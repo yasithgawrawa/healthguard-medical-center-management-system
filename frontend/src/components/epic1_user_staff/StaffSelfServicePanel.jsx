@@ -10,6 +10,7 @@ import { Toast } from "../shared/Toast.jsx";
 import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
 import { e1Api } from "../../services/e1Api.js";
+import { billingApi } from "../../services/billingApi.js";
 import { formatDate, formatTime, LEAVE_TYPES } from "./e1Constants.js";
 
 const leaveRequestSchema = z
@@ -45,6 +46,7 @@ const getCurrentPosition = () =>
 export const StaffSelfServicePanel = () => {
   const [attendance, setAttendance] = useState([]);
   const [leave, setLeave] = useState([]);
+  const [payroll, setPayroll] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -63,14 +65,16 @@ export const StaffSelfServicePanel = () => {
 
   const load = async () => {
     try {
-      const [attendanceData, leaveData, shiftData] = await Promise.all([
+      const [attendanceData, leaveData, shiftData, payrollData] = await Promise.all([
         e1Api.listMyAttendance(),
         e1Api.listMyLeave(),
-        e1Api.listMyShifts()
+        e1Api.listMyShifts(),
+        billingApi.payroll()
       ]);
       setAttendance(Array.isArray(attendanceData) ? attendanceData : []);
       setLeave(Array.isArray(leaveData) ? leaveData : []);
       setShifts(Array.isArray(shiftData) ? shiftData : []);
+      setPayroll(Array.isArray(payrollData) ? payrollData : []);
     } catch (error) {
       setToast({ type: "error", message: error.response?.data?.message || "Unable to load staff self-service data" });
     }
@@ -209,6 +213,21 @@ export const StaffSelfServicePanel = () => {
           ]}
           rows={leave.slice(0, 5)}
           emptyText="No leave requests submitted."
+        />
+      </div>
+
+      <div className="staff-self-leave">
+        <h3>My Payslips & Salary History</h3>
+        <DataTable
+          columns={[
+            { key: "month", header: "Month" },
+            { key: "attendanceDays", header: "Attendance Days" },
+            { key: "baseSalary", header: "Base Salary", render: (item) => `Rs. ${Number(item.baseSalary || 0).toFixed(2)}` },
+            { key: "netSalary", header: "Net Salary", render: (item) => `Rs. ${Number(item.netSalary || 0).toFixed(2)}` },
+            { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> }
+          ]}
+          rows={payroll.slice(0, 5)}
+          emptyText="No payslips available yet."
         />
       </div>
 

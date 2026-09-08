@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarCheck, RefreshCw, Send } from "lucide-react";
 import { patientApi } from "../../services/patientApi.js";
-import { stripDigits } from "../../utils/validationSchemas.js";
 
 const initialForm = {
   doctorId: "",
   appointmentDate: "",
+  appointmentDay: "",
   slotLabel: "",
   reason: ""
 };
@@ -14,6 +14,8 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
   const [doctors, setDoctors] = useState([]);
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(true);
+  const [slots, setSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -32,6 +34,19 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (!form.doctorId || !form.appointmentDay) {
+      setSlots([]);
+      return;
+    }
+    setLoadingSlots(true);
+    patientApi
+      .getAppointmentSlots({ doctorId: form.doctorId, date: form.appointmentDay })
+      .then(setSlots)
+      .catch(() => setError("Unable to load appointment slots for the selected date."))
+      .finally(() => setLoadingSlots(false));
+  }, [form.doctorId, form.appointmentDay]);
+
   const setField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
     setFieldErrors((current) => ({ ...current, [field]: "" }));
@@ -40,13 +55,8 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
   const validate = () => {
     const nextErrors = {};
     if (!form.doctorId) nextErrors.doctorId = "Select a doctor";
-    if (!form.appointmentDate) {
-      nextErrors.appointmentDate = "Appointment date and time is required";
-    } else if (new Date(form.appointmentDate) <= new Date()) {
-      nextErrors.appointmentDate = "Appointment date and time must be in the future";
-    }
-    if (form.slotLabel.trim().length < 2) nextErrors.slotLabel = "Slot is required";
-    if (/\d/.test(form.slotLabel)) nextErrors.slotLabel = "Slot cannot contain numbers";
+    if (!form.appointmentDay) nextErrors.appointmentDay = "Appointment date is required";
+    if (!form.appointmentDate) nextErrors.appointmentDate = "Select an available slot";
     if (form.reason.trim().length < 5) nextErrors.reason = "Reason must be at least 5 characters";
     if (form.reason.trim().length > 300) nextErrors.reason = "Reason is too long";
     setFieldErrors(nextErrors);
@@ -61,7 +71,12 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
     setSubmitting(true);
 
     try {
-      await patientApi.bookAppointment(form);
+      await patientApi.bookAppointment({
+        doctorId: form.doctorId,
+        appointmentDate: form.appointmentDate,
+        slotLabel: form.slotLabel,
+        reason: form.reason
+      });
       setMessage("Appointment booked and saved to MongoDB.");
       setForm(initialForm);
       onBooked?.();
@@ -106,33 +121,47 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
             </select>
             {fieldErrors.doctorId ? <small>{fieldErrors.doctorId}</small> : null}
           </label>
-          <label className={`form-field${fieldErrors.appointmentDate ? " has-error" : ""}`}>
-            <span>Date and Time</span>
+          <label className={`form-field${fieldErrors.appointmentDay ? " has-error" : ""}`}>
+            <span>Appointment Date</span>
             <input
-              type="datetime-local"
-              value={form.appointmentDate}
-              onChange={(event) => setField("appointmentDate", event.target.value)}
+              type="date"
+              value={form.appointmentDay}
+              onChange={(event) => {
+                setField("appointmentDay", event.target.value);
+                setField("appointmentDate", "");
+                setField("slotLabel", "");
+              }}
               required
               disabled={submitting}
-              aria-invalid={Boolean(fieldErrors.appointmentDate)}
+              aria-invalid={Boolean(fieldErrors.appointmentDay)}
             />
-            {fieldErrors.appointmentDate ? <small>{fieldErrors.appointmentDate}</small> : null}
+            {fieldErrors.appointmentDay ? <small>{fieldErrors.appointmentDay}</small> : null}
           </label>
         </div>
 
         <div className="operation-form-card">
           <h3>Visit Reason</h3>
           <label className={`form-field${fieldErrors.slotLabel ? " has-error" : ""}`}>
-            <span>Slot</span>
-            <input
-              value={form.slotLabel}
-              onChange={(event) => setField("slotLabel", stripDigits(event.target.value))}
-              placeholder="Morning Slot"
+            <span>Available Slot</span>
+            <select
+              value={form.appointmentDate}
+              onChange={(event) => {
+                const slot = slots.find((item) => item.startsAt === event.target.value);
+                setField("appointmentDate", event.target.value);
+                setField("slotLabel", slot?.label || "");
+              }}
               required
-              disabled={submitting}
-              aria-invalid={Boolean(fieldErrors.slotLabel)}
-            />
-            {fieldErrors.slotLabel ? <small>{fieldErrors.slotLabel}</small> : null}
+              disabled={submitting || loadingSlots || !slots.length}
+              aria-invalid={Boolean(fieldErrors.appointmentDate || fieldErrors.slotLabel)}
+            >
+              <option value="">{loadingSlots ? "Loading slots..." : "Select available slot"}</option>
+              {slots.map((slot) => (
+                <option value={slot.startsAt} key={slot.startsAt} disabled={!slot.available}>
+                  {slot.label}{slot.available ? "" : " - unavailable"}
+                </option>
+              ))}
+            </select>
+            {fieldErrors.appointmentDate || fieldErrors.slotLabel ? <small>{fieldErrors.appointmentDate || fieldErrors.slotLabel}</small> : null}
           </label>
           <label className={`form-field${fieldErrors.reason ? " has-error" : ""}`}>
             <span>Reason</span>

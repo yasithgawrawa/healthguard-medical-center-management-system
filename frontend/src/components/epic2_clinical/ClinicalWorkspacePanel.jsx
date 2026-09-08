@@ -82,7 +82,12 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
       if (mode === "lab") {
         setLabs(await clinicalApi.listLabRequests());
       } else {
-        setAppointments(await clinicalApi.listAppointments());
+        const [appointmentData, labData] = await Promise.all([
+          clinicalApi.listAppointments(),
+          mode === "doctor" ? clinicalApi.listLabRequests() : Promise.resolve([])
+        ]);
+        setAppointments(appointmentData);
+        setLabs(labData);
       }
     } catch (error) {
       setToast({ type: "error", message: error.response?.data?.message || "Unable to load clinical workspace" });
@@ -185,6 +190,13 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
         <FilterSelect label="Status" value={status} onChange={setStatus} options={mode === "lab" ? ["requested", "verified", "in_progress", "completed", "cancelled"] : ["booked", "checked_in", "in_consultation", "completed", "cancelled"]} />
       </div>
       <DataTable columns={mode === "lab" ? labColumns : appointmentColumns} rows={rows} emptyText="No records match your filters." />
+
+      {mode === "doctor" ? (
+        <div className="staff-self-leave">
+          <h3>Lab Results Requested By Me</h3>
+          <DataTable columns={labColumns.filter((column) => column.key !== "actions")} rows={labs.slice(0, 6)} emptyText="No lab requests yet." />
+        </div>
+      ) : null}
 
       <Modal open={Boolean(modal.type)} title="Update Workflow" subtitle={modal.record ? patientName(modal.record) || modal.record.testName : ""} onClose={() => setModal({ type: null, record: null })}>
         <form onSubmit={handleSubmit(submit)}>

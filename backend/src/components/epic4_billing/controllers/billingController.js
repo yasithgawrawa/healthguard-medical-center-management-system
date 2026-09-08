@@ -1,7 +1,10 @@
 import { Attendance } from "../../epic1_user_staff/models/Attendance.js";
+import { Staff } from "../../epic1_user_staff/models/Staff.js";
+import { Appointment } from "../../epic2_clinical/models/Appointment.js";
 import { Invoice } from "../models/Invoice.js";
 import { Payment } from "../models/Payment.js";
 import { Payroll } from "../models/Payroll.js";
+import { ROLES } from "../../../shared/constants/roles.js";
 import { successResponse } from "../../../shared/utils/apiResponse.js";
 import { AppError } from "../../../shared/utils/AppError.js";
 
@@ -12,6 +15,11 @@ const recalculateInvoice = (invoice) => {
 };
 
 export const createInvoice = async (req, res) => {
+  if (req.body.appointmentId) {
+    const appointment = await Appointment.findById(req.body.appointmentId);
+    if (!appointment) throw new AppError("Appointment not found", 404);
+    if (appointment.status !== "completed") throw new AppError("Only completed medical services can be invoiced", 409);
+  }
   const items = req.body.items.map((item) => ({
     ...item,
     lineTotal: item.quantity * item.unitPrice
@@ -50,7 +58,9 @@ export const recordPayment = async (req, res) => {
 };
 
 export const listPayments = async (req, res) => {
-  const payments = await Payment.find().sort({ createdAt: -1 });
+  const payments = await Payment.find()
+    .populate("invoiceId", "patientId subtotal outstandingAmount status")
+    .sort({ createdAt: -1 });
   return successResponse(res, "Payment list loaded", payments);
 };
 
@@ -77,7 +87,15 @@ export const createPayroll = async (req, res) => {
 };
 
 export const listPayroll = async (req, res) => {
-  const payroll = await Payroll.find().sort({ month: -1, createdAt: -1 });
+  const filter = {};
+  if (![ROLES.MANAGER, ROLES.ADMIN].includes(req.user.role)) {
+    const staff = await Staff.findOne({ userId: req.user._id });
+    if (!staff) throw new AppError("Staff profile not found", 404);
+    filter.staffId = staff._id;
+  }
+  const payroll = await Payroll.find(filter)
+    .populate({ path: "staffId", populate: { path: "userId", select: "firstName lastName email" } })
+    .sort({ month: -1, createdAt: -1 });
   return successResponse(res, "Payroll list loaded", payroll);
 };
 
@@ -100,5 +118,7 @@ export const revenueSummary = async (req, res) => {
   const invoiced = invoices.reduce((sum, invoice) => sum + invoice.subtotal, 0);
   const outstanding = invoices.reduce((sum, invoice) => sum + invoice.outstandingAmount, 0);
   const collected = payments.reduce((sum, payment) => sum + payment.amount, 0);
-  return successResponse(res, "Revenue summary loaded", { invoiced, collected, outstanding });
+  const payroll = await Payroll.find();
+  const payrollExpense = payroll.reduce((sum, item) => sum + item.netSalary, 0);
+  return successResponse(res, "Revenue summary loaded", { invoiced, collected, outstanding, payrollExpense });
 };

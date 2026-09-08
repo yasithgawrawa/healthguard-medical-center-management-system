@@ -26,7 +26,7 @@ router.post("/payments", authorizeRoles(ROLES.CASHIER, ROLES.ADMIN), validateReq
 router.get("/payments", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN), asyncHandler(listPayments));
 router.patch("/payments/:id/status", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER), validateRequest(paymentStatusSchema), asyncHandler(updatePaymentStatus));
 router.post("/payroll", authorizeRoles(ROLES.MANAGER, ROLES.ADMIN), validateRequest(payrollSchema), asyncHandler(createPayroll));
-router.get("/payroll", authorizeRoles(ROLES.MANAGER, ROLES.ADMIN), asyncHandler(listPayroll));
+router.get("/payroll", authorizeRoles(ROLES.MANAGER, ROLES.ADMIN, ROLES.DOCTOR, ROLES.NURSE, ROLES.PHARMACIST, ROLES.CASHIER, ROLES.LAB_ASSISTANT), asyncHandler(listPayroll));
 router.patch("/payroll/:id/status", authorizeRoles(ROLES.MANAGER), validateRequest(payrollStatusSchema), asyncHandler(updatePayrollStatus));
 
 export default router;

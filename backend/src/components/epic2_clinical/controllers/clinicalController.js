@@ -27,6 +27,38 @@ export const createAppointment = async (req, res) => {
   return successResponse(res, "Appointment booked successfully", appointment, 201);
 };
 
+export const listAppointmentSlots = async (req, res) => {
+  const { doctorId, date } = req.validatedQuery || req.query;
+  const doctor = await User.findOne({ _id: doctorId, role: ROLES.DOCTOR, status: "active" });
+  if (!doctor) throw new AppError("Active doctor not found", 404, { doctorId: "Select an active doctor" });
+
+  const day = new Date(date);
+  day.setHours(0, 0, 0, 0);
+  const nextDay = new Date(day);
+  nextDay.setDate(day.getDate() + 1);
+
+  const booked = await Appointment.find({
+    doctorId,
+    appointmentDate: { $gte: day, $lt: nextDay },
+    status: { $ne: "cancelled" }
+  }).select("appointmentDate slotLabel");
+
+  const bookedTimes = new Set(booked.map((item) => item.appointmentDate.toISOString()));
+  const slots = Array.from({ length: 8 }, (_, index) => {
+    const hour = 9 + index;
+    const startsAt = new Date(day);
+    startsAt.setHours(hour, 0, 0, 0);
+    const label = `${hour < 12 ? "Morning" : "Afternoon"} ${String(hour).padStart(2, "0")}:00`;
+    return {
+      label,
+      startsAt,
+      available: startsAt > new Date() && !bookedTimes.has(startsAt.toISOString())
+    };
+  });
+
+  return successResponse(res, "Available appointment slots loaded", slots);
+};
+
 export const listAppointments = async (req, res) => {
   const filter = {};
   if (req.user.role === ROLES.PATIENT) filter.patientId = req.user._id;
@@ -44,6 +76,23 @@ export const listDoctors = async (req, res) => {
     .sort({ firstName: 1 });
 
   return successResponse(res, "Doctor list loaded", doctors);
+};
+
+export const cancelAppointment = async (req, res) => {
+  const appointment = await Appointment.findById(req.params.id);
+  if (!appointment) throw new AppError("Appointment not found", 404);
+  if (req.user.role === ROLES.PATIENT && appointment.patientId.toString() !== req.user._id.toString()) {
+    throw new AppError("You can only cancel your own appointments", 403);
+  }
+  if (appointment.status !== "booked") {
+    throw new AppError("Only booked appointments can be cancelled", 409);
+  }
+  if (appointment.appointmentDate <= new Date()) {
+    throw new AppError("Past appointments cannot be cancelled", 409);
+  }
+  appointment.status = "cancelled";
+  await appointment.save();
+  return successResponse(res, "Appointment cancelled", appointment);
 };
 
 export const updateAppointmentStatus = async (req, res) => {

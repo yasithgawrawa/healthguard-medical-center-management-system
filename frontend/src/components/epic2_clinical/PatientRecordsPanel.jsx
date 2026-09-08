@@ -25,6 +25,7 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
     invoices: []
   });
   const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState("");
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
@@ -49,6 +50,38 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
     load();
   }, [load, refreshKey]);
 
+  const cancelAppointment = async (id) => {
+    setBusyId(id);
+    setError("");
+    try {
+      await patientApi.cancelAppointment(id);
+      await load();
+    } catch (err) {
+      setError(err.response?.data?.message || "Unable to cancel appointment");
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const canCancel = (item) => item.status === "booked" && new Date(item.appointmentDate) > new Date();
+
+  const downloadReceipt = (invoice) => {
+    const receipt = [
+      "Health Guard Medical Center",
+      `Receipt for invoice ${invoice._id}`,
+      `Status: ${invoice.status}`,
+      `Total: Rs. ${Number(invoice.subtotal || 0).toFixed(2)}`,
+      `Paid: Rs. ${Number(invoice.paidAmount || 0).toFixed(2)}`,
+      `Outstanding: Rs. ${Number(invoice.outstandingAmount || 0).toFixed(2)}`
+    ].join("\n");
+    const url = URL.createObjectURL(new Blob([receipt], { type: "text/plain" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `healthguard-receipt-${invoice._id}.txt`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
   const sections = [
     {
       key: "appointments",
@@ -60,6 +93,14 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
           <strong>{formatDate(item.appointmentDate)}</strong>
           <span>{item.doctorId ? `Dr. ${item.doctorId.firstName} ${item.doctorId.lastName}` : "Doctor pending"}</span>
           <small>{item.reason}</small>
+          <div className="record-item-header">
+            <small>{item.status}</small>
+            {canCancel(item) ? (
+              <button className="table-link-button danger-action" type="button" onClick={() => cancelAppointment(item._id)} disabled={busyId === item._id}>
+                {busyId === item._id ? "Cancelling..." : "Cancel"}
+              </button>
+            ) : null}
+          </div>
         </>
       )
     },
@@ -73,6 +114,8 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
           <strong>{item.testName}</strong>
           <span>{item.status}</span>
           <small>{item.resultSummary || "Result not uploaded yet"}</small>
+          {item.status === "requested" ? <small>New lab request from your doctor</small> : null}
+          {item.resultUrl ? <a className="table-link-button" href={item.resultUrl} target="_blank" rel="noreferrer">Open report</a> : null}
         </>
       )
     },
@@ -99,6 +142,11 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
           <strong>Rs. {Number(item.outstandingAmount || 0).toFixed(2)} outstanding</strong>
           <span>{item.status}</span>
           <small>Total: Rs. {Number(item.subtotal || 0).toFixed(2)}</small>
+          {item.status === "paid" ? (
+            <button className="table-link-button" type="button" onClick={() => downloadReceipt(item)}>
+              Download receipt
+            </button>
+          ) : null}
         </>
       )
     }

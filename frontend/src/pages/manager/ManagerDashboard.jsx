@@ -1,4 +1,6 @@
 import { CalendarPlus, ClipboardCheck, ClipboardList } from "lucide-react";
+import { BillingWorkspacePanel } from "../../components/epic4_billing/BillingWorkspacePanel.jsx";
+import { InventoryWorkspacePanel } from "../../components/epic3_inventory/InventoryWorkspacePanel.jsx";
 import { DashboardQuickActions } from "../../components/shared/DashboardQuickActions.jsx";
 import { WorkforceManagementPanel } from "../../components/epic1_user_staff/WorkforceManagementPanel.jsx";
 
@@ -19,10 +21,13 @@ export const ManagerDashboard = () => (
       actions={[
         { label: "Create Shift", detail: "Schedule active staff", icon: CalendarPlus, href: "#manager-workforce" },
         { label: "Review Attendance", detail: "Search staff attendance records", icon: ClipboardCheck, href: "#manager-workforce" },
-        { label: "Review Leave", detail: "Approve or reject requests", icon: ClipboardList, href: "#manager-workforce" }
+        { label: "Review Leave", detail: "Approve or reject requests", icon: ClipboardList, href: "#manager-workforce" },
+        { label: "Finance Reports", detail: "Revenue, outstanding and payroll", icon: ClipboardCheck, href: "#billing-payments" }
       ]}
     />
 
     <WorkforceManagementPanel />
+    <InventoryWorkspacePanel />
+    <BillingWorkspacePanel />
   </div>
 );

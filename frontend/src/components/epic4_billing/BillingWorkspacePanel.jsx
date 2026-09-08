@@ -1,10 +1,14 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CreditCard, Receipt } from "lucide-react";
+import { CheckCircle, CreditCard, DollarSign, Receipt } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { billingApi } from "../../services/billingApi.js";
 import { clinicalApi } from "../../services/clinicalApi.js";
+import { e1Api } from "../../services/e1Api.js";
+import { useAuth } from "../../context/AuthContext.jsx";
+import { ROLES } from "../../utils/roles.js";
+import { requiredMoney, requiredQuantity } from "../../utils/validationSchemas.js";
 import { DataTable } from "../shared/DataTable.jsx";
 import { Modal } from "../shared/Modal.jsx";
 import { SearchBar } from "../shared/SearchBar.jsx";
@@ -12,7 +16,10 @@ import { StatusBadge } from "../shared/StatusBadge.jsx";
 import { Toast } from "../shared/Toast.jsx";
 import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
-import { requiredMoney, requiredQuantity } from "../../utils/validationSchemas.js";
+
+const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
+const name = (user) => [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Patient";
+const staffName = (staff) => [staff?.userId?.firstName, staff?.userId?.lastName].filter(Boolean).join(" ") || staff?.employeeId || "Staff";
 
 const invoiceSchema = z.object({
   appointmentId: z.string().min(1, "Select appointment"),
@@ -24,28 +31,57 @@ const paymentSchema = z.object({
   amount: z.coerce.number({ invalid_type_error: "Amount is required" }).min(0.01, "Amount must be greater than 0").max(10000000, "Amount is too high"),
   method: z.string().min(1, "Payment method is required")
 });
-const name = (user) => [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Patient";
+const payrollSchema = z.object({
+  staffId: z.string().min(1, "Select staff member"),
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Select payroll month"),
+  baseSalary: requiredMoney("Base salary"),
+  allowances: requiredMoney("Allowances"),
+  deductions: requiredMoney("Deductions")
+});
 
 export const BillingWorkspacePanel = () => {
+  const { user } = useAuth();
   const [invoices, setInvoices] = useState([]);
   const [appointments, setAppointments] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [payroll, setPayroll] = useState([]);
+  const [staff, setStaff] = useState([]);
+  const [summary, setSummary] = useState({ invoiced: 0, collected: 0, outstanding: 0, payrollExpense: 0 });
+  const [activeTab, setActiveTab] = useState("invoices");
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState({ type: null, record: null });
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
-  const { register, handleSubmit, reset, formState: { errors } } = useForm({ resolver: zodResolver(modal.type === "payment" ? paymentSchema : invoiceSchema), mode: "onChange" });
+  const isManager = [ROLES.MANAGER, ROLES.ADMIN].includes(user?.role);
+  const isCashier = [ROLES.CASHIER, ROLES.ADMIN].includes(user?.role);
+
+  const schema = modal.type === "payment" ? paymentSchema : modal.type === "payroll" ? payrollSchema : invoiceSchema;
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({ resolver: zodResolver(schema), mode: "onChange" });
 
   const load = async () => {
     try {
-      const [invoiceData, appointmentData] = await Promise.all([billingApi.invoices(), clinicalApi.listAppointments()]);
+      const requests = [billingApi.invoices(), billingApi.summary()];
+      if (isCashier || isManager) requests.push(billingApi.payments()); else requests.push(Promise.resolve([]));
+      if (isManager) {
+        requests.push(clinicalApi.listAppointments(), billingApi.payroll(), e1Api.listWorkforceStaff());
+      } else {
+        requests.push(isCashier ? clinicalApi.listAppointments() : Promise.resolve([]), Promise.resolve([]), Promise.resolve([]));
+      }
+      const [invoiceData, summaryData, paymentData, appointmentData, payrollData, staffData] = await Promise.all(requests);
       setInvoices(invoiceData || []);
+      setSummary(summaryData || {});
+      setPayments(paymentData || []);
       setAppointments(appointmentData || []);
+      setPayroll(payrollData || []);
+      setStaff(staffData || []);
     } catch (error) {
       setToast({ type: "error", message: error.response?.data?.message || "Unable to load billing workspace" });
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -57,9 +93,17 @@ export const BillingWorkspacePanel = () => {
     try {
       if (modal.type === "invoice") {
         const appointment = appointments.find((item) => item._id === values.appointmentId);
-        await billingApi.createInvoice({ patientId: appointment.patientId?._id || appointment.patientId, appointmentId: appointment._id, items: [{ description: values.description, quantity: values.quantity, unitPrice: values.unitPrice }] });
-      } else {
+        await billingApi.createInvoice({
+          patientId: appointment.patientId?._id || appointment.patientId,
+          appointmentId: appointment._id,
+          items: [{ description: values.description, quantity: values.quantity, unitPrice: values.unitPrice }]
+        });
+      }
+      if (modal.type === "payment") {
         await billingApi.recordPayment({ invoiceId: modal.record._id, amount: values.amount, method: values.method });
+      }
+      if (modal.type === "payroll") {
+        await billingApi.createPayroll(values);
       }
       setToast({ type: "success", message: "Billing workflow saved" });
       setModal({ type: null, record: null });
@@ -71,29 +115,108 @@ export const BillingWorkspacePanel = () => {
     }
   };
 
+  const changePaymentStatus = async (payment, status) => {
+    setBusy(true);
+    try {
+      await billingApi.updatePaymentStatus(payment._id, status);
+      setToast({ type: "success", message: `Payment ${status}` });
+      await load();
+    } catch (error) {
+      setToast({ type: "error", message: error.response?.data?.message || "Unable to update payment" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const changePayrollStatus = async (item, status) => {
+    setBusy(true);
+    try {
+      await billingApi.updatePayrollStatus(item._id, status);
+      setToast({ type: "success", message: `Payroll ${status}` });
+      await load();
+    } catch (error) {
+      setToast({ type: "error", message: error.response?.data?.message || "Unable to update payroll" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <section className="e1-panel" id="billing-payments">
       <Toast toast={toast} onClose={() => setToast(null)} />
       <div className="e1-panel-header">
-        <div><h2>Billing & Payments</h2><p>Create invoices from patient appointments and record payments from invoice rows.</p></div>
-        <button className="button-primary" type="button" onClick={() => { reset({}); setModal({ type: "invoice", record: null }); }}><Receipt size={17} /> Create Invoice</button>
+        <div><h2>Billing, Payments & Payroll</h2><p>Create invoices, record payments, reconcile revenue and process attendance-based payroll.</p></div>
+        <div className="inline-actions">
+          {isCashier ? <button className="button-primary" type="button" onClick={() => { reset({}); setModal({ type: "invoice", record: null }); }}><Receipt size={17} /> Create Invoice</button> : null}
+          {isManager ? <button type="button" onClick={() => { reset({ month: new Date().toISOString().slice(0, 7), allowances: 0, deductions: 0 }); setModal({ type: "payroll", record: null }); }}><DollarSign size={17} /> Calculate Payroll</button> : null}
+        </div>
       </div>
-      <div className="table-toolbar compact-toolbar"><SearchBar value={search} onChange={setSearch} placeholder="Search patient, amount or status" /></div>
-      <DataTable
-        rows={rows}
-        columns={[
-          { key: "patient", header: "Patient", render: (item) => name(item.patientId) },
-          { key: "subtotal", header: "Total", render: (item) => `Rs. ${Number(item.subtotal || 0).toFixed(2)}` },
-          { key: "paid", header: "Paid", render: (item) => `Rs. ${Number(item.paidAmount || 0).toFixed(2)}` },
-          { key: "outstanding", header: "Outstanding", render: (item) => `Rs. ${Number(item.outstandingAmount || 0).toFixed(2)}` },
-          { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
-          { key: "actions", header: "Actions", render: (item) => <button className="table-link-button" type="button" onClick={() => { reset({ amount: item.outstandingAmount || "", method: "cash" }); setModal({ type: "payment", record: item }); }} disabled={item.outstandingAmount <= 0}>Record Payment</button> }
-        ]}
-      />
-      <Modal open={Boolean(modal.type)} title={modal.type === "payment" ? "Record Payment" : "Create Invoice"} onClose={() => setModal({ type: null, record: null })}>
+
+      <div className="e1-tabbar">
+        {["invoices", "payments", "revenue", "payroll"].map((tab) => (
+          <button className={activeTab === tab ? "active" : ""} type="button" onClick={() => setActiveTab(tab)} key={tab}>{tab}</button>
+        ))}
+      </div>
+
+      {activeTab === "invoices" ? (
+        <>
+          <div className="table-toolbar compact-toolbar"><SearchBar value={search} onChange={setSearch} placeholder="Search patient, amount or status" /></div>
+          <DataTable
+            rows={rows}
+            columns={[
+              { key: "patient", header: "Patient", render: (item) => name(item.patientId) },
+              { key: "subtotal", header: "Total", render: (item) => money(item.subtotal) },
+              { key: "paid", header: "Paid", render: (item) => money(item.paidAmount) },
+              { key: "outstanding", header: "Outstanding", render: (item) => money(item.outstandingAmount) },
+              { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
+              { key: "actions", header: "Actions", render: (item) => isCashier ? <button className="table-link-button" type="button" onClick={() => { reset({ amount: item.outstandingAmount || "", method: "cash" }); setModal({ type: "payment", record: item }); }} disabled={item.outstandingAmount <= 0}>Record Payment</button> : null }
+            ]}
+          />
+        </>
+      ) : null}
+
+      {activeTab === "payments" ? (
+        <DataTable
+          rows={payments}
+          columns={[
+            { key: "amount", header: "Amount", render: (item) => money(item.amount) },
+            { key: "method", header: "Method", render: (item) => item.method?.replace("_", " ") },
+            { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
+            { key: "actions", header: "Actions", render: (item) => <div className="inline-actions"><button type="button" onClick={() => changePaymentStatus(item, "verified")} disabled={busy || item.status !== "recorded"}><CheckCircle size={15} /> Verify</button><button type="button" onClick={() => changePaymentStatus(item, "reconciled")} disabled={busy || item.status !== "verified"}>Reconcile</button></div> }
+          ]}
+          emptyText="No payments recorded yet."
+        />
+      ) : null}
+
+      {activeTab === "revenue" ? (
+        <div className="manager-summary-grid">
+          <div><strong>{money(summary.invoiced)}</strong><span>total invoiced</span></div>
+          <div><strong>{money(summary.collected)}</strong><span>payments collected</span></div>
+          <div><strong>{money(summary.outstanding)}</strong><span>outstanding invoices</span></div>
+          <div><strong>{money(summary.payrollExpense)}</strong><span>payroll expense</span></div>
+        </div>
+      ) : null}
+
+      {activeTab === "payroll" ? (
+        <DataTable
+          rows={payroll}
+          columns={[
+            { key: "staff", header: "Staff", render: (item) => staffName(item.staffId) },
+            { key: "month", header: "Month" },
+            { key: "attendanceDays", header: "Attendance Days" },
+            { key: "netSalary", header: "Net Salary", render: (item) => money(item.netSalary) },
+            { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
+            { key: "actions", header: "Actions", render: (item) => isManager ? <div className="inline-actions"><button type="button" onClick={() => changePayrollStatus(item, "reviewed")} disabled={busy || item.status !== "draft"}>Review</button><button type="button" onClick={() => changePayrollStatus(item, "approved")} disabled={busy || item.status !== "reviewed"}>Approve</button><button type="button" onClick={() => changePayrollStatus(item, "paid")} disabled={busy || item.status !== "approved"}>Mark Paid</button></div> : null }
+          ]}
+          emptyText="No payroll records yet."
+        />
+      ) : null}
+
+      <Modal open={Boolean(modal.type)} title={modal.type === "payment" ? "Record Payment" : modal.type === "payroll" ? "Calculate Payroll" : "Create Invoice"} onClose={() => setModal({ type: null, record: null })}>
         <form onSubmit={handleSubmit(submit)}>
-          {modal.type === "invoice" ? <div className="form-grid"><FormSelect label="Appointment" error={errors.appointmentId?.message} {...register("appointmentId")}><option value="">Select appointment</option>{appointments.map((item) => <option value={item._id} key={item._id}>{name(item.patientId)} - {new Date(item.appointmentDate).toLocaleDateString()}</option>)}</FormSelect><FormInput label="Description" error={errors.description?.message} {...register("description")} /><FormInput label="Quantity" type="number" min="1" step="1" error={errors.quantity?.message} {...register("quantity")} /><FormInput label="Unit Price" type="number" min="0" step="0.01" error={errors.unitPrice?.message} {...register("unitPrice")} /></div> : null}
+          {modal.type === "invoice" ? <div className="form-grid"><FormSelect label="Completed Appointment" error={errors.appointmentId?.message} {...register("appointmentId")}><option value="">Select completed appointment</option>{appointments.filter((item) => item.status === "completed").map((item) => <option value={item._id} key={item._id}>{name(item.patientId)} - {new Date(item.appointmentDate).toLocaleDateString()}</option>)}</FormSelect><FormInput label="Description" error={errors.description?.message} {...register("description")} /><FormInput label="Quantity" type="number" min="1" step="1" error={errors.quantity?.message} {...register("quantity")} /><FormInput label="Unit Price" type="number" min="0" step="0.01" error={errors.unitPrice?.message} {...register("unitPrice")} /></div> : null}
           {modal.type === "payment" ? <div className="form-grid"><FormInput label="Amount" type="number" min="0.01" step="0.01" error={errors.amount?.message} {...register("amount")} /><FormSelect label="Method" error={errors.method?.message} {...register("method")}><option value="cash">Cash</option><option value="card">Card</option><option value="bank_transfer">Bank Transfer</option></FormSelect></div> : null}
+          {modal.type === "payroll" ? <div className="form-grid"><FormSelect label="Staff" error={errors.staffId?.message} {...register("staffId")}><option value="">Select staff</option>{staff.map((item) => <option value={item._id} key={item._id}>{staffName(item)} - {item.employeeId}</option>)}</FormSelect><FormInput label="Month" type="month" error={errors.month?.message} {...register("month")} /><FormInput label="Base Salary" type="number" min="0" step="0.01" error={errors.baseSalary?.message} {...register("baseSalary")} /><FormInput label="Allowances" type="number" min="0" step="0.01" error={errors.allowances?.message} {...register("allowances")} /><FormInput label="Deductions" type="number" min="0" step="0.01" error={errors.deductions?.message} {...register("deductions")} /></div> : null}
           <div className="modal-actions"><button className="button-secondary" type="button" onClick={() => setModal({ type: null, record: null })} disabled={busy}>Cancel</button><button className="button-primary" type="submit" disabled={busy}><CreditCard size={16} /> {busy ? "Saving..." : "Save"}</button></div>
         </form>
       </Modal>

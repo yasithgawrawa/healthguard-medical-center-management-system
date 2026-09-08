@@ -2,6 +2,8 @@ import {
   Activity,
   Calendar,
   ClipboardList,
+  CreditCard,
+  PackageSearch,
   Shield,
   UserRoundCheck,
   Users
@@ -35,7 +37,9 @@ const roleNavItems = (role) => {
       { href: "#overview", label: "Overview", icon: Activity },
       { href: "#work", label: "Quick Actions", icon: ClipboardList },
       { href: "#manager-workforce", label: "Schedule & Shifts", icon: Calendar },
-      { href: "#manager-workforce", label: "Attendance & Leave", icon: UserRoundCheck }
+      { href: "#manager-workforce", label: "Attendance & Leave", icon: UserRoundCheck },
+      { href: "#pharmacy-inventory", label: "Inventory Reports", icon: PackageSearch },
+      { href: "#billing-payments", label: "Finance & Payroll", icon: CreditCard }
     ];
   }
 

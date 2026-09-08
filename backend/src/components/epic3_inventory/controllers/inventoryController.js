@@ -11,6 +11,13 @@ export const medicineCrud = createCrudController(Medicine, "Medicine", { softDel
 export const supplierCrud = createCrudController(Supplier, "Supplier", { softDelete: { status: "inactive" } });
 export const batchCrud = createCrudController(MedicineBatch, "Medicine batch");
 
+export const listBatches = async (req, res) => {
+  const batches = await MedicineBatch.find()
+    .populate("medicineId", "name category unit")
+    .sort({ expiryDate: 1, createdAt: -1 });
+  return successResponse(res, "Medicine batch list loaded", batches);
+};
+
 export const recordPurchase = async (req, res) => {
   const batch = await MedicineBatch.findById(req.body.batchId);
   if (!batch) throw new AppError("Medicine batch not found", 404);
@@ -23,7 +30,11 @@ export const recordPurchase = async (req, res) => {
 };
 
 export const listPurchases = async (req, res) => {
-  const purchases = await Purchase.find().sort({ purchasedAt: -1 });
+  const purchases = await Purchase.find()
+    .populate("supplierId", "name")
+    .populate("medicineId", "name")
+    .populate("batchId", "batchNumber")
+    .sort({ purchasedAt: -1 });
   return successResponse(res, "Purchase list loaded", purchases);
 };
 
@@ -58,13 +69,16 @@ export const createPharmacySale = async (req, res) => {
 };
 
 export const listPharmacySales = async (req, res) => {
-  const sales = await PharmacySale.find().sort({ createdAt: -1 });
+  const sales = await PharmacySale.find()
+    .populate("patientId", "firstName lastName email")
+    .populate("items.medicineId", "name")
+    .sort({ createdAt: -1 });
   return successResponse(res, "Pharmacy sale list loaded", sales);
 };
 
 export const inventoryAlerts = async (req, res) => {
   const medicines = await Medicine.find({ status: "active" });
-  const batches = await MedicineBatch.find();
+  const batches = await MedicineBatch.find().populate("medicineId", "name category unit");
   const stockByMedicine = batches.reduce((acc, batch) => {
     const key = batch.medicineId.toString();
     acc[key] = (acc[key] || 0) + batch.quantity;
@@ -74,4 +88,29 @@ export const inventoryAlerts = async (req, res) => {
   const expiresBefore = new Date(Date.now() + 30 * 86400000);
   const expiring = batches.filter((batch) => batch.expiryDate <= expiresBefore);
   return successResponse(res, "Inventory alerts loaded", { lowStock, expiring });
+};
+
+export const pharmacySalesReport = async (req, res) => {
+  const sales = await PharmacySale.find().populate("items.medicineId", "name").sort({ createdAt: -1 });
+  const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0);
+  const itemTotals = new Map();
+  for (const sale of sales) {
+    for (const item of sale.items) {
+      const key = item.medicineId?._id?.toString() || item.medicineId?.toString();
+      const current = itemTotals.get(key) || {
+        medicine: item.medicineId?.name || "Medicine",
+        quantity: 0,
+        revenue: 0
+      };
+      current.quantity += item.quantity;
+      current.revenue += item.lineTotal;
+      itemTotals.set(key, current);
+    }
+  }
+  const topMedicines = [...itemTotals.values()].sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+  return successResponse(res, "Pharmacy sales report loaded", {
+    totalSales: sales.length,
+    totalRevenue,
+    topMedicines
+  });
 };

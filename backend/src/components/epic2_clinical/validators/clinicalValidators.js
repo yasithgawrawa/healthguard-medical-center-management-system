@@ -2,6 +2,13 @@ import { z } from "zod";
 import { bloodPressurePattern } from "../../../shared/validators/fieldSchemas.js";
 import { idParamSchema, objectIdSchema } from "../../../shared/validators/commonSchemas.js";
 
+export const slotQuerySchema = z.object({
+  query: z.object({
+    doctorId: objectIdSchema,
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD")
+  })
+});
+
 export const appointmentSchema = z.object({
   body: z.object({
     patientId: objectIdSchema.optional(),
