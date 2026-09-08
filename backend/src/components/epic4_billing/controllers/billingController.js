@@ -75,14 +75,20 @@ export const updatePaymentStatus = async (req, res) => {
 };
 
 export const createPayroll = async (req, res) => {
+  const staff = await Staff.findById(req.body.staffId);
+  if (!staff) throw new AppError("Staff profile not found", 404);
+  const baseSalary = req.body.baseSalary ?? staff.baseSalary;
+  const allowances = req.body.allowances ?? staff.allowances ?? 0;
+  const deductions = req.body.deductions ?? staff.deductions ?? 0;
+  if (!baseSalary || baseSalary <= 0) throw new AppError("Base salary is required on staff profile or payroll form", 400, { baseSalary: "Base salary is required" });
   const attendanceDays = await Attendance.countDocuments({
     staffId: req.body.staffId,
     workDate: { $regex: `^${req.body.month}` },
     status: "checked_out"
   });
-  const dailyRate = req.body.baseSalary / 26;
-  const netSalary = Math.max(dailyRate * attendanceDays + req.body.allowances - req.body.deductions, 0);
-  const payroll = await Payroll.create({ ...req.body, attendanceDays, netSalary });
+  const dailyRate = baseSalary / 26;
+  const netSalary = Math.max(dailyRate * attendanceDays + allowances - deductions, 0);
+  const payroll = await Payroll.create({ ...req.body, baseSalary, allowances, deductions, attendanceDays, netSalary });
   return successResponse(res, "Payroll calculated successfully", payroll, 201);
 };
 
@@ -112,6 +118,61 @@ export const updatePayrollStatus = async (req, res) => {
   return successResponse(res, "Payroll status updated", payroll);
 };
 
+export const downloadInvoiceReceipt = async (req, res) => {
+  const filter = { _id: req.params.id };
+  if (req.user.role === ROLES.PATIENT) filter.patientId = req.user._id;
+  const invoice = await Invoice.findOne(filter).populate("patientId", "firstName lastName email");
+  if (!invoice) throw new AppError("Invoice not found", 404);
+  if (invoice.status !== "paid") throw new AppError("Receipt is available only after the invoice is fully paid", 409);
+
+  const lines = [
+    "Health Guard Medical Center",
+    "Payment Receipt",
+    `Invoice: ${invoice._id}`,
+    `Issued: ${invoice.updatedAt.toISOString()}`,
+    `Patient: ${nameFromUser(invoice.patientId)}`,
+    "",
+    "Items",
+    ...invoice.items.map((item) => `${item.description} x ${item.quantity} @ Rs. ${item.unitPrice.toFixed(2)} = Rs. ${item.lineTotal.toFixed(2)}`),
+    "",
+    `Total: Rs. ${invoice.subtotal.toFixed(2)}`,
+    `Paid: Rs. ${invoice.paidAmount.toFixed(2)}`,
+    "Status: Paid"
+  ];
+
+  res.setHeader("Content-Type", "text/plain; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="healthguard-receipt-${invoice._id}.txt"`);
+  return res.send(lines.join("\n"));
+};
+
+export const downloadPayslip = async (req, res) => {
+  const payroll = await Payroll.findById(req.params.id)
+    .populate({ path: "staffId", populate: { path: "userId", select: "firstName lastName email" } });
+  if (!payroll) throw new AppError("Payroll not found", 404);
+  if (![ROLES.MANAGER, ROLES.ADMIN].includes(req.user.role) && payroll.staffId?.userId?._id?.toString() !== req.user._id.toString()) {
+    throw new AppError("You can only download your own payslip", 403);
+  }
+
+  const lines = [
+    "Health Guard Medical Center",
+    "Staff Payslip",
+    `Month: ${payroll.month}`,
+    `Staff: ${nameFromUser(payroll.staffId?.userId)} (${payroll.staffId?.employeeId || "-"})`,
+    `Status: ${payroll.status}`,
+    "",
+    `Base Salary: Rs. ${payroll.baseSalary.toFixed(2)}`,
+    `Attendance Days: ${payroll.attendanceDays}`,
+    `Allowances: Rs. ${payroll.allowances.toFixed(2)}`,
+    `Deductions: Rs. ${payroll.deductions.toFixed(2)}`,
+    `Net Salary: Rs. ${payroll.netSalary.toFixed(2)}`,
+    payroll.paidAt ? `Paid At: ${payroll.paidAt.toISOString()}` : "Paid At: Pending"
+  ];
+
+  res.setHeader("Content-Type", "text/plain; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="healthguard-payslip-${payroll.month}-${payroll._id}.txt"`);
+  return res.send(lines.join("\n"));
+};
+
 export const revenueSummary = async (req, res) => {
   const invoices = await Invoice.find();
   const payments = await Payment.find({ status: { $ne: "voided" } });
@@ -122,3 +183,5 @@ export const revenueSummary = async (req, res) => {
   const payrollExpense = payroll.reduce((sum, item) => sum + item.netSalary, 0);
   return successResponse(res, "Revenue summary loaded", { invoiced, collected, outstanding, payrollExpense });
 };
+
+const nameFromUser = (user) => [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "Health Guard user";

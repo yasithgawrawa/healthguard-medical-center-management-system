@@ -28,7 +28,10 @@ export const createStaff = async (req, res) => {
     department: req.body.department,
     role: req.body.role,
     employmentDate: req.body.employmentDate,
-    emergencyContact: req.body.emergencyContact
+    emergencyContact: req.body.emergencyContact,
+    baseSalary: req.body.baseSalary,
+    allowances: req.body.allowances,
+    deductions: req.body.deductions
   });
 
   return successResponse(res, "Staff created successfully", { user: user.toSafeJSON(), staff }, 201);
@@ -46,7 +49,7 @@ export const updateStaff = async (req, res) => {
   const staff = await Staff.findById(req.params.id);
   if (!staff) throw new AppError("Staff not found", 404);
 
-  const staffUpdates = ["department", "role", "status", "emergencyContact"].reduce((acc, key) => {
+  const staffUpdates = ["department", "role", "status", "emergencyContact", "baseSalary", "allowances", "deductions"].reduce((acc, key) => {
     if (req.body[key] !== undefined) acc[key] = req.body[key];
     return acc;
   }, {});

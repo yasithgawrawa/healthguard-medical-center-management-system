@@ -13,11 +13,14 @@ const saleItemSchema = new mongoose.Schema(
 
 const pharmacySaleSchema = new mongoose.Schema(
   {
+    saleNumber: { type: String, unique: true, sparse: true, index: true },
     prescriptionId: { type: mongoose.Schema.Types.ObjectId, ref: "Prescription" },
     patientId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     soldBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     items: { type: [saleItemSchema], validate: [(items) => items.length > 0, "At least one item is required"] },
-    total: { type: Number, required: true, min: 0 }
+    total: { type: Number, required: true, min: 0 },
+    paymentStatus: { type: String, enum: ["paid"], default: "paid" },
+    billIssuedAt: { type: Date, default: Date.now }
   },
   { timestamps: true }
 );

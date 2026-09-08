@@ -57,7 +57,13 @@ export const createPharmacySale = async (req, res) => {
     saleItems.push({ ...item, unitPrice: medicine.price, lineTotal });
   }
 
+  const todayKey = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const saleNumber = `PH-${todayKey}-${String((await PharmacySale.countDocuments({
+    createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) }
+  })) + 1).padStart(4, "0")}`;
+
   const sale = await PharmacySale.create({
+    saleNumber,
     prescriptionId: req.body.prescriptionId,
     patientId: req.body.patientId,
     soldBy: req.user._id,
@@ -72,8 +78,42 @@ export const listPharmacySales = async (req, res) => {
   const sales = await PharmacySale.find()
     .populate("patientId", "firstName lastName email")
     .populate("items.medicineId", "name")
+    .populate("items.batchId", "batchNumber")
     .sort({ createdAt: -1 });
   return successResponse(res, "Pharmacy sale list loaded", sales);
+};
+
+export const downloadSaleBill = async (req, res) => {
+  const sale = await PharmacySale.findById(req.params.id)
+    .populate("patientId", "firstName lastName email")
+    .populate("soldBy", "firstName lastName")
+    .populate("items.medicineId", "name unit")
+    .populate("items.batchId", "batchNumber");
+  if (!sale) throw new AppError("Pharmacy sale not found", 404);
+  if (!sale.saleNumber) {
+    sale.saleNumber = `PH-LEGACY-${sale._id.toString().slice(-8).toUpperCase()}`;
+    sale.billIssuedAt = sale.billIssuedAt || sale.createdAt || new Date();
+    await sale.save();
+  }
+
+  const patientName = [sale.patientId?.firstName, sale.patientId?.lastName].filter(Boolean).join(" ") || "Walk-in patient";
+  const lines = [
+    "Health Guard Medical Center",
+    "Pharmacy Bill",
+    `Bill No: ${sale.saleNumber}`,
+    `Issued: ${(sale.billIssuedAt || sale.createdAt).toISOString()}`,
+    `Patient: ${patientName}`,
+    "",
+    "Items"
+  ];
+  sale.items.forEach((item) => {
+    lines.push(`${item.medicineId?.name || "Medicine"} (${item.batchId?.batchNumber || "Batch"}) x ${item.quantity} @ Rs. ${item.unitPrice.toFixed(2)} = Rs. ${item.lineTotal.toFixed(2)}`);
+  });
+  lines.push("", `Total Paid: Rs. ${sale.total.toFixed(2)}`, `Dispensed By: ${[sale.soldBy?.firstName, sale.soldBy?.lastName].filter(Boolean).join(" ") || "Health Guard"}`);
+
+  res.setHeader("Content-Type", "text/plain; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="${sale.saleNumber}.txt"`);
+  return res.send(lines.join("\n"));
 };
 
 export const inventoryAlerts = async (req, res) => {

@@ -30,6 +30,15 @@ const workedHours = (item) => {
   return `${Math.max((new Date(item.checkOutAt) - new Date(item.checkInAt)) / 36e5, 0).toFixed(1)}h`;
 };
 
+const saveBlob = (blob, filename) => {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+};
+
 const getCurrentPosition = () =>
   new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
@@ -123,6 +132,17 @@ export const StaffSelfServicePanel = () => {
       await load();
     } catch (error) {
       setToast({ type: "error", message: error.response?.data?.message || "Unable to submit leave request" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const downloadPayslip = async (item) => {
+    setBusy(true);
+    try {
+      saveBlob(await billingApi.downloadPayslip(item._id), `healthguard-payslip-${item.month}-${item._id}.txt`);
+    } catch (error) {
+      setToast({ type: "error", message: error.response?.data?.message || "Unable to download payslip" });
     } finally {
       setBusy(false);
     }
@@ -224,7 +244,8 @@ export const StaffSelfServicePanel = () => {
             { key: "attendanceDays", header: "Attendance Days" },
             { key: "baseSalary", header: "Base Salary", render: (item) => `Rs. ${Number(item.baseSalary || 0).toFixed(2)}` },
             { key: "netSalary", header: "Net Salary", render: (item) => `Rs. ${Number(item.netSalary || 0).toFixed(2)}` },
-            { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> }
+            { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
+            { key: "actions", header: "Actions", render: (item) => <button className="table-link-button" type="button" onClick={() => downloadPayslip(item)} disabled={busy}>Download</button> }
           ]}
           rows={payroll.slice(0, 5)}
           emptyText="No payslips available yet."

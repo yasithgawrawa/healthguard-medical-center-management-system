@@ -1,6 +1,7 @@
 import { apiClient } from "./apiClient.js";
 
 const unwrap = ({ data }) => data.data;
+const download = async (url) => (await apiClient.get(url, { responseType: "blob" })).data;
 
 export const inventoryApi = {
   alerts: async () => unwrap(await apiClient.get("/e3/inventory/alerts")),
@@ -16,5 +17,6 @@ export const inventoryApi = {
   createPurchase: async (payload) => unwrap(await apiClient.post("/e3/inventory/purchases", payload)),
   sales: async () => unwrap(await apiClient.get("/e3/inventory/sales")),
   salesReport: async () => unwrap(await apiClient.get("/e3/inventory/reports/sales")),
-  createSale: async (payload) => unwrap(await apiClient.post("/e3/inventory/sales", payload))
+  createSale: async (payload) => unwrap(await apiClient.post("/e3/inventory/sales", payload)),
+  downloadSaleBill: async (id) => download(`/e3/inventory/sales/${id}/bill`)
 };

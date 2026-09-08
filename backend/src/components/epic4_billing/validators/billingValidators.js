@@ -31,7 +31,7 @@ export const payrollSchema = z.object({
   body: z.object({
     staffId: objectIdSchema,
     month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Month must be YYYY-MM"),
-    baseSalary: moneySchema("Base salary"),
+    baseSalary: moneySchema("Base salary").optional(),
     allowances: moneySchema("Allowances").optional().default(0),
     deductions: moneySchema("Deductions").optional().default(0)
   })

@@ -23,7 +23,9 @@ import {
   listAppointments,
   listDoctors,
   listLabRequests,
+  listNotifications,
   listPrescriptions,
+  markNotificationRead,
   recordVitals,
   saveConsultation,
   updateAppointmentStatus,
@@ -37,6 +39,8 @@ router.post("/appointments", authorizeRoles(ROLES.PATIENT, ROLES.ADMIN, ROLES.NU
 router.get("/appointments/slots", authorizeRoles(ROLES.PATIENT, ROLES.ADMIN, ROLES.NURSE), validateRequest(slotQuerySchema), asyncHandler(listAppointmentSlots));
 router.get("/appointments", asyncHandler(listAppointments));
 router.get("/doctors", authorizeRoles(ROLES.PATIENT, ROLES.ADMIN, ROLES.NURSE), asyncHandler(listDoctors));
+router.get("/notifications", authorizeRoles(ROLES.PATIENT), asyncHandler(listNotifications));
+router.patch("/notifications/:id/read", authorizeRoles(ROLES.PATIENT), validateRequest(idParamSchema), asyncHandler(markNotificationRead));
 router.patch("/appointments/:id/cancel", authorizeRoles(ROLES.PATIENT, ROLES.ADMIN), validateRequest(idParamSchema), asyncHandler(cancelAppointment));
 router.patch("/appointments/:id/status", authorizeRoles(ROLES.NURSE, ROLES.DOCTOR, ROLES.ADMIN), validateRequest(appointmentStatusSchema), asyncHandler(updateAppointmentStatus));
 router.post("/vitals", authorizeRoles(ROLES.NURSE, ROLES.DOCTOR), validateRequest(vitalsSchema), asyncHandler(recordVitals));

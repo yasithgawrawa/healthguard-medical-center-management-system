@@ -7,6 +7,7 @@ import { idParamSchema } from "../../../shared/validators/commonSchemas.js";
 import {
   batchCrud,
   createPharmacySale,
+  downloadSaleBill,
   inventoryAlerts,
   listBatches,
   pharmacySalesReport,
@@ -38,5 +39,6 @@ router.post("/purchases", validateRequest(purchaseSchema), asyncHandler(recordPu
 router.get("/purchases", asyncHandler(listPurchases));
 router.post("/sales", validateRequest(saleSchema), asyncHandler(createPharmacySale));
 router.get("/sales", asyncHandler(listPharmacySales));
+router.get("/sales/:id/bill", validateRequest(idParamSchema), asyncHandler(downloadSaleBill));
 
 export default router;

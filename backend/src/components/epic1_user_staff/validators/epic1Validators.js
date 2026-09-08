@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ROLE_VALUES, ROLES } from "../../../shared/constants/roles.js";
-import { employeeIdSchema, nameSchema, phoneSchema, textNoNumbersSchema } from "../../../shared/validators/fieldSchemas.js";
+import { employeeIdSchema, moneySchema, nameSchema, phoneSchema, textNoNumbersSchema } from "../../../shared/validators/fieldSchemas.js";
 import { idParamSchema, objectIdSchema } from "../../../shared/validators/commonSchemas.js";
 
 const staffRoleValues = ROLE_VALUES.filter((role) => role !== ROLES.PATIENT);
@@ -18,6 +18,9 @@ export const createStaffSchema = z.object({
     role: z.enum(staffRoleValues),
     employmentDate: z.coerce.date(),
     emergencyContact: z.string().trim().optional().default(""),
+    baseSalary: moneySchema("Base salary").optional().default(0),
+    allowances: moneySchema("Allowances").optional().default(0),
+    deductions: moneySchema("Deductions").optional().default(0),
     password: passwordSchema
   })
 });
@@ -32,7 +35,10 @@ export const updateStaffSchema = z.object({
     department: textNoNumbersSchema("Department", 80).optional(),
     role: z.enum(staffRoleValues).optional(),
     status: z.enum(["active", "inactive"]).optional(),
-    emergencyContact: z.string().trim().optional()
+    emergencyContact: z.string().trim().optional(),
+    baseSalary: moneySchema("Base salary").optional(),
+    allowances: moneySchema("Allowances").optional(),
+    deductions: moneySchema("Deductions").optional()
   })
 });
 

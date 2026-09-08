@@ -14,6 +14,7 @@ import { formatDate, roleLabel, STAFF_ROLES, staffName } from "./e1Constants.js"
 import { StaffFormModal } from "./StaffFormModal.jsx";
 
 const PAGE_SIZE = 8;
+const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
 
 export const StaffManagementPanel = () => {
   const [staff, setStaff] = useState([]);
@@ -194,6 +195,9 @@ export const StaffManagementPanel = () => {
             <div><span>Department</span><strong>{modal.staff.department}</strong></div>
             <div><span>Employment Date</span><strong>{formatDate(modal.staff.employmentDate)}</strong></div>
             <div><span>Status</span><StatusBadge status={modal.staff.status} /></div>
+            <div><span>Base Salary</span><strong>{money(modal.staff.baseSalary)}</strong></div>
+            <div><span>Allowances</span><strong>{money(modal.staff.allowances)}</strong></div>
+            <div><span>Deductions</span><strong>{money(modal.staff.deductions)}</strong></div>
           </div>
         ) : null}
       </Modal>

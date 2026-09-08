@@ -30,7 +30,7 @@ This document tracks completion of all user stories across E1-E4 after the imple
 | E2-US07 Doctor records consultation details | Complete | Doctor consultation modal stores diagnosis, notes and finalization state. |
 | E2-US08 Doctor creates prescription | Complete | Doctor prescription workflow and patient/pharmacy prescription visibility. |
 | E2-US09 Doctor creates lab request | Complete | Doctor lab request workflow with priority. |
-| E2-US10 Patient receives lab request notification | Complete | Patient records panel highlights newly requested lab tests. |
+| E2-US10 Patient receives lab request notification | Complete | Doctor lab requests create persisted patient notifications with unread/read state in MongoDB. |
 | E2-US11 Lab assistant verifies lab request | Complete | Lab workspace can move requests to verified. |
 | E2-US12 Lab assistant updates lab progress | Complete | Lab workspace status updates through requested/verified/in progress/completed/cancelled. |
 | E2-US13 Lab assistant enters/uploads results | Complete | Lab result summary and report URL fields. |
@@ -57,7 +57,7 @@ This document tracks completion of all user stories across E1-E4 after the imple
 | E3-US14 Pharmacist/Manager views low-stock medicines | Complete | Low-stock count and alert data through shared inventory panel. |
 | E3-US15 Pharmacist/Manager views expiry information | Complete | Expiry alert data and batch expiry table. |
 | E3-US16 Pharmacist sells medicines | Complete | Record sale workflow with stock and expiry validation. |
-| E3-US17 Pharmacist generates bill for medicine sale | Complete | Sales table records bill total for each pharmacy sale. |
+| E3-US17 Pharmacist generates bill for medicine sale | Complete | Pharmacy sale creates a bill number and protected backend-generated downloadable bill. |
 | E3-US18 System reduces stock after sale | Complete | Backend sale controller deducts batch quantity after validated sale. |
 | E3-US19 Pharmacist views previous sales | Complete | Sales tab lists previous pharmacy sales. |
 | E3-US20 Pharmacist/Manager views sales reports | Complete | Pharmacy sales report tab shows total sales, revenue and top medicine. |
@@ -72,18 +72,18 @@ This document tracks completion of all user stories across E1-E4 after the imple
 | E4-US04 Cashier records payments | Complete | Cashier payment modal records cash/card/bank transfer payments. |
 | E4-US05 Cashier verifies payments | Complete | Payments tab supports recorded to verified transition. |
 | E4-US06 Cashier reconciles payments | Complete | Payments tab supports verified to reconciled transition. |
-| E4-US07 System generates receipt after payment | Complete | Paid invoice and payment history serve as receipt record. |
-| E4-US08 Patient views/downloads receipt | Complete | Patient paid invoice card can download a receipt text file. |
+| E4-US07 System generates receipt after payment | Complete | Fully paid invoices expose a protected backend-generated receipt endpoint. |
+| E4-US08 Patient views/downloads receipt | Complete | Patient paid invoice card downloads the real backend receipt for their invoice. |
 | E4-US09 Manager views revenue reports | Complete | Revenue tab shows invoiced, collected, outstanding and payroll expense totals. |
 | E4-US10 Manager views outstanding invoices | Complete | Manager invoice table includes outstanding balances and statuses. |
-| E4-US11 Admin/Manager maintains salary information | Complete | Payroll calculation form captures base salary, allowances and deductions. |
+| E4-US11 Admin/Manager maintains salary information | Complete | Staff profiles store base salary, allowances and deductions; payroll can auto-fill from salary master data. |
 | E4-US12 System obtains attendance records for salary | Complete | Payroll calculation counts checked-out E1 attendance records by staff/month. |
 | E4-US13 System calculates monthly salary | Complete | Backend computes attendance days, daily rate and net salary. |
 | E4-US14 Manager reviews salaries | Complete | Payroll status transition supports draft to reviewed. |
 | E4-US15 Manager approves salary payments | Complete | Payroll status transition supports reviewed to approved. |
 | E4-US16 Manager records completed salary payments | Complete | Payroll status transition supports approved to paid with paid date. |
-| E4-US17 System generates payslip | Complete | Payroll records include attendance, base salary, allowances, deductions, net salary and status. |
-| E4-US18 Staff views monthly payslip | Complete | Staff self-service panel includes payslip table. |
+| E4-US17 System generates payslip | Complete | Payroll records expose a protected backend-generated downloadable payslip. |
+| E4-US18 Staff views monthly payslip | Complete | Staff self-service panel includes payslip table and own-payslip download action. |
 | E4-US19 Staff views salary payment history | Complete | Staff self-service payroll table lists salary history. |
 | E4-US20 Manager views payroll reports | Complete | Manager payroll tab lists payroll records and payroll expense summary. |
 

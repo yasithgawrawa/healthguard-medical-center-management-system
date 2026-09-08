@@ -5,7 +5,7 @@ import { z } from "zod";
 import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
 import { Modal } from "../shared/Modal.jsx";
-import { requiredEmployeeId, requiredName, requiredPhone, requiredTextNoNumbers, stripDigits, stripNonId, stripNonPhone } from "../../utils/validationSchemas.js";
+import { requiredEmployeeId, requiredMoney, requiredName, requiredPhone, requiredTextNoNumbers, stripDigits, stripNonId, stripNonPhone } from "../../utils/validationSchemas.js";
 import { STAFF_ROLES } from "./e1Constants.js";
 
 const baseSchema = z.object({
@@ -17,6 +17,9 @@ const baseSchema = z.object({
   department: requiredTextNoNumbers("Department", 80),
   role: z.string().min(1, "Role is required"),
   employmentDate: z.string().min(1, "Employment date is required"),
+  baseSalary: requiredMoney("Base salary").min(0.01, "Base salary must be greater than 0"),
+  allowances: requiredMoney("Allowances"),
+  deductions: requiredMoney("Deductions"),
   password: z.string().optional()
 });
 
@@ -39,6 +42,9 @@ const toFormValues = (staff) => ({
   department: staff?.department || "",
   role: staff?.role || "",
   employmentDate: staff?.employmentDate ? new Date(staff.employmentDate).toISOString().slice(0, 10) : "",
+  baseSalary: staff?.baseSalary ?? 0,
+  allowances: staff?.allowances ?? 0,
+  deductions: staff?.deductions ?? 0,
   password: ""
 });
 
@@ -98,6 +104,13 @@ export const StaffFormModal = ({ open, mode = "create", staff, onClose, onSubmit
             ))}
           </FormSelect>
           <FormInput label="Employment Date" type="date" error={errors.employmentDate?.message} {...register("employmentDate")} />
+        </div>
+
+        <div className="form-section-title">Salary Information</div>
+        <div className="form-grid">
+          <FormInput label="Base Salary" type="number" min="0" step="0.01" error={errors.baseSalary?.message} {...register("baseSalary")} />
+          <FormInput label="Allowances" type="number" min="0" step="0.01" error={errors.allowances?.message} {...register("allowances")} />
+          <FormInput label="Deductions" type="number" min="0" step="0.01" error={errors.deductions?.message} {...register("deductions")} />
         </div>
 
         {!isEdit ? (

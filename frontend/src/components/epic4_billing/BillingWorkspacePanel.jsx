@@ -20,6 +20,14 @@ import { FormSelect } from "../shared/forms/FormSelect.jsx";
 const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
 const name = (user) => [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Patient";
 const staffName = (staff) => [staff?.userId?.firstName, staff?.userId?.lastName].filter(Boolean).join(" ") || staff?.employeeId || "Staff";
+const saveBlob = (blob, filename) => {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+};
 
 const invoiceSchema = z.object({
   appointmentId: z.string().min(1, "Select appointment"),
@@ -34,7 +42,7 @@ const paymentSchema = z.object({
 const payrollSchema = z.object({
   staffId: z.string().min(1, "Select staff member"),
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Select payroll month"),
-  baseSalary: requiredMoney("Base salary"),
+  baseSalary: requiredMoney("Base salary").min(0.01, "Base salary must be greater than 0"),
   allowances: requiredMoney("Allowances"),
   deductions: requiredMoney("Deductions")
 });
@@ -56,7 +64,8 @@ export const BillingWorkspacePanel = () => {
   const isCashier = [ROLES.CASHIER, ROLES.ADMIN].includes(user?.role);
 
   const schema = modal.type === "payment" ? paymentSchema : modal.type === "payroll" ? payrollSchema : invoiceSchema;
-  const { register, handleSubmit, reset, formState: { errors } } = useForm({ resolver: zodResolver(schema), mode: "onChange" });
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({ resolver: zodResolver(schema), mode: "onChange" });
+  const selectedStaffId = watch("staffId");
 
   const load = async () => {
     try {
@@ -82,6 +91,15 @@ export const BillingWorkspacePanel = () => {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (modal.type !== "payroll" || !selectedStaffId) return;
+    const selectedStaff = staff.find((item) => item._id === selectedStaffId);
+    if (!selectedStaff) return;
+    setValue("baseSalary", selectedStaff.baseSalary || 0, { shouldValidate: true });
+    setValue("allowances", selectedStaff.allowances || 0, { shouldValidate: true });
+    setValue("deductions", selectedStaff.deductions || 0, { shouldValidate: true });
+  }, [modal.type, selectedStaffId, setValue, staff]);
 
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -141,6 +159,28 @@ export const BillingWorkspacePanel = () => {
     }
   };
 
+  const downloadPayslip = async (item) => {
+    setBusy(true);
+    try {
+      saveBlob(await billingApi.downloadPayslip(item._id), `healthguard-payslip-${item.month}-${item._id}.txt`);
+    } catch (error) {
+      setToast({ type: "error", message: error.response?.data?.message || "Unable to download payslip" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const downloadReceipt = async (invoice) => {
+    setBusy(true);
+    try {
+      saveBlob(await billingApi.downloadReceipt(invoice._id), `healthguard-receipt-${invoice._id}.txt`);
+    } catch (error) {
+      setToast({ type: "error", message: error.response?.data?.message || "Unable to download receipt" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <section className="e1-panel" id="billing-payments">
       <Toast toast={toast} onClose={() => setToast(null)} />
@@ -169,7 +209,7 @@ export const BillingWorkspacePanel = () => {
               { key: "paid", header: "Paid", render: (item) => money(item.paidAmount) },
               { key: "outstanding", header: "Outstanding", render: (item) => money(item.outstandingAmount) },
               { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
-              { key: "actions", header: "Actions", render: (item) => isCashier ? <button className="table-link-button" type="button" onClick={() => { reset({ amount: item.outstandingAmount || "", method: "cash" }); setModal({ type: "payment", record: item }); }} disabled={item.outstandingAmount <= 0}>Record Payment</button> : null }
+              { key: "actions", header: "Actions", render: (item) => <div className="inline-actions">{isCashier ? <button className="table-link-button" type="button" onClick={() => { reset({ amount: item.outstandingAmount || "", method: "cash" }); setModal({ type: "payment", record: item }); }} disabled={item.outstandingAmount <= 0}>Record Payment</button> : null}{item.status === "paid" ? <button className="table-link-button" type="button" onClick={() => downloadReceipt(item)} disabled={busy}>Receipt</button> : null}</div> }
             ]}
           />
         </>
@@ -206,7 +246,7 @@ export const BillingWorkspacePanel = () => {
             { key: "attendanceDays", header: "Attendance Days" },
             { key: "netSalary", header: "Net Salary", render: (item) => money(item.netSalary) },
             { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
-            { key: "actions", header: "Actions", render: (item) => isManager ? <div className="inline-actions"><button type="button" onClick={() => changePayrollStatus(item, "reviewed")} disabled={busy || item.status !== "draft"}>Review</button><button type="button" onClick={() => changePayrollStatus(item, "approved")} disabled={busy || item.status !== "reviewed"}>Approve</button><button type="button" onClick={() => changePayrollStatus(item, "paid")} disabled={busy || item.status !== "approved"}>Mark Paid</button></div> : null }
+            { key: "actions", header: "Actions", render: (item) => isManager ? <div className="inline-actions"><button type="button" onClick={() => changePayrollStatus(item, "reviewed")} disabled={busy || item.status !== "draft"}>Review</button><button type="button" onClick={() => changePayrollStatus(item, "approved")} disabled={busy || item.status !== "reviewed"}>Approve</button><button type="button" onClick={() => changePayrollStatus(item, "paid")} disabled={busy || item.status !== "approved"}>Mark Paid</button><button type="button" onClick={() => downloadPayslip(item)} disabled={busy}>Payslip</button></div> : null }
           ]}
           emptyText="No payroll records yet."
         />

@@ -11,6 +11,7 @@ import { User } from "./components/epic1_user_staff/models/User.js";
 import { Appointment } from "./components/epic2_clinical/models/Appointment.js";
 import { Consultation } from "./components/epic2_clinical/models/Consultation.js";
 import { LabRequest } from "./components/epic2_clinical/models/LabRequest.js";
+import { Notification } from "./components/epic2_clinical/models/Notification.js";
 import { Prescription } from "./components/epic2_clinical/models/Prescription.js";
 import { Vitals } from "./components/epic2_clinical/models/Vitals.js";
 import { Medicine } from "./components/epic3_inventory/models/Medicine.js";
@@ -48,6 +49,18 @@ const staffUsers = [
   ["Tharindu", "Abeysekara", "lab@healthguard.local", "+94771234507", ROLES.LAB_ASSISTANT, "HG-LAB-001", "Laboratory", "2022-06-21"]
 ];
 
+const salaryByEmployeeId = {
+  "HG-ADM-001": { baseSalary: 180000, allowances: 10000, deductions: 2500 },
+  "HG-MGR-001": { baseSalary: 165000, allowances: 9000, deductions: 2200 },
+  "HG-DOC-001": { baseSalary: 240000, allowances: 15000, deductions: 4000 },
+  "HG-DOC-002": { baseSalary: 260000, allowances: 16000, deductions: 4200 },
+  "HG-NUR-001": { baseSalary: 95000, allowances: 5000, deductions: 1500 },
+  "HG-NUR-002": { baseSalary: 92000, allowances: 4500, deductions: 1300 },
+  "HG-PHA-001": { baseSalary: 120000, allowances: 5000, deductions: 1500 },
+  "HG-CAS-001": { baseSalary: 85000, allowances: 4000, deductions: 1200 },
+  "HG-LAB-001": { baseSalary: 98000, allowances: 4500, deductions: 1400 }
+};
+
 const patientUsers = [
   ["Saman", "Kumara", "saman.kumara@example.lk", "+94712345671", "No. 24, Galle Road, Colombo 03", "1984-04-16", "male"],
   ["Nethmi", "Herath", "nethmi.herath@example.lk", "+94712345672", "No. 12, Lake Road, Kandy", "1996-10-02", "female"],
@@ -73,6 +86,7 @@ const upsertUser = async ({ firstName, lastName, email, phone, role, address, da
 
 for (const [firstName, lastName, email, phone, role, employeeId, department, employmentDate] of staffUsers) {
   const user = await upsertUser({ firstName, lastName, email, phone, role, address: "Health Guard Medical Center, Colombo 07" });
+  const salary = salaryByEmployeeId[employeeId];
   let staff = await Staff.findOne({ userId: user._id });
   if (staff) {
     staff.employeeId = employeeId;
@@ -81,11 +95,14 @@ for (const [firstName, lastName, email, phone, role, employeeId, department, emp
     staff.status = "active";
     staff.employmentDate = new Date(employmentDate);
     staff.emergencyContact = "+94112555999";
+    staff.baseSalary = salary.baseSalary;
+    staff.allowances = salary.allowances;
+    staff.deductions = salary.deductions;
     await staff.save();
   } else {
     staff = await Staff.findOneAndUpdate(
       { employeeId },
-      { userId: user._id, employeeId, department, role, status: "active", employmentDate: new Date(employmentDate), emergencyContact: "+94112555999" },
+      { userId: user._id, employeeId, department, role, status: "active", employmentDate: new Date(employmentDate), emergencyContact: "+94112555999", ...salary },
       { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
     );
   }
@@ -202,15 +219,27 @@ const prescription = await Prescription.findOneAndUpdate(
   { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
 );
 
-await LabRequest.findOneAndUpdate(
+const ecgRequest = await LabRequest.findOneAndUpdate(
   { appointmentId: appointments[2]._id, testName: "ECG" },
   { appointmentId: appointments[2]._id, patientId: appointments[2].patientId, doctorId: appointments[2].doctorId, testName: "ECG", priority: "urgent", status: "in_progress", verifiedBy: labUser._id },
   { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
 );
 
-await LabRequest.findOneAndUpdate(
+const fbsRequest = await LabRequest.findOneAndUpdate(
   { appointmentId: appointments[3]._id, testName: "Fasting Blood Sugar" },
   { appointmentId: appointments[3]._id, patientId: appointments[3].patientId, doctorId: appointments[3].doctorId, testName: "Fasting Blood Sugar", priority: "routine", status: "completed", resultSummary: "FBS 112 mg/dL. Continue monitoring.", resultUrl: "https://healthguard.local/reports/fbs-demo.pdf", verifiedBy: labUser._id },
+  { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+);
+
+await Notification.findOneAndUpdate(
+  { patientId: ecgRequest.patientId, relatedId: ecgRequest._id, type: "lab_request" },
+  { patientId: ecgRequest.patientId, type: "lab_request", title: "New lab test requested", message: "ECG has been requested by your doctor.", relatedModel: "LabRequest", relatedId: ecgRequest._id, createdBy: doctor2._id },
+  { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+);
+
+await Notification.findOneAndUpdate(
+  { patientId: fbsRequest.patientId, relatedId: fbsRequest._id, type: "lab_result" },
+  { patientId: fbsRequest.patientId, type: "lab_result", title: "Lab result is ready", message: "Fasting Blood Sugar result has been uploaded to your patient portal.", relatedModel: "LabRequest", relatedId: fbsRequest._id, createdBy: labUser._id },
   { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
 );
 
@@ -252,11 +281,14 @@ const metforminBatch = await MedicineBatch.findOne({ medicineId: metformin._id }
 await PharmacySale.findOneAndUpdate(
   { prescriptionId: prescription._id },
   {
+    saleNumber: `PH-${now.toISOString().slice(0, 10).replace(/-/g, "")}-0001`,
     prescriptionId: prescription._id,
     patientId: prescription.patientId,
     soldBy: pharmacist._id,
     items: [{ medicineId: metformin._id, batchId: metforminBatch._id, quantity: 20, unitPrice: metformin.price, lineTotal: metformin.price * 20 }],
-    total: metformin.price * 20
+    total: metformin.price * 20,
+    paymentStatus: "paid",
+    billIssuedAt: atTime(-1, 15)
   },
   { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
 );
@@ -285,11 +317,12 @@ await Payment.findOneAndUpdate(
   { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
 );
 
-for (const [employeeId, baseSalary] of [["HG-NUR-001", 95000], ["HG-PHA-001", 120000], ["HG-CAS-001", 85000]]) {
+for (const employeeId of ["HG-NUR-001", "HG-PHA-001", "HG-CAS-001"]) {
   const staff = staffByEmployeeId.get(employeeId);
+  const salary = salaryByEmployeeId[employeeId];
   await Payroll.findOneAndUpdate(
     { staffId: staff._id, month },
-    { staffId: staff._id, month, baseSalary, attendanceDays: 20, allowances: 5000, deductions: 1500, netSalary: Math.max((baseSalary / 26) * 20 + 5000 - 1500, 0), status: "reviewed", reviewedBy: userByEmail.get("manager@healthguard.local")._id },
+    { staffId: staff._id, month, baseSalary: salary.baseSalary, attendanceDays: 20, allowances: salary.allowances, deductions: salary.deductions, netSalary: Math.max((salary.baseSalary / 26) * 20 + salary.allowances - salary.deductions, 0), status: "reviewed", reviewedBy: userByEmail.get("manager@healthguard.local")._id },
     { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
   );
 }

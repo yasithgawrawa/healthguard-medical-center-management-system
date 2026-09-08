@@ -1,6 +1,7 @@
 import { Appointment } from "../models/Appointment.js";
 import { Consultation } from "../models/Consultation.js";
 import { LabRequest } from "../models/LabRequest.js";
+import { Notification } from "../models/Notification.js";
 import { Prescription } from "../models/Prescription.js";
 import { Vitals } from "../models/Vitals.js";
 import { ROLES } from "../../../shared/constants/roles.js";
@@ -164,6 +165,15 @@ export const createLabRequest = async (req, res) => {
     patientId: req.body.patientId || appointment.patientId,
     doctorId: req.user.role === ROLES.DOCTOR ? req.user._id : req.body.doctorId || appointment.doctorId
   });
+  await Notification.create({
+    patientId: labRequest.patientId,
+    type: "lab_request",
+    title: "New lab test requested",
+    message: `${labRequest.testName} has been requested by your doctor.`,
+    relatedModel: "LabRequest",
+    relatedId: labRequest._id,
+    createdBy: req.user._id
+  });
   return successResponse(res, "Lab request created successfully", labRequest, 201);
 };
 
@@ -180,10 +190,35 @@ export const listLabRequests = async (req, res) => {
 export const updateLabRequest = async (req, res) => {
   const request = await LabRequest.findById(req.params.id);
   if (!request) throw new AppError("Lab request not found", 404);
+  const wasIncomplete = request.status !== "completed" && request.status !== "verified";
   request.status = req.body.status;
   request.resultSummary = req.body.resultSummary ?? request.resultSummary;
   request.resultUrl = req.body.resultUrl ?? request.resultUrl;
   if (req.body.status === "verified") request.verifiedBy = req.user._id;
   await request.save();
+  if (wasIncomplete && ["completed", "verified"].includes(request.status)) {
+    await Notification.create({
+      patientId: request.patientId,
+      type: "lab_result",
+      title: "Lab result is ready",
+      message: `${request.testName} result has been uploaded to your patient portal.`,
+      relatedModel: "LabRequest",
+      relatedId: request._id,
+      createdBy: req.user._id
+    });
+  }
   return successResponse(res, "Lab request updated successfully", request);
+};
+
+export const listNotifications = async (req, res) => {
+  const notifications = await Notification.find({ patientId: req.user._id }).sort({ createdAt: -1 }).limit(25);
+  return successResponse(res, "Patient notifications loaded", notifications);
+};
+
+export const markNotificationRead = async (req, res) => {
+  const notification = await Notification.findOne({ _id: req.params.id, patientId: req.user._id });
+  if (!notification) throw new AppError("Notification not found", 404);
+  notification.readAt = notification.readAt || new Date();
+  await notification.save();
+  return successResponse(res, "Notification marked as read", notification);
 };

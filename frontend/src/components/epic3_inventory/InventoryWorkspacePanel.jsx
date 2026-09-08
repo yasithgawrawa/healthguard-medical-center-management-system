@@ -17,6 +17,14 @@ const dateOnly = (value) => (value ? new Date(value).toISOString().slice(0, 10) 
 const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
 const medicineName = (item) => item?.medicineId?.name || item?.medicine || item?.name || "Medicine";
 const batchMedicineId = (batch) => batch?.medicineId?._id || batch?.medicineId;
+const saveBlob = (blob, filename) => {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+};
 
 const schemas = {
   medicine: z.object({
@@ -159,6 +167,18 @@ export const InventoryWorkspacePanel = () => {
     }
   };
 
+  const downloadSaleBill = async (sale) => {
+    setBusy(true);
+    try {
+      const bill = await inventoryApi.downloadSaleBill(sale._id);
+      saveBlob(bill, `${sale.saleNumber || `pharmacy-bill-${sale._id}`}.txt`);
+    } catch (error) {
+      setToast({ type: "error", message: error.response?.data?.message || "Unable to download pharmacy bill" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <section className="e1-panel" id="pharmacy-inventory">
       <Toast toast={toast} onClose={() => setToast(null)} />
@@ -230,9 +250,11 @@ export const InventoryWorkspacePanel = () => {
           rows={sales}
           columns={[
             { key: "createdAt", header: "Date", render: (item) => dateOnly(item.createdAt) },
+            { key: "saleNumber", header: "Bill No", render: (item) => item.saleNumber || `PH-LEGACY-${item._id?.slice(-8)?.toUpperCase()}` },
             { key: "patient", header: "Patient", render: (item) => [item.patientId?.firstName, item.patientId?.lastName].filter(Boolean).join(" ") || "-" },
             { key: "items", header: "Items", render: (item) => `${item.items?.length || 0} item(s)` },
-            { key: "total", header: "Bill Total", render: (item) => money(item.total) }
+            { key: "total", header: "Bill Total", render: (item) => money(item.total) },
+            { key: "actions", header: "Actions", render: (item) => <button className="table-link-button" type="button" onClick={() => downloadSaleBill(item)} disabled={busy}>Download Bill</button> }
           ]}
         />
       ) : null}

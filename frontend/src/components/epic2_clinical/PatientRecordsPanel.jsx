@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { CalendarCheck, CreditCard, FileText, Pill, RefreshCw } from "lucide-react";
+import { Bell, CalendarCheck, CreditCard, FileText, Pill, RefreshCw } from "lucide-react";
 import { patientApi } from "../../services/patientApi.js";
 
 const formatDate = (value) => {
@@ -14,7 +14,17 @@ const emptyText = {
   appointments: "No appointments saved yet.",
   labs: "No laboratory requests found.",
   prescriptions: "No prescriptions found.",
-  invoices: "No invoices found."
+  invoices: "No invoices found.",
+  notifications: "No notifications yet."
+};
+
+const saveBlob = (blob, filename) => {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
 };
 
 export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
@@ -22,7 +32,8 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
     appointments: [],
     labs: [],
     prescriptions: [],
-    invoices: []
+    invoices: [],
+    notifications: []
   });
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");
@@ -32,13 +43,14 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
     setLoading(true);
     setError("");
     try {
-      const [appointments, labs, prescriptions, invoices] = await Promise.all([
+      const [appointments, labs, prescriptions, invoices, notifications] = await Promise.all([
         patientApi.getAppointments(),
         patientApi.getLabRequests(),
         patientApi.getPrescriptions(),
-        patientApi.getInvoices()
+        patientApi.getInvoices(),
+        patientApi.getNotifications()
       ]);
-      setData({ appointments, labs, prescriptions, invoices });
+      setData({ appointments, labs, prescriptions, invoices, notifications });
     } catch (err) {
       setError(err.response?.data?.message || "Unable to load patient records from MongoDB");
     } finally {
@@ -65,24 +77,48 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
 
   const canCancel = (item) => item.status === "booked" && new Date(item.appointmentDate) > new Date();
 
-  const downloadReceipt = (invoice) => {
-    const receipt = [
-      "Health Guard Medical Center",
-      `Receipt for invoice ${invoice._id}`,
-      `Status: ${invoice.status}`,
-      `Total: Rs. ${Number(invoice.subtotal || 0).toFixed(2)}`,
-      `Paid: Rs. ${Number(invoice.paidAmount || 0).toFixed(2)}`,
-      `Outstanding: Rs. ${Number(invoice.outstandingAmount || 0).toFixed(2)}`
-    ].join("\n");
-    const url = URL.createObjectURL(new Blob([receipt], { type: "text/plain" }));
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `healthguard-receipt-${invoice._id}.txt`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+  const downloadReceipt = async (invoice) => {
+    setBusyId(invoice._id);
+    try {
+      saveBlob(await patientApi.downloadReceipt(invoice._id), `healthguard-receipt-${invoice._id}.txt`);
+    } catch (err) {
+      setError(err.response?.data?.message || "Unable to download receipt");
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const markNotificationRead = async (id) => {
+    setBusyId(id);
+    try {
+      await patientApi.markNotificationRead(id);
+      await load();
+    } catch (err) {
+      setError(err.response?.data?.message || "Unable to update notification");
+    } finally {
+      setBusyId("");
+    }
   };
 
   const sections = [
+    {
+      key: "notifications",
+      title: "Notifications",
+      icon: Bell,
+      records: data.notifications,
+      render: (item) => (
+        <>
+          <strong>{item.title}</strong>
+          <span>{item.message}</span>
+          <small>{formatDate(item.createdAt)}</small>
+          {!item.readAt ? (
+            <button className="table-link-button" type="button" onClick={() => markNotificationRead(item._id)} disabled={busyId === item._id}>
+              Mark read
+            </button>
+          ) : null}
+        </>
+      )
+    },
     {
       key: "appointments",
       title: "My Appointments",
@@ -143,8 +179,8 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
           <span>{item.status}</span>
           <small>Total: Rs. {Number(item.subtotal || 0).toFixed(2)}</small>
           {item.status === "paid" ? (
-            <button className="table-link-button" type="button" onClick={() => downloadReceipt(item)}>
-              Download receipt
+            <button className="table-link-button" type="button" onClick={() => downloadReceipt(item)} disabled={busyId === item._id}>
+              {busyId === item._id ? "Downloading..." : "Download receipt"}
             </button>
           ) : null}
         </>
