@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, Lock, Mail, ShieldPlus } from "lucide-react";
+import { AlertCircle, ShieldPlus } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -7,23 +7,12 @@ import { z } from "zod";
 import { FormInput } from "../../components/shared/forms/FormInput.jsx";
 import { SubmitButton } from "../../components/shared/forms/SubmitButton.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { DASHBOARD_PATH_BY_ROLE, ROLES } from "../../utils/roles.js";
+import { DASHBOARD_PATH_BY_ROLE } from "../../utils/roles.js";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email address"),
   password: z.string().min(1, "Password is required")
 });
-
-const demoAccounts = [
-  { role: "Doctor", email: "doctor@healthguard.local", label: "Doctor" },
-  { role: "Patient", email: "patient@healthguard.local", label: "Patient" },
-  { role: "Admin", email: "admin@healthguard.local", label: "Admin" },
-  { role: "Nurse", email: "nurse@healthguard.local", label: "Nurse" },
-  { role: "Pharmacist", email: "pharmacist@healthguard.local", label: "Pharmacist" },
-  { role: "Cashier", email: "cashier@healthguard.local", label: "Cashier" },
-  { role: "Lab", email: "lab@healthguard.local", label: "Lab" },
-  { role: "Manager", email: "manager@healthguard.local", label: "Manager" }
-];
 
 export const LoginPage = () => {
   const { login } = useAuth();
@@ -33,7 +22,6 @@ export const LoginPage = () => {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors, isSubmitting }
   } = useForm({ resolver: zodResolver(schema) });
 
@@ -45,11 +33,6 @@ export const LoginPage = () => {
     } catch (error) {
       setApiError(error.response?.data?.message || "Login failed. Please check your credentials.");
     }
-  };
-
-  const handleFillDemo = (email) => {
-    setValue("email", email);
-    setValue("password", "Password@123");
   };
 
   return (
@@ -94,22 +77,6 @@ export const LoginPage = () => {
           <p>
             New patient? <Link to="/register">Create an account</Link>
           </p>
-        </div>
-
-        <div className="demo-role-box">
-          <span>Quick Demo Logins (Password@123):</span>
-          <div className="role-chip-grid">
-            {demoAccounts.map((acc) => (
-              <button
-                type="button"
-                className="role-chip-btn"
-                key={acc.role}
-                onClick={() => handleFillDemo(acc.email)}
-              >
-                {acc.label}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
     </section>

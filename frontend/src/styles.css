@@ -1924,47 +1924,6 @@ main {
   text-decoration: underline;
 }
 
-/* Fast Role Selector for Demo/Evaluation */
-.demo-role-box {
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px dashed var(--line);
-}
-
-.demo-role-box span {
-  display: block;
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-  margin-bottom: 10px;
-}
-
-.role-chip-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.role-chip-btn {
-  padding: 5px 10px;
-  background: var(--brand-50);
-  border: 1px solid var(--brand-200);
-  border-radius: var(--radius-pill);
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--brand-700);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.role-chip-btn:hover {
-  background: var(--brand-600);
-  color: #ffffff;
-  border-color: var(--brand-600);
-}
-
 /* ==========================================================================
    DASHBOARDS & SHELL
    ========================================================================== */
