@@ -2,6 +2,7 @@
   "name": "healthguard-medical-center-management-system",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Integrated MERN medical center management system with role-based epic modules.",
   "scripts": {
     "dev": "concurrently \"npm run dev --workspace backend\" \"npm run dev --workspace frontend\"",

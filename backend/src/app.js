@@ -14,12 +14,29 @@ import { successResponse } from "./shared/utils/apiResponse.js";
 import { env } from "./shared/config/env.js";
 
 const app = express();
-const allowedOrigins = new Set([env.CLIENT_ORIGIN, "http://localhost:5173", "http://127.0.0.1:5173"]);
+const vercelOrigin = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null;
+const allowedOrigins = new Set([
+  env.CLIENT_ORIGIN,
+  vercelOrigin,
+  "http://localhost:5173",
+  "http://127.0.0.1:5173"
+].filter(Boolean));
+
+const isAllowedVercelPreview = (origin) => {
+  try {
+    const { hostname, protocol } = new URL(origin);
+    return protocol === "https:" && hostname.endsWith(".vercel.app");
+  } catch {
+    return false;
+  }
+};
 
 app.use(helmet());
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+    if (!origin || allowedOrigins.has(origin) || isAllowedVercelPreview(origin)) {
+      return callback(null, true);
+    }
     return callback(new Error("Origin not allowed by CORS"));
   },
   credentials: true
