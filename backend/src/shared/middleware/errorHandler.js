@@ -9,6 +9,10 @@ const formatZodErrors = (error) =>
   }, {});
 
 export const errorHandler = (error, req, res, next) => {
+  if (process.env.NODE_ENV !== "production") {
+    console.error(error);
+  }
+
   if (error instanceof ZodError) {
     return errorResponse(res, "Validation failed", 400, formatZodErrors(error));
   }

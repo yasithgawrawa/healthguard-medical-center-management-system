@@ -41,6 +41,11 @@ export const shiftSchema = z.object({
     startTime: z.coerce.date(),
     endTime: z.coerce.date(),
     location: z.string().trim().min(2),
+    geoFence: z.object({
+      latitude: z.coerce.number().min(-90).max(90),
+      longitude: z.coerce.number().min(-180).max(180),
+      radiusMeters: z.coerce.number().min(10).max(1000).default(100)
+    }).optional(),
     notes: z.string().trim().max(250).optional().default("")
   }).refine((data) => data.endTime > data.startTime, {
     path: ["endTime"],
@@ -51,6 +56,9 @@ export const shiftSchema = z.object({
 export const attendanceCheckInSchema = z.object({
   body: z.object({
     staffId: objectIdSchema,
+    latitude: z.coerce.number().min(-90).max(90).optional(),
+    longitude: z.coerce.number().min(-180).max(180).optional(),
+    accuracyMeters: z.coerce.number().min(0).optional(),
     notes: z.string().trim().max(250).optional().default("")
   })
 });
@@ -73,5 +81,14 @@ export const reviewLeaveSchema = z.object({
   body: z.object({
     status: z.enum(["approved", "rejected"]),
     reviewNote: z.string().trim().max(250).optional().default("")
+  })
+});
+
+export const centerLocationSchema = z.object({
+  body: z.object({
+    name: z.string().trim().min(2).max(120),
+    latitude: z.coerce.number().min(-90).max(90),
+    longitude: z.coerce.number().min(-180).max(180),
+    radiusMeters: z.coerce.number().min(10).max(1000)
   })
 });

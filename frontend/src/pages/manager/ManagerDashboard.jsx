@@ -1,17 +1,28 @@
-import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
-import { OperationPanel } from "../../components/shared/OperationPanel.jsx";
-import { e1WorkforceActions, e3Actions, e4Actions } from "../../utils/operationConfigs.js";
+import { CalendarPlus, ClipboardCheck, ClipboardList } from "lucide-react";
+import { DashboardQuickActions } from "../../components/shared/DashboardQuickActions.jsx";
+import { WorkforceManagementPanel } from "../../components/epic1_user_staff/WorkforceManagementPanel.jsx";
 
 export const ManagerDashboard = () => (
-  <div id="overview">
-    <h1>Manager Dashboard</h1>
-    <div className="dashboard-grid">
-      <DashboardCard title="Workforce" value="Monitor" detail="Attendance, shifts and leave" />
-      <DashboardCard title="Inventory" value="Alerts" detail="Low-stock and expiry view" />
-      <DashboardCard title="Finance" value="Reports" detail="Revenue, invoices and payroll" />
+  <div id="overview" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+    <div className="dashboard-header-banner">
+      <div>
+        <h1>Manager Overview</h1>
+        <p>Plan shifts, monitor attendance and review leave requests for day-to-day staffing.</p>
+      </div>
+      <div className="dashboard-live-indicator">
+        <div className="live-dot" />
+        <span>Operations Normal</span>
+      </div>
     </div>
-    <OperationPanel title="Workforce Monitoring" description="E1 attendance, shifts and leave review." listPath="/e1/workforce/attendance" actions={e1WorkforceActions} />
-    <OperationPanel title="Inventory Oversight" description="E3 stock, supplier and pharmacy workflows." listPath="/e3/inventory/alerts" actions={e3Actions} />
-    <OperationPanel title="Finance And Payroll" description="E4 revenue, payment and payroll workflows." listPath="/e4/billing/summary" actions={e4Actions} />
+
+    <DashboardQuickActions
+      actions={[
+        { label: "Create Shift", detail: "Schedule active staff", icon: CalendarPlus, href: "#manager-workforce" },
+        { label: "Review Attendance", detail: "Search staff attendance records", icon: ClipboardCheck, href: "#manager-workforce" },
+        { label: "Review Leave", detail: "Approve or reject requests", icon: ClipboardList, href: "#manager-workforce" }
+      ]}
+    />
+
+    <WorkforceManagementPanel />
   </div>
 );

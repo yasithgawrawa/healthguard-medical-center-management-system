@@ -6,9 +6,24 @@ import { Vitals } from "../models/Vitals.js";
 import { ROLES } from "../../../shared/constants/roles.js";
 import { successResponse } from "../../../shared/utils/apiResponse.js";
 import { AppError } from "../../../shared/utils/AppError.js";
+import { User } from "../../epic1_user_staff/models/User.js";
 
 export const createAppointment = async (req, res) => {
-  const appointment = await Appointment.create(req.body);
+  const payload = {
+    ...req.body,
+    patientId: req.user.role === ROLES.PATIENT ? req.user._id : req.body.patientId
+  };
+
+  if (!payload.patientId) {
+    throw new AppError("Patient is required", 400, { patientId: "Patient is required" });
+  }
+
+  const doctor = await User.findOne({ _id: payload.doctorId, role: ROLES.DOCTOR, status: "active" });
+  if (!doctor) {
+    throw new AppError("Active doctor not found", 404, { doctorId: "Select an active doctor" });
+  }
+
+  const appointment = await Appointment.create(payload);
   return successResponse(res, "Appointment booked successfully", appointment, 201);
 };
 
@@ -16,8 +31,19 @@ export const listAppointments = async (req, res) => {
   const filter = {};
   if (req.user.role === ROLES.PATIENT) filter.patientId = req.user._id;
   if (req.user.role === ROLES.DOCTOR) filter.doctorId = req.user._id;
-  const appointments = await Appointment.find(filter).sort({ appointmentDate: -1 });
+  const appointments = await Appointment.find(filter)
+    .populate("patientId", "firstName lastName email phone")
+    .populate("doctorId", "firstName lastName email")
+    .sort({ appointmentDate: -1 });
   return successResponse(res, "Appointment list loaded", appointments);
+};
+
+export const listDoctors = async (req, res) => {
+  const doctors = await User.find({ role: ROLES.DOCTOR, status: "active" })
+    .select("firstName lastName email")
+    .sort({ firstName: 1 });
+
+  return successResponse(res, "Doctor list loaded", doctors);
 };
 
 export const updateAppointmentStatus = async (req, res) => {
@@ -32,18 +58,26 @@ export const updateAppointmentStatus = async (req, res) => {
 };
 
 export const recordVitals = async (req, res) => {
+  const appointment = await Appointment.findById(req.body.appointmentId);
+  if (!appointment) throw new AppError("Appointment not found", 404);
   const vitals = await Vitals.findOneAndUpdate(
     { appointmentId: req.body.appointmentId },
-    { ...req.body, recordedBy: req.user._id },
+    { ...req.body, patientId: req.body.patientId || appointment.patientId, recordedBy: req.user._id },
     { new: true, upsert: true, runValidators: true }
   );
   return successResponse(res, "Vitals recorded successfully", vitals, 201);
 };
 
 export const saveConsultation = async (req, res) => {
+  const appointment = await Appointment.findById(req.body.appointmentId);
+  if (!appointment) throw new AppError("Appointment not found", 404);
   const consultation = await Consultation.findOneAndUpdate(
     { appointmentId: req.body.appointmentId },
-    req.body,
+    {
+      ...req.body,
+      patientId: req.body.patientId || appointment.patientId,
+      doctorId: req.user.role === ROLES.DOCTOR ? req.user._id : req.body.doctorId || appointment.doctorId
+    },
     { new: true, upsert: true, runValidators: true }
   );
   if (req.body.finalized) {
@@ -53,7 +87,13 @@ export const saveConsultation = async (req, res) => {
 };
 
 export const createPrescription = async (req, res) => {
-  const prescription = await Prescription.create(req.body);
+  const appointment = await Appointment.findById(req.body.appointmentId);
+  if (!appointment) throw new AppError("Appointment not found", 404);
+  const prescription = await Prescription.create({
+    ...req.body,
+    patientId: req.body.patientId || appointment.patientId,
+    doctorId: req.user.role === ROLES.DOCTOR ? req.user._id : req.body.doctorId || appointment.doctorId
+  });
   return successResponse(res, "Prescription created successfully", prescription, 201);
 };
 
@@ -61,12 +101,20 @@ export const listPrescriptions = async (req, res) => {
   const filter = {};
   if (req.user.role === ROLES.PATIENT) filter.patientId = req.user._id;
   if (req.user.role === ROLES.DOCTOR) filter.doctorId = req.user._id;
-  const prescriptions = await Prescription.find(filter).sort({ createdAt: -1 });
+  const prescriptions = await Prescription.find(filter)
+    .populate("doctorId", "firstName lastName")
+    .sort({ createdAt: -1 });
   return successResponse(res, "Prescription list loaded", prescriptions);
 };
 
 export const createLabRequest = async (req, res) => {
-  const labRequest = await LabRequest.create(req.body);
+  const appointment = await Appointment.findById(req.body.appointmentId);
+  if (!appointment) throw new AppError("Appointment not found", 404);
+  const labRequest = await LabRequest.create({
+    ...req.body,
+    patientId: req.body.patientId || appointment.patientId,
+    doctorId: req.user.role === ROLES.DOCTOR ? req.user._id : req.body.doctorId || appointment.doctorId
+  });
   return successResponse(res, "Lab request created successfully", labRequest, 201);
 };
 
@@ -74,7 +122,9 @@ export const listLabRequests = async (req, res) => {
   const filter = {};
   if (req.user.role === ROLES.PATIENT) filter.patientId = req.user._id;
   if (req.user.role === ROLES.DOCTOR) filter.doctorId = req.user._id;
-  const requests = await LabRequest.find(filter).sort({ createdAt: -1 });
+  const requests = await LabRequest.find(filter)
+    .populate("doctorId", "firstName lastName")
+    .sort({ createdAt: -1 });
   return successResponse(res, "Lab request list loaded", requests);
 };
 

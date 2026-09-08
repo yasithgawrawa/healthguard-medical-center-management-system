@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "seed:admin": "node src/seedAdmin.js"
+    "seed:admin": "node src/seedAdmin.js",
+    "seed:demo": "node src/seedAdmin.js"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^6.1.1",

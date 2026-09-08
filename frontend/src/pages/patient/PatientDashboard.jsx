@@ -1,16 +1,61 @@
+import { Calendar, CreditCard, FileText, Pill } from "lucide-react";
+import { useState } from "react";
 import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
-import { OperationPanel } from "../../components/shared/OperationPanel.jsx";
-import { e2Actions } from "../../utils/operationConfigs.js";
+import { DashboardQuickActions } from "../../components/shared/DashboardQuickActions.jsx";
+import { PatientAppointmentBooking } from "../../components/epic2_clinical/PatientAppointmentBooking.jsx";
+import { PatientRecordsPanel } from "../../components/epic2_clinical/PatientRecordsPanel.jsx";
 
-export const PatientDashboard = () => (
-  <div id="overview">
-    <h1>Patient Dashboard</h1>
-    <div className="dashboard-grid">
-      <DashboardCard title="Appointments" value="Book" detail="Schedule and review visits" />
-      <DashboardCard title="Lab Reports" value="View" detail="Access completed reports" />
-      <DashboardCard title="Invoices" value="Track" detail="Review balances and receipts" />
+export const PatientDashboard = () => {
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  return (
+    <div id="overview" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+      <div className="dashboard-header-banner">
+        <div>
+          <h1>Patient Care Portal</h1>
+          <p>Book visits and keep your appointments, lab results, prescriptions and bills in one simple care record.</p>
+        </div>
+        <div className="dashboard-live-indicator">
+          <div className="live-dot" />
+          <span>Care Record Live</span>
+        </div>
+      </div>
+
+      <div className="dashboard-grid">
+        <DashboardCard
+          title="Appointments"
+          value="Book"
+          detail="Schedule visits with available doctors"
+          icon={Calendar}
+          change="Saved Live"
+        />
+        <DashboardCard
+          title="Lab Reports"
+          value="View"
+          detail="Access diagnostic results and tests"
+          icon={FileText}
+          change="Patient Scoped"
+        />
+        <DashboardCard
+          title="Billing & Invoices"
+          value="Track"
+          detail="Review itemized invoices and receipts"
+          icon={CreditCard}
+          change="MongoDB"
+        />
+      </div>
+
+      <DashboardQuickActions
+        actions={[
+          { label: "Book Appointment", detail: "Choose a doctor and time", icon: Calendar, href: "#book-appointment" },
+          { label: "View Lab Results", detail: "Check test request updates", icon: FileText, href: "#patient-records" },
+          { label: "Review Medicines", detail: "See prescriptions", icon: Pill, href: "#patient-records" },
+          { label: "Check Bills", detail: "Track invoices and payments", icon: CreditCard, href: "#patient-records" }
+        ]}
+      />
+
+      <PatientAppointmentBooking onBooked={() => setRefreshKey((key) => key + 1)} />
+      <PatientRecordsPanel refreshKey={refreshKey} />
     </div>
-    <OperationPanel title="My Appointments" description="E2 appointment booking and history." listPath="/e2/clinical/appointments" actions={[e2Actions[0]]} />
-    <OperationPanel title="My Invoices" description="E4 invoices and outstanding balances." listPath="/e4/billing/invoices" actions={[]} />
-  </div>
-);
+  );
+};

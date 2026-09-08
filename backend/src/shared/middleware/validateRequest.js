@@ -5,8 +5,8 @@ export const validateRequest = (schema) => (req, res, next) => {
     query: req.query
   });
 
-  req.body = parsed.body ?? req.body;
-  req.params = parsed.params ?? req.params;
-  req.query = parsed.query ?? req.query;
+  if (parsed.body) req.body = parsed.body;
+  if (parsed.params) Object.assign(req.params, parsed.params);
+  if (parsed.query) req.validatedQuery = parsed.query;
   next();
 };

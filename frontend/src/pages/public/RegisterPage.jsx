@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { AlertCircle, ShieldPlus } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
@@ -51,37 +52,101 @@ export const RegisterPage = () => {
     setApiError("");
     try {
       const user = await registerPatient(values);
-      navigate(DASHBOARD_PATH_BY_ROLE[user.role], { replace: true });
+      navigate(DASHBOARD_PATH_BY_ROLE[user.role] || "/patient", { replace: true });
     } catch (error) {
-      setApiError(error.response?.data?.message || "Registration failed");
+      setApiError(error.response?.data?.message || "Registration failed. Please check your details.");
     }
   };
 
   return (
     <section className="auth-page">
-      <form className="auth-form wide" onSubmit={handleSubmit(onSubmit)}>
-        <h1>Patient Registration</h1>
-        {apiError ? <div className="form-alert">{apiError}</div> : null}
-        <div className="form-grid">
-          <FormInput label="First name" error={errors.firstName?.message} {...register("firstName")} />
-          <FormInput label="Last name" error={errors.lastName?.message} {...register("lastName")} />
-          <FormInput label="Email" type="email" error={errors.email?.message} {...register("email")} />
-          <FormInput label="Phone" error={errors.phone?.message} {...register("phone")} />
-          <FormInput label="Date of birth" type="date" error={errors.dateOfBirth?.message} {...register("dateOfBirth")} />
-          <FormSelect label="Gender" error={errors.gender?.message} {...register("gender")}>
-            <option value="female">Female</option>
-            <option value="male">Male</option>
-            <option value="other">Other</option>
-            <option value="prefer_not_to_say">Prefer not to say</option>
-          </FormSelect>
-          <FormInput label="Address" error={errors.address?.message} {...register("address")} />
-          <span />
-          <FormInput label="Password" type="password" error={errors.password?.message} {...register("password")} />
-          <FormInput label="Confirm password" type="password" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
+      <div className="auth-card wide">
+        <div className="auth-header">
+          <div className="auth-header-icon">
+            <ShieldPlus size={28} />
+          </div>
+          <h1>Patient Registration</h1>
+          <p>Create your Health Guard patient portal account for appointments and medical records</p>
         </div>
-        <SubmitButton isSubmitting={isSubmitting}>Create Patient Account</SubmitButton>
-        <p>Already registered? <Link to="/login">Login</Link></p>
-      </form>
+
+        {apiError ? (
+          <div className="form-alert">
+            <AlertCircle size={18} />
+            <span>{apiError}</span>
+          </div>
+        ) : null}
+
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="form-grid">
+            <FormInput
+              label="First Name"
+              placeholder="John"
+              error={errors.firstName?.message}
+              {...register("firstName")}
+            />
+            <FormInput
+              label="Last Name"
+              placeholder="Doe"
+              error={errors.lastName?.message}
+              {...register("lastName")}
+            />
+            <FormInput
+              label="Email Address"
+              type="email"
+              placeholder="john.doe@example.com"
+              error={errors.email?.message}
+              {...register("email")}
+            />
+            <FormInput
+              label="Phone Number"
+              placeholder="+94 77 123 4567"
+              error={errors.phone?.message}
+              {...register("phone")}
+            />
+            <FormInput
+              label="Date of Birth"
+              type="date"
+              error={errors.dateOfBirth?.message}
+              {...register("dateOfBirth")}
+            />
+            <FormSelect label="Gender" error={errors.gender?.message} {...register("gender")}>
+              <option value="female">Female</option>
+              <option value="male">Male</option>
+              <option value="other">Other</option>
+              <option value="prefer_not_to_say">Prefer not to say</option>
+            </FormSelect>
+            <FormInput
+              label="Residential Address"
+              placeholder="123 Wellness Ave, Colombo"
+              error={errors.address?.message}
+              {...register("address")}
+            />
+            <span />
+            <FormInput
+              label="Password (min 8 chars, 1 uppercase, 1 symbol)"
+              type="password"
+              placeholder="••••••••"
+              error={errors.password?.message}
+              {...register("password")}
+            />
+            <FormInput
+              label="Confirm Password"
+              type="password"
+              placeholder="••••••••"
+              error={errors.confirmPassword?.message}
+              {...register("confirmPassword")}
+            />
+          </div>
+
+          <SubmitButton isSubmitting={isSubmitting}>Create Patient Account</SubmitButton>
+        </form>
+
+        <div className="auth-footer">
+          <p>
+            Already have an account? <Link to="/login">Sign In</Link>
+          </p>
+        </div>
+      </div>
     </section>
   );
 };

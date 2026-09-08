@@ -3,7 +3,7 @@ import { idParamSchema, objectIdSchema } from "../../../shared/validators/common
 
 export const appointmentSchema = z.object({
   body: z.object({
-    patientId: objectIdSchema,
+    patientId: objectIdSchema.optional(),
     doctorId: objectIdSchema,
     appointmentDate: z.coerce.date().refine((date) => date >= new Date(Date.now() - 86400000), "Appointment date cannot be in the past"),
     slotLabel: z.string().trim().min(2).max(40),
@@ -19,7 +19,7 @@ export const appointmentStatusSchema = z.object({
 export const vitalsSchema = z.object({
   body: z.object({
     appointmentId: objectIdSchema,
-    patientId: objectIdSchema,
+    patientId: objectIdSchema.optional(),
     temperature: z.coerce.number().min(25).max(45).optional(),
     bloodPressure: z.string().trim().optional(),
     heartRate: z.coerce.number().min(20).max(250).optional(),
@@ -32,8 +32,8 @@ export const vitalsSchema = z.object({
 export const consultationSchema = z.object({
   body: z.object({
     appointmentId: objectIdSchema,
-    patientId: objectIdSchema,
-    doctorId: objectIdSchema,
+    patientId: objectIdSchema.optional(),
+    doctorId: objectIdSchema.optional(),
     diagnosis: z.string().trim().min(2),
     clinicalNotes: z.string().trim().min(3),
     finalized: z.boolean().optional().default(false)
@@ -43,8 +43,8 @@ export const consultationSchema = z.object({
 export const prescriptionSchema = z.object({
   body: z.object({
     appointmentId: objectIdSchema,
-    patientId: objectIdSchema,
-    doctorId: objectIdSchema,
+    patientId: objectIdSchema.optional(),
+    doctorId: objectIdSchema.optional(),
     items: z.array(z.object({
       medicineName: z.string().trim().min(2),
       dosage: z.string().trim().min(1),
@@ -58,8 +58,8 @@ export const prescriptionSchema = z.object({
 export const labRequestSchema = z.object({
   body: z.object({
     appointmentId: objectIdSchema,
-    patientId: objectIdSchema,
-    doctorId: objectIdSchema,
+    patientId: objectIdSchema.optional(),
+    doctorId: objectIdSchema.optional(),
     testName: z.string().trim().min(2),
     priority: z.enum(["routine", "urgent"]).optional().default("routine")
   })

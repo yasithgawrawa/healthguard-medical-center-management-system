@@ -17,6 +17,7 @@ import {
   createLabRequest,
   createPrescription,
   listAppointments,
+  listDoctors,
   listLabRequests,
   listPrescriptions,
   recordVitals,
@@ -30,6 +31,7 @@ router.use(authenticate);
 
 router.post("/appointments", authorizeRoles(ROLES.PATIENT, ROLES.ADMIN, ROLES.NURSE), validateRequest(appointmentSchema), asyncHandler(createAppointment));
 router.get("/appointments", asyncHandler(listAppointments));
+router.get("/doctors", authorizeRoles(ROLES.PATIENT, ROLES.ADMIN, ROLES.NURSE), asyncHandler(listDoctors));
 router.patch("/appointments/:id/status", authorizeRoles(ROLES.NURSE, ROLES.DOCTOR, ROLES.ADMIN), validateRequest(appointmentStatusSchema), asyncHandler(updateAppointmentStatus));
 router.post("/vitals", authorizeRoles(ROLES.NURSE, ROLES.DOCTOR), validateRequest(vitalsSchema), asyncHandler(recordVitals));
 router.post("/consultations", authorizeRoles(ROLES.DOCTOR), validateRequest(consultationSchema), asyncHandler(saveConsultation));

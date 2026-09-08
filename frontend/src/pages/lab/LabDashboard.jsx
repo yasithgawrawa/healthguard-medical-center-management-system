@@ -1,34 +1,37 @@
+import { CheckCircle2, FlaskConical, Microscope, UploadCloud } from "lucide-react";
+import { ClinicalWorkspacePanel } from "../../components/epic2_clinical/ClinicalWorkspacePanel.jsx";
+import { StaffSelfServicePanel } from "../../components/epic1_user_staff/StaffSelfServicePanel.jsx";
 import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
-import { OperationPanel } from "../../components/shared/OperationPanel.jsx";
-import { commonId } from "../../utils/operationConfigs.js";
-
-const labActions = [
-  {
-    label: "Update Lab Request",
-    method: "patch",
-    path: "/e2/clinical/lab-requests/:id",
-    fields: [
-      commonId,
-      { name: "status", label: "Status", type: "select", required: true, options: [
-        { value: "verified", label: "Verified" },
-        { value: "in_progress", label: "In progress" },
-        { value: "completed", label: "Completed" },
-        { value: "cancelled", label: "Cancelled" }
-      ] },
-      { name: "resultSummary", label: "Result summary" },
-      { name: "resultUrl", label: "Result URL" }
-    ]
-  }
-];
+import { DashboardQuickActions } from "../../components/shared/DashboardQuickActions.jsx";
 
 export const LabDashboard = () => (
-  <div id="overview">
-    <h1>Laboratory Dashboard</h1>
-    <div className="dashboard-grid">
-      <DashboardCard title="Requests" value="Verify" detail="Review new lab requests" />
-      <DashboardCard title="Progress" value="Update" detail="Track sample processing" />
-      <DashboardCard title="Results" value="Upload" detail="Publish completed test results" />
+  <div id="overview" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+    <div className="dashboard-header-banner">
+      <div>
+        <h1>Laboratory Workspace</h1>
+        <p>Review requested tests, update sample progress and publish completed results to patient records.</p>
+      </div>
+      <div className="dashboard-live-indicator">
+        <div className="live-dot" />
+        <span>Lab Queue Live</span>
+      </div>
     </div>
-    <OperationPanel title="Laboratory Requests" description="E2 lab verification, progress and result updates." listPath="/e2/clinical/lab-requests" actions={labActions} />
+
+    <div className="dashboard-grid">
+      <DashboardCard title="Requests" value="Verify" detail="Review new doctor orders" icon={FlaskConical} change="Queue Ready" />
+      <DashboardCard title="Processing" value="Track" detail="Move samples through lab stages" icon={Microscope} change="In Progress" />
+      <DashboardCard title="Results" value="Publish" detail="Attach summaries and report links" icon={UploadCloud} change="Patient Visible" />
+    </div>
+
+    <DashboardQuickActions
+      actions={[
+        { label: "Verify Request", detail: "Accept test orders", icon: CheckCircle2, href: "#laboratory-results" },
+        { label: "Update Progress", detail: "Mark processing status", icon: Microscope, href: "#laboratory-results" },
+        { label: "Publish Result", detail: "Add summary or file link", icon: UploadCloud, href: "#laboratory-results" }
+      ]}
+    />
+
+    <ClinicalWorkspacePanel mode="lab" />
+    <StaffSelfServicePanel />
   </div>
 );

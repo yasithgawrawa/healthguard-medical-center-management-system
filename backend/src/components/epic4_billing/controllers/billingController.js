@@ -30,7 +30,9 @@ export const createInvoice = async (req, res) => {
 
 export const listInvoices = async (req, res) => {
   const filter = req.user.role === "patient" ? { patientId: req.user._id } : {};
-  const invoices = await Invoice.find(filter).sort({ createdAt: -1 });
+  const invoices = await Invoice.find(filter)
+    .populate("patientId", "firstName lastName email")
+    .sort({ createdAt: -1 });
   return successResponse(res, "Invoice list loaded", invoices);
 };
 
