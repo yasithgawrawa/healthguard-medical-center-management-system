@@ -79,10 +79,10 @@ export const CenterLocationPanel = ({ onToast }) => {
         </button>
       </div>
       <div className="form-grid">
-        <FormInput label="Center Name" error={errors.name?.message} {...register("name")} />
-        <FormInput label="Latitude" type="number" step="0.000001" error={errors.latitude?.message} {...register("latitude")} />
-        <FormInput label="Longitude" type="number" step="0.000001" error={errors.longitude?.message} {...register("longitude")} />
-        <FormInput label="Allowed Radius (meters)" type="number" error={errors.radiusMeters?.message} {...register("radiusMeters")} />
+        <FormInput label="Center Name" placeholder="Health Guard Medical Center - Colombo 07" error={errors.name?.message} {...register("name")} />
+        <FormInput label="Latitude" placeholder="6.914700" type="number" step="0.000001" error={errors.latitude?.message} {...register("latitude")} />
+        <FormInput label="Longitude" placeholder="79.878000" type="number" step="0.000001" error={errors.longitude?.message} {...register("longitude")} />
+        <FormInput label="Allowed Radius (meters)" placeholder="100" type="number" error={errors.radiusMeters?.message} {...register("radiusMeters")} />
       </div>
       {locationMessage ? <p className="section-description" style={{ margin: "0 0 12px" }}>{locationMessage}</p> : null}
       <button className="button-primary" type="submit" disabled={busy}>

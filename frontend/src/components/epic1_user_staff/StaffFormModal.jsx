@@ -85,16 +85,16 @@ export const StaffFormModal = ({ open, mode = "create", staff, onClose, onSubmit
       <form onSubmit={handleSubmit(submit)}>
         <div className="form-section-title">Personal Information</div>
         <div className="form-grid">
-          <FormInput label="First Name" sanitize={stripDigits} error={errors.firstName?.message} {...register("firstName")} />
-          <FormInput label="Last Name" sanitize={stripDigits} error={errors.lastName?.message} {...register("lastName")} />
-          <FormInput label="Email" type="email" disabled={isEdit} error={errors.email?.message} {...register("email")} />
-          <FormInput label="Phone" inputMode="tel" sanitize={stripNonPhone} error={errors.phone?.message} {...register("phone")} />
+          <FormInput label="First Name" placeholder="Amara" sanitize={stripDigits} error={errors.firstName?.message} {...register("firstName")} />
+          <FormInput label="Last Name" placeholder="Perera" sanitize={stripDigits} error={errors.lastName?.message} {...register("lastName")} />
+          <FormInput label="Email" type="email" placeholder="doctor@healthguard.local" disabled={isEdit} error={errors.email?.message} {...register("email")} />
+          <FormInput label="Phone" placeholder="+94 77 123 4501" inputMode="tel" sanitize={stripNonPhone} error={errors.phone?.message} {...register("phone")} />
         </div>
 
         <div className="form-section-title">Employment Information</div>
         <div className="form-grid">
-          <FormInput label="Employee ID" disabled={isEdit} sanitize={stripNonId} error={errors.employeeId?.message} {...register("employeeId")} />
-          <FormInput label="Department" sanitize={stripDigits} error={errors.department?.message} {...register("department")} />
+          <FormInput label="Employee ID" placeholder="HG-DOC-001" disabled={isEdit} sanitize={stripNonId} error={errors.employeeId?.message} {...register("employeeId")} />
+          <FormInput label="Department" placeholder="OPD" sanitize={stripDigits} error={errors.department?.message} {...register("department")} />
           <FormSelect label="Role" error={errors.role?.message} {...register("role")}>
             <option value="">Select role</option>
             {STAFF_ROLES.map((role) => (
@@ -108,15 +108,15 @@ export const StaffFormModal = ({ open, mode = "create", staff, onClose, onSubmit
 
         <div className="form-section-title">Salary Information</div>
         <div className="form-grid">
-          <FormInput label="Base Salary" type="number" min="0" step="0.01" error={errors.baseSalary?.message} {...register("baseSalary")} />
-          <FormInput label="Allowances" type="number" min="0" step="0.01" error={errors.allowances?.message} {...register("allowances")} />
-          <FormInput label="Deductions" type="number" min="0" step="0.01" error={errors.deductions?.message} {...register("deductions")} />
+          <FormInput label="Base Salary" placeholder="95000.00" type="number" min="0" step="0.01" error={errors.baseSalary?.message} {...register("baseSalary")} />
+          <FormInput label="Allowances" placeholder="5000.00" type="number" min="0" step="0.01" error={errors.allowances?.message} {...register("allowances")} />
+          <FormInput label="Deductions" placeholder="1500.00" type="number" min="0" step="0.01" error={errors.deductions?.message} {...register("deductions")} />
         </div>
 
         {!isEdit ? (
           <>
             <div className="form-section-title">Account</div>
-            <FormInput label="Temporary Password" type="password" error={errors.password?.message} {...register("password")} />
+            <FormInput label="Temporary Password" type="password" placeholder="Admin@12345" error={errors.password?.message} {...register("password")} />
           </>
         ) : null}
 

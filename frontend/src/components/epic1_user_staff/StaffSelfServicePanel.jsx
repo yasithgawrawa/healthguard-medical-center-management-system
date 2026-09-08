@@ -266,7 +266,7 @@ export const StaffSelfServicePanel = () => {
             <FormInput label="Start Date" type="date" error={errors.startDate?.message} {...register("startDate")} />
             <FormInput label="End Date" type="date" error={errors.endDate?.message} {...register("endDate")} />
           </div>
-          <FormInput label="Reason" error={errors.reason?.message} {...register("reason")} />
+          <FormInput label="Reason" placeholder="Family commitment in Matara" error={errors.reason?.message} {...register("reason")} />
           <div className="modal-actions">
             <button className="button-secondary" type="button" onClick={() => setLeaveOpen(false)} disabled={busy}>
               Cancel

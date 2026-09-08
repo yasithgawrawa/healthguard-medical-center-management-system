@@ -82,14 +82,14 @@ export const RegisterPage = () => {
           <div className="form-grid">
             <FormInput
               label="First Name"
-              placeholder="John"
+              placeholder="Saman"
               sanitize={stripDigits}
               error={errors.firstName?.message}
               {...register("firstName")}
             />
             <FormInput
               label="Last Name"
-              placeholder="Doe"
+              placeholder="Kumara"
               sanitize={stripDigits}
               error={errors.lastName?.message}
               {...register("lastName")}
@@ -97,7 +97,7 @@ export const RegisterPage = () => {
             <FormInput
               label="Email Address"
               type="email"
-              placeholder="john.doe@example.com"
+              placeholder="saman.kumara@example.lk"
               error={errors.email?.message}
               {...register("email")}
             />
@@ -123,7 +123,7 @@ export const RegisterPage = () => {
             </FormSelect>
             <FormInput
               label="Residential Address"
-              placeholder="123 Wellness Ave, Colombo"
+              placeholder="No. 24, Galle Road, Colombo 03"
               error={errors.address?.message}
               {...register("address")}
             />
@@ -131,14 +131,14 @@ export const RegisterPage = () => {
             <FormInput
               label="Password (min 8 chars, 1 uppercase, 1 symbol)"
               type="password"
-              placeholder="••••••••"
+              placeholder="Password@123"
               error={errors.password?.message}
               {...register("password")}
             />
             <FormInput
               label="Confirm Password"
               type="password"
-              placeholder="••••••••"
+              placeholder="Password@123"
               error={errors.confirmPassword?.message}
               {...register("confirmPassword")}
             />

@@ -35,6 +35,7 @@ export const OperationPanel = ({ id, title, description, listPath, actions = [] 
   const [records, setRecords] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [busy, setBusy] = useState(false);
   const [showRawJson, setShowRawJson] = useState(false);
   const [forms, setForms] = useState(() =>
@@ -68,16 +69,46 @@ export const OperationPanel = ({ id, title, description, listPath, actions = [] 
   const visibleRecords = useMemo(() => records.slice(0, 6), [records]);
 
   const setField = (actionLabel, fieldName, value) => {
+    setFieldErrors((current) => ({
+      ...current,
+      [actionLabel]: { ...(current[actionLabel] || {}), [fieldName]: "" }
+    }));
     setForms((current) => ({
       ...current,
       [actionLabel]: { ...current[actionLabel], [fieldName]: value }
     }));
   };
 
+  const validateAction = (action) => {
+    const form = forms[action.label] || {};
+    const errors = {};
+    for (const field of action.fields || []) {
+      if (field.required && String(form[field.name] || "").trim() === "") {
+        errors[field.name] = `${field.label} is required`;
+      }
+      if (field.type === "number" && form[field.name] !== "" && Number.isNaN(Number(form[field.name]))) {
+        errors[field.name] = `${field.label} must be a number`;
+      }
+      if (field.type === "json" && form[field.name]) {
+        try {
+          JSON.parse(form[field.name]);
+        } catch {
+          errors[field.name] = `${field.label} must be valid JSON`;
+        }
+      }
+    }
+    setFieldErrors((current) => ({ ...current, [action.label]: errors }));
+    return Object.keys(errors).length === 0;
+  };
+
   const submitAction = async (action) => {
     setBusy(true);
     setError("");
     setMessage("");
+    if (!validateAction(action)) {
+      setBusy(false);
+      return;
+    }
     try {
       const form = forms[action.label] || {};
       const payload = {};
@@ -138,16 +169,19 @@ export const OperationPanel = ({ id, title, description, listPath, actions = [] 
               }}
             >
               <h3>{action.label}</h3>
-              {(action.fields || []).map((field) => (
-                <label className="form-field" key={field.name}>
+              {(action.fields || []).map((field) => {
+                const fieldError = fieldErrors[action.label]?.[field.name];
+                return (
+                <label className={`form-field${fieldError ? " has-error" : ""}`} key={field.name}>
                   <span>{field.label}</span>
                   {field.type === "select" ? (
                     <select
                       value={forms[action.label]?.[field.name] || ""}
                       onChange={(event) => setField(action.label, field.name, event.target.value)}
                       required={field.required}
+                      aria-invalid={Boolean(fieldError)}
                     >
-                      <option value="">Select option</option>
+                      <option value="">{field.placeholder || "Select option"}</option>
                       {field.options.map((option) => (
                         <option value={option.value} key={option.value}>
                           {option.label}
@@ -160,7 +194,8 @@ export const OperationPanel = ({ id, title, description, listPath, actions = [] 
                       onChange={(event) => setField(action.label, field.name, event.target.value)}
                       required={field.required}
                       rows={3}
-                      placeholder="Paste item details as JSON"
+                      placeholder={field.placeholder || "Paste item details as JSON"}
+                      aria-invalid={Boolean(fieldError)}
                     />
                   ) : (
                     <input
@@ -168,11 +203,14 @@ export const OperationPanel = ({ id, title, description, listPath, actions = [] 
                       value={forms[action.label]?.[field.name] || ""}
                       onChange={(event) => setField(action.label, field.name, event.target.value)}
                       required={field.required}
-                      placeholder={field.label}
+                      placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                      aria-invalid={Boolean(fieldError)}
                     />
                   )}
+                  {fieldError ? <small>{fieldError}</small> : null}
                 </label>
-              ))}
+              );
+              })}
               <button
                 className="submit-button"
                 type="submit"

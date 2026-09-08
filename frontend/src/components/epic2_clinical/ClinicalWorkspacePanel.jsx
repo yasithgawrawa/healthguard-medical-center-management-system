@@ -208,31 +208,31 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
           ) : null}
           {modal.type === "vitals" ? (
             <div className="form-grid">
-              <FormInput label="Temperature" type="number" step="0.1" error={errors.temperature?.message} {...register("temperature")} />
+              <FormInput label="Temperature" placeholder="37.2" type="number" step="0.1" error={errors.temperature?.message} {...register("temperature")} />
               <FormInput label="Blood Pressure" placeholder="120/80" error={errors.bloodPressure?.message} {...register("bloodPressure")} />
-              <FormInput label="Heart Rate" type="number" error={errors.heartRate?.message} {...register("heartRate")} />
-              <FormInput label="SpO2" type="number" error={errors.spo2?.message} {...register("spo2")} />
+              <FormInput label="Heart Rate" placeholder="82" type="number" error={errors.heartRate?.message} {...register("heartRate")} />
+              <FormInput label="SpO2" placeholder="98" type="number" error={errors.spo2?.message} {...register("spo2")} />
             </div>
           ) : null}
           {modal.type === "consultation" ? (
             <>
-              <FormInput label="Diagnosis" error={errors.diagnosis?.message} {...register("diagnosis")} />
-              <FormInput label="Clinical Notes" error={errors.clinicalNotes?.message} {...register("clinicalNotes")} />
+              <FormInput label="Diagnosis" placeholder="Viral fever" error={errors.diagnosis?.message} {...register("diagnosis")} />
+              <FormInput label="Clinical Notes" placeholder="Fever for two days, hydration advised" error={errors.clinicalNotes?.message} {...register("clinicalNotes")} />
               <label className="checkbox-line"><input type="checkbox" {...register("finalized")} /> Finalize visit</label>
             </>
           ) : null}
           {modal.type === "prescription" ? (
             <div className="form-grid">
-              <FormInput label="Medicine" error={errors.medicineName?.message} {...register("medicineName")} />
-              <FormInput label="Dosage" error={errors.dosage?.message} {...register("dosage")} />
-              <FormInput label="Frequency" error={errors.frequency?.message} {...register("frequency")} />
-              <FormInput label="Duration" error={errors.duration?.message} {...register("duration")} />
-              <FormInput label="Instructions" error={errors.instructions?.message} {...register("instructions")} />
+              <FormInput label="Medicine" placeholder="Paracetamol 500mg" error={errors.medicineName?.message} {...register("medicineName")} />
+              <FormInput label="Dosage" placeholder="500mg" error={errors.dosage?.message} {...register("dosage")} />
+              <FormInput label="Frequency" placeholder="Twice daily" error={errors.frequency?.message} {...register("frequency")} />
+              <FormInput label="Duration" placeholder="3 days" error={errors.duration?.message} {...register("duration")} />
+              <FormInput label="Instructions" placeholder="After meals" error={errors.instructions?.message} {...register("instructions")} />
             </div>
           ) : null}
           {modal.type === "lab-request" ? (
             <div className="form-grid">
-              <FormInput label="Test Name" error={errors.testName?.message} {...register("testName")} />
+              <FormInput label="Test Name" placeholder="Fasting Blood Sugar" error={errors.testName?.message} {...register("testName")} />
               <FormSelect label="Priority" error={errors.priority?.message} {...register("priority")}>
                 <option value="routine">Routine</option>
                 <option value="urgent">Urgent</option>
@@ -244,8 +244,8 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
               <FormSelect label="Status" error={errors.status?.message} {...register("status")}>
                 {["verified", "in_progress", "completed", "cancelled"].map((item) => <option value={item} key={item}>{item.replace(/_/g, " ")}</option>)}
               </FormSelect>
-              <FormInput label="Result Summary" error={errors.resultSummary?.message} {...register("resultSummary")} />
-              <FormInput label="Result URL" error={errors.resultUrl?.message} {...register("resultUrl")} />
+              <FormInput label="Result Summary" placeholder="FBS 112 mg/dL. Continue monitoring." error={errors.resultSummary?.message} {...register("resultSummary")} />
+              <FormInput label="Result URL" placeholder="https://example.lk/reports/fbs.pdf" error={errors.resultUrl?.message} {...register("resultUrl")} />
             </>
           ) : null}
           <div className="modal-actions">

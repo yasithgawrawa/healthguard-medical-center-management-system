@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { batchNumberPattern, moneySchema, phoneSchema, quantitySchema, textNoNumbersSchema } from "../../../shared/validators/fieldSchemas.js";
 import { idParamSchema, objectIdSchema } from "../../../shared/validators/commonSchemas.js";
+import { MEDICINE_CATEGORIES } from "../constants/medicineCategories.js";
 
 const medicineBodySchema = z.object({
   name: z.string().trim().min(2, "Medicine name is required").max(120),
-  category: textNoNumbersSchema("Category", 80),
+  category: z.string().min(1, "Select medicine category").refine((value) => MEDICINE_CATEGORIES.includes(value), "Select a valid medicine category"),
   unit: z.string().trim().min(1, "Unit is required").max(30),
   price: moneySchema("Price"),
   reorderLevel: z.coerce.number().int("Reorder level must be a whole number").min(0).max(100000)

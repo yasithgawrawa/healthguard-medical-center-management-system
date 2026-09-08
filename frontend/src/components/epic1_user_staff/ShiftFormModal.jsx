@@ -51,11 +51,11 @@ export const ShiftFormModal = ({ open, staff = [], onClose, onSubmit, busy }) =>
                 </option>
               ))}
           </FormSelect>
-          <FormInput label="Location" error={errors.location?.message} {...register("location")} />
+          <FormInput label="Location" placeholder="OPD Room 1" error={errors.location?.message} {...register("location")} />
           <FormInput label="Start" type="datetime-local" error={errors.startTime?.message} {...register("startTime")} />
           <FormInput label="End" type="datetime-local" error={errors.endTime?.message} {...register("endTime")} />
         </div>
-        <FormInput label="Notes" error={errors.notes?.message} {...register("notes")} />
+        <FormInput label="Notes" placeholder="Morning OPD coverage" error={errors.notes?.message} {...register("notes")} />
         <div className="modal-actions">
           <button className="button-secondary" type="button" onClick={onClose} disabled={busy}>
             Cancel
