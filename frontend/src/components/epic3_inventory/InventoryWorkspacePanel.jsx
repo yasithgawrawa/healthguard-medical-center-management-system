@@ -56,7 +56,7 @@ export const InventoryWorkspacePanel = () => {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
 
-  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm({ resolver: zodResolver(schemas[modal] || schemas.medicine) });
+  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm({ resolver: zodResolver(schemas[modal] || schemas.medicine), mode: "onChange" });
   const selectedMedicineId = watch("medicineId");
 
   const load = async () => {

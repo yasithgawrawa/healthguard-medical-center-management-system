@@ -28,6 +28,7 @@ export const ShiftFormModal = ({ open, staff = [], onClose, onSubmit, busy }) =>
     formState: { errors }
   } = useForm({
     resolver: zodResolver(shiftSchema),
+    mode: "onChange",
     defaultValues: { staffId: "", startTime: "", endTime: "", location: "", notes: "" }
   });
 

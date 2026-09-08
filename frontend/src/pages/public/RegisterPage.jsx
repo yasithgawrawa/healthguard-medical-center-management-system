@@ -46,6 +46,7 @@ export const RegisterPage = () => {
     formState: { errors, isSubmitting }
   } = useForm({
     resolver: zodResolver(schema),
+    mode: "onChange",
     defaultValues: { gender: "prefer_not_to_say" }
   });
 

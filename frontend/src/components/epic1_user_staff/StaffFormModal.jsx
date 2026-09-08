@@ -51,6 +51,7 @@ export const StaffFormModal = ({ open, mode = "create", staff, onClose, onSubmit
     formState: { errors }
   } = useForm({
     resolver: zodResolver(isEdit ? editSchema : createSchema),
+    mode: "onChange",
     defaultValues: toFormValues(staff)
   });
 

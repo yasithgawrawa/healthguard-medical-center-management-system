@@ -88,13 +88,14 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
       <form className="operation-actions-grid" onSubmit={submit}>
         <div className="operation-form-card">
           <h3>Appointment Details</h3>
-          <label className="form-field">
+          <label className={`form-field${fieldErrors.doctorId ? " has-error" : ""}`}>
             <span>Doctor</span>
             <select
               value={form.doctorId}
               onChange={(event) => setField("doctorId", event.target.value)}
               required
               disabled={loading || submitting}
+              aria-invalid={Boolean(fieldErrors.doctorId)}
             >
               <option value="">{loading ? "Loading doctors..." : "Select doctor"}</option>
               {doctors.map((doctor) => (
@@ -105,7 +106,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
             </select>
             {fieldErrors.doctorId ? <small>{fieldErrors.doctorId}</small> : null}
           </label>
-          <label className="form-field">
+          <label className={`form-field${fieldErrors.appointmentDate ? " has-error" : ""}`}>
             <span>Date and Time</span>
             <input
               type="datetime-local"
@@ -113,6 +114,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
               onChange={(event) => setField("appointmentDate", event.target.value)}
               required
               disabled={submitting}
+              aria-invalid={Boolean(fieldErrors.appointmentDate)}
             />
             {fieldErrors.appointmentDate ? <small>{fieldErrors.appointmentDate}</small> : null}
           </label>
@@ -120,7 +122,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
 
         <div className="operation-form-card">
           <h3>Visit Reason</h3>
-          <label className="form-field">
+          <label className={`form-field${fieldErrors.slotLabel ? " has-error" : ""}`}>
             <span>Slot</span>
             <input
               value={form.slotLabel}
@@ -128,10 +130,11 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
               placeholder="Morning Slot"
               required
               disabled={submitting}
+              aria-invalid={Boolean(fieldErrors.slotLabel)}
             />
             {fieldErrors.slotLabel ? <small>{fieldErrors.slotLabel}</small> : null}
           </label>
-          <label className="form-field">
+          <label className={`form-field${fieldErrors.reason ? " has-error" : ""}`}>
             <span>Reason</span>
             <textarea
               value={form.reason}
@@ -140,6 +143,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
               rows={3}
               required
               disabled={submitting}
+              aria-invalid={Boolean(fieldErrors.reason)}
             />
             {fieldErrors.reason ? <small>{fieldErrors.reason}</small> : null}
           </label>

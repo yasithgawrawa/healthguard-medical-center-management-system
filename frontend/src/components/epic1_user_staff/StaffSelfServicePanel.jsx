@@ -57,6 +57,7 @@ export const StaffSelfServicePanel = () => {
     formState: { errors }
   } = useForm({
     resolver: zodResolver(leaveRequestSchema),
+    mode: "onChange",
     defaultValues: { leaveType: "", startDate: "", endDate: "", reason: "" }
   });
 

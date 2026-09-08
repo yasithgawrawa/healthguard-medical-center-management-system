@@ -33,7 +33,7 @@ export const BillingWorkspacePanel = () => {
   const [modal, setModal] = useState({ type: null, record: null });
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
-  const { register, handleSubmit, reset, formState: { errors } } = useForm({ resolver: zodResolver(modal.type === "payment" ? paymentSchema : invoiceSchema) });
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({ resolver: zodResolver(modal.type === "payment" ? paymentSchema : invoiceSchema), mode: "onChange" });
 
   const load = async () => {
     try {

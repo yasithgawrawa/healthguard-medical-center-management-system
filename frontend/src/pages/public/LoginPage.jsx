@@ -23,7 +23,7 @@ export const LoginPage = () => {
     register,
     handleSubmit,
     formState: { errors, isSubmitting }
-  } = useForm({ resolver: zodResolver(schema) });
+  } = useForm({ resolver: zodResolver(schema), mode: "onChange" });
 
   const onSubmit = async (values) => {
     setApiError("");

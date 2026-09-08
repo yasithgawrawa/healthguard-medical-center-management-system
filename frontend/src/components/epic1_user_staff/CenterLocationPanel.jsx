@@ -24,6 +24,7 @@ export const CenterLocationPanel = ({ onToast }) => {
     formState: { errors }
   } = useForm({
     resolver: zodResolver(centerSchema),
+    mode: "onChange",
     defaultValues: { name: "Health Guard Medical Center", latitude: "", longitude: "", radiusMeters: 100 }
   });
 

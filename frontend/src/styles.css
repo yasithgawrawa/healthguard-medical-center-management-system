@@ -1842,6 +1842,10 @@ main {
   color: var(--brand-900);
 }
 
+.form-field.has-error span {
+  color: var(--danger);
+}
+
 .form-field input,
 .form-field select,
 .form-field textarea {
@@ -1865,9 +1869,11 @@ main {
 }
 
 .form-field input[aria-invalid="true"],
-.form-field select[aria-invalid="true"] {
+.form-field select[aria-invalid="true"],
+.form-field textarea[aria-invalid="true"] {
   border-color: var(--danger);
   background-color: #fff9f9;
+  box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.08);
 }
 
 .form-field small,

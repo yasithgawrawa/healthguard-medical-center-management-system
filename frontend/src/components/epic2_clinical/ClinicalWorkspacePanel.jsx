@@ -75,7 +75,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
     handleSubmit,
     reset,
     formState: { errors }
-  } = useForm({ resolver: zodResolver(schema) });
+  } = useForm({ resolver: zodResolver(schema), mode: "onChange" });
 
   const load = async () => {
     try {

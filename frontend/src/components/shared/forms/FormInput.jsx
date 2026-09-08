@@ -12,9 +12,9 @@ export const FormInput = forwardRef(({ label, error, sanitize, onChange, ...prop
   };
 
   return (
-  <label className="form-field">
+  <label className={`form-field${error ? " has-error" : ""}`}>
     <span>{label}</span>
-    <input ref={ref} aria-invalid={Boolean(error)} onChange={handleChange} {...props} />
+    <input ref={ref} aria-invalid={Boolean(error)} {...props} onChange={handleChange} />
     {error ? <small>{error}</small> : null}
   </label>
   );
