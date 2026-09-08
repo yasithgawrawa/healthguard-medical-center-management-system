@@ -11,12 +11,39 @@ import { StatusBadge } from "../shared/StatusBadge.jsx";
 import { Toast } from "../shared/Toast.jsx";
 import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
+import { batchNumberPattern, requiredMoney, requiredPhone, requiredQuantity, requiredTextNoNumbers, stripDigits, stripNonBatch, stripNonPhone } from "../../utils/validationSchemas.js";
 
 const schemas = {
-  medicine: z.object({ name: z.string().min(2), category: z.string().min(2), unit: z.string().min(1), price: z.coerce.number().min(0), reorderLevel: z.coerce.number().min(0) }),
-  supplier: z.object({ name: z.string().min(2), email: z.string().email().optional().or(z.literal("")), phone: z.string().min(7), address: z.string().optional() }),
-  batch: z.object({ medicineId: z.string().min(1), batchNumber: z.string().min(2), quantity: z.coerce.number().min(1), purchasePrice: z.coerce.number().min(0), manufactureDate: z.string().min(1), expiryDate: z.string().min(1) }),
-  sale: z.object({ medicineId: z.string().min(1), batchId: z.string().min(1), quantity: z.coerce.number().min(1), patientId: z.string().optional() })
+  medicine: z.object({
+    name: z.string().trim().min(2, "Medicine name is required").max(120, "Medicine name is too long"),
+    category: requiredTextNoNumbers("Category", 80),
+    unit: z.string().trim().min(1, "Unit is required").max(30, "Unit is too long"),
+    price: requiredMoney("Price"),
+    reorderLevel: z.coerce.number().int("Reorder level must be a whole number").min(0, "Reorder level cannot be negative").max(100000, "Reorder level is too high")
+  }),
+  supplier: z.object({
+    name: requiredTextNoNumbers("Supplier name", 120),
+    email: z.string().trim().email("Enter a valid email").optional().or(z.literal("")),
+    phone: requiredPhone,
+    address: z.string().trim().min(5, "Address is required").max(250, "Address is too long")
+  }),
+  batch: z.object({
+    medicineId: z.string().min(1, "Select medicine"),
+    batchNumber: z.string().trim().min(2, "Batch number is required").max(40, "Batch number is too long").regex(batchNumberPattern, "Batch number can only contain letters, numbers and hyphens"),
+    quantity: requiredQuantity(),
+    purchasePrice: requiredMoney("Purchase price"),
+    manufactureDate: z.string().min(1, "Manufacture date is required"),
+    expiryDate: z.string().min(1, "Expiry date is required")
+  }).refine((data) => new Date(data.expiryDate) > new Date(data.manufactureDate), {
+    path: ["expiryDate"],
+    message: "Expiry date must be after manufacture date"
+  }),
+  sale: z.object({
+    medicineId: z.string().min(1, "Select medicine"),
+    batchId: z.string().min(1, "Select batch"),
+    quantity: requiredQuantity(),
+    patientId: z.string().trim().optional()
+  })
 };
 
 export const InventoryWorkspacePanel = () => {
@@ -117,10 +144,10 @@ export const InventoryWorkspacePanel = () => {
 
       <Modal open={Boolean(modal)} title={modal ? `${modal[0].toUpperCase()}${modal.slice(1)} Workflow` : ""} onClose={() => setModal(null)}>
         <form onSubmit={handleSubmit(submit)}>
-          {modal === "medicine" ? <div className="form-grid"><FormInput label="Name" error={errors.name?.message} {...register("name")} /><FormInput label="Category" error={errors.category?.message} {...register("category")} /><FormInput label="Unit" error={errors.unit?.message} {...register("unit")} /><FormInput label="Price" type="number" error={errors.price?.message} {...register("price")} /><FormInput label="Reorder Level" type="number" error={errors.reorderLevel?.message} {...register("reorderLevel")} /></div> : null}
-          {modal === "supplier" ? <div className="form-grid"><FormInput label="Name" error={errors.name?.message} {...register("name")} /><FormInput label="Email" error={errors.email?.message} {...register("email")} /><FormInput label="Phone" error={errors.phone?.message} {...register("phone")} /><FormInput label="Address" error={errors.address?.message} {...register("address")} /></div> : null}
-          {modal === "batch" ? <div className="form-grid"><FormSelect label="Medicine" error={errors.medicineId?.message} {...register("medicineId")}><option value="">Select medicine</option>{medicines.map((item) => <option value={item._id} key={item._id}>{item.name}</option>)}</FormSelect><FormInput label="Batch Number" error={errors.batchNumber?.message} {...register("batchNumber")} /><FormInput label="Quantity" type="number" error={errors.quantity?.message} {...register("quantity")} /><FormInput label="Purchase Price" type="number" error={errors.purchasePrice?.message} {...register("purchasePrice")} /><FormInput label="Manufacture Date" type="date" error={errors.manufactureDate?.message} {...register("manufactureDate")} /><FormInput label="Expiry Date" type="date" error={errors.expiryDate?.message} {...register("expiryDate")} /></div> : null}
-          {modal === "sale" ? <div className="form-grid"><FormSelect label="Medicine" error={errors.medicineId?.message} {...register("medicineId")}><option value="">Select medicine</option>{medicines.map((item) => <option value={item._id} key={item._id}>{item.name}</option>)}</FormSelect><FormSelect label="Batch" error={errors.batchId?.message} {...register("batchId")}><option value="">Select batch</option>{batches.filter((batch) => !selectedMedicineId || batch.medicineId === selectedMedicineId).map((item) => <option value={item._id} key={item._id}>{item.batchNumber} - Qty {item.quantity}</option>)}</FormSelect><FormInput label="Quantity" type="number" error={errors.quantity?.message} {...register("quantity")} /><FormInput label="Patient Reference" error={errors.patientId?.message} {...register("patientId")} /></div> : null}
+          {modal === "medicine" ? <div className="form-grid"><FormInput label="Name" error={errors.name?.message} {...register("name")} /><FormInput label="Category" sanitize={stripDigits} error={errors.category?.message} {...register("category")} /><FormInput label="Unit" error={errors.unit?.message} {...register("unit")} /><FormInput label="Price" type="number" min="0" step="0.01" error={errors.price?.message} {...register("price")} /><FormInput label="Reorder Level" type="number" min="0" step="1" error={errors.reorderLevel?.message} {...register("reorderLevel")} /></div> : null}
+          {modal === "supplier" ? <div className="form-grid"><FormInput label="Name" sanitize={stripDigits} error={errors.name?.message} {...register("name")} /><FormInput label="Email" type="email" error={errors.email?.message} {...register("email")} /><FormInput label="Phone" inputMode="tel" sanitize={stripNonPhone} error={errors.phone?.message} {...register("phone")} /><FormInput label="Address" error={errors.address?.message} {...register("address")} /></div> : null}
+          {modal === "batch" ? <div className="form-grid"><FormSelect label="Medicine" error={errors.medicineId?.message} {...register("medicineId")}><option value="">Select medicine</option>{medicines.map((item) => <option value={item._id} key={item._id}>{item.name}</option>)}</FormSelect><FormInput label="Batch Number" sanitize={stripNonBatch} error={errors.batchNumber?.message} {...register("batchNumber")} /><FormInput label="Quantity" type="number" min="1" step="1" error={errors.quantity?.message} {...register("quantity")} /><FormInput label="Purchase Price" type="number" min="0" step="0.01" error={errors.purchasePrice?.message} {...register("purchasePrice")} /><FormInput label="Manufacture Date" type="date" error={errors.manufactureDate?.message} {...register("manufactureDate")} /><FormInput label="Expiry Date" type="date" error={errors.expiryDate?.message} {...register("expiryDate")} /></div> : null}
+          {modal === "sale" ? <div className="form-grid"><FormSelect label="Medicine" error={errors.medicineId?.message} {...register("medicineId")}><option value="">Select medicine</option>{medicines.map((item) => <option value={item._id} key={item._id}>{item.name}</option>)}</FormSelect><FormSelect label="Batch" error={errors.batchId?.message} {...register("batchId")}><option value="">Select batch</option>{batches.filter((batch) => !selectedMedicineId || batch.medicineId === selectedMedicineId).map((item) => <option value={item._id} key={item._id}>{item.batchNumber} - Qty {item.quantity}</option>)}</FormSelect><FormInput label="Quantity" type="number" min="1" step="1" error={errors.quantity?.message} {...register("quantity")} /><FormInput label="Patient Reference" error={errors.patientId?.message} {...register("patientId")} /></div> : null}
           <div className="modal-actions"><button className="button-secondary" type="button" onClick={() => setModal(null)} disabled={busy}>Cancel</button><button className="button-primary" type="submit" disabled={busy}><Plus size={16} /> {busy ? "Saving..." : "Save"}</button></div>
         </form>
       </Modal>

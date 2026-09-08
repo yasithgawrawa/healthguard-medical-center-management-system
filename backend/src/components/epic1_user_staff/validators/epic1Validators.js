@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ROLE_VALUES, ROLES } from "../../../shared/constants/roles.js";
+import { employeeIdSchema, nameSchema, phoneSchema, textNoNumbersSchema } from "../../../shared/validators/fieldSchemas.js";
 import { idParamSchema, objectIdSchema } from "../../../shared/validators/commonSchemas.js";
 
 const staffRoleValues = ROLE_VALUES.filter((role) => role !== ROLES.PATIENT);
@@ -7,13 +8,13 @@ const passwordSchema = z.string().min(8).regex(/[a-z]/).regex(/[A-Z]/).regex(/[0
 
 export const createStaffSchema = z.object({
   body: z.object({
-    firstName: z.string().trim().min(2).max(60),
-    lastName: z.string().trim().min(2).max(60),
+    firstName: nameSchema("First name"),
+    lastName: nameSchema("Last name"),
     email: z.string().trim().email().toLowerCase(),
-    phone: z.string().trim().min(7).max(20),
+    phone: phoneSchema,
     address: z.string().trim().optional().default(""),
-    employeeId: z.string().trim().min(2).max(30),
-    department: z.string().trim().min(2).max(80),
+    employeeId: employeeIdSchema,
+    department: textNoNumbersSchema("Department", 80),
     role: z.enum(staffRoleValues),
     employmentDate: z.coerce.date(),
     emergencyContact: z.string().trim().optional().default(""),
@@ -24,11 +25,11 @@ export const createStaffSchema = z.object({
 export const updateStaffSchema = z.object({
   params: idParamSchema.shape.params,
   body: z.object({
-    firstName: z.string().trim().min(2).max(60).optional(),
-    lastName: z.string().trim().min(2).max(60).optional(),
-    phone: z.string().trim().min(7).max(20).optional(),
+    firstName: nameSchema("First name").optional(),
+    lastName: nameSchema("Last name").optional(),
+    phone: phoneSchema.optional(),
     address: z.string().trim().optional(),
-    department: z.string().trim().min(2).max(80).optional(),
+    department: textNoNumbersSchema("Department", 80).optional(),
     role: z.enum(staffRoleValues).optional(),
     status: z.enum(["active", "inactive"]).optional(),
     emergencyContact: z.string().trim().optional()
@@ -40,7 +41,7 @@ export const shiftSchema = z.object({
     staffId: objectIdSchema,
     startTime: z.coerce.date(),
     endTime: z.coerce.date(),
-    location: z.string().trim().min(2),
+    location: z.string().trim().min(2, "Location is required").max(120),
     geoFence: z.object({
       latitude: z.coerce.number().min(-90).max(90),
       longitude: z.coerce.number().min(-180).max(180),
@@ -86,7 +87,7 @@ export const reviewLeaveSchema = z.object({
 
 export const centerLocationSchema = z.object({
   body: z.object({
-    name: z.string().trim().min(2).max(120),
+    name: z.string().trim().min(2, "Center name is required").max(120),
     latitude: z.coerce.number().min(-90).max(90),
     longitude: z.coerce.number().min(-180).max(180),
     radiusMeters: z.coerce.number().min(10).max(1000)

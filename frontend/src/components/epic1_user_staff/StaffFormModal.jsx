@@ -5,15 +5,16 @@ import { z } from "zod";
 import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
 import { Modal } from "../shared/Modal.jsx";
+import { requiredEmployeeId, requiredName, requiredPhone, requiredTextNoNumbers, stripDigits, stripNonId, stripNonPhone } from "../../utils/validationSchemas.js";
 import { STAFF_ROLES } from "./e1Constants.js";
 
 const baseSchema = z.object({
-  firstName: z.string().trim().min(2, "First name is required"),
-  lastName: z.string().trim().min(2, "Last name is required"),
+  firstName: requiredName("First name"),
+  lastName: requiredName("Last name"),
   email: z.string().trim().email("Enter a valid email"),
-  phone: z.string().trim().min(7, "Phone is required"),
-  employeeId: z.string().trim().min(2, "Employee ID is required"),
-  department: z.string().trim().min(2, "Department is required"),
+  phone: requiredPhone,
+  employeeId: requiredEmployeeId,
+  department: requiredTextNoNumbers("Department", 80),
   role: z.string().min(1, "Role is required"),
   employmentDate: z.string().min(1, "Employment date is required"),
   password: z.string().optional()
@@ -77,16 +78,16 @@ export const StaffFormModal = ({ open, mode = "create", staff, onClose, onSubmit
       <form onSubmit={handleSubmit(submit)}>
         <div className="form-section-title">Personal Information</div>
         <div className="form-grid">
-          <FormInput label="First Name" error={errors.firstName?.message} {...register("firstName")} />
-          <FormInput label="Last Name" error={errors.lastName?.message} {...register("lastName")} />
+          <FormInput label="First Name" sanitize={stripDigits} error={errors.firstName?.message} {...register("firstName")} />
+          <FormInput label="Last Name" sanitize={stripDigits} error={errors.lastName?.message} {...register("lastName")} />
           <FormInput label="Email" type="email" disabled={isEdit} error={errors.email?.message} {...register("email")} />
-          <FormInput label="Phone" error={errors.phone?.message} {...register("phone")} />
+          <FormInput label="Phone" inputMode="tel" sanitize={stripNonPhone} error={errors.phone?.message} {...register("phone")} />
         </div>
 
         <div className="form-section-title">Employment Information</div>
         <div className="form-grid">
-          <FormInput label="Employee ID" disabled={isEdit} error={errors.employeeId?.message} {...register("employeeId")} />
-          <FormInput label="Department" error={errors.department?.message} {...register("department")} />
+          <FormInput label="Employee ID" disabled={isEdit} sanitize={stripNonId} error={errors.employeeId?.message} {...register("employeeId")} />
+          <FormInput label="Department" sanitize={stripDigits} error={errors.department?.message} {...register("department")} />
           <FormSelect label="Role" error={errors.role?.message} {...register("role")}>
             <option value="">Select role</option>
             {STAFF_ROLES.map((role) => (

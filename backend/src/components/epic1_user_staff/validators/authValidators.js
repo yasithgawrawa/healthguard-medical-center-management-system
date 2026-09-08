@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nameSchema, phoneSchema } from "../../../shared/validators/fieldSchemas.js";
 
 const passwordSchema = z
   .string()
@@ -8,20 +9,14 @@ const passwordSchema = z
   .regex(/[0-9]/, "Password must include a number")
   .regex(/[^A-Za-z0-9]/, "Password must include a special character");
 
-const phoneSchema = z
-  .string()
-  .min(7, "Phone number is too short")
-  .max(20, "Phone number is too long")
-  .regex(/^[0-9+\-\s()]+$/, "Phone number contains invalid characters");
-
 export const registerPatientSchema = z.object({
   body: z
     .object({
-      firstName: z.string().trim().min(2).max(60),
-      lastName: z.string().trim().min(2).max(60),
+      firstName: nameSchema("First name"),
+      lastName: nameSchema("Last name"),
       email: z.string().trim().email().toLowerCase(),
       phone: phoneSchema,
-      address: z.string().trim().max(250).optional().default(""),
+      address: z.string().trim().min(5, "Address is required").max(250),
       dateOfBirth: z.coerce.date().refine((date) => date <= new Date(), {
         message: "Date of birth cannot be in the future"
       }),

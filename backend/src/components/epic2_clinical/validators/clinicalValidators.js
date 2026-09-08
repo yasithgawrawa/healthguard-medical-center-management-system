@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { bloodPressurePattern } from "../../../shared/validators/fieldSchemas.js";
 import { idParamSchema, objectIdSchema } from "../../../shared/validators/commonSchemas.js";
 
 export const appointmentSchema = z.object({
@@ -21,7 +22,7 @@ export const vitalsSchema = z.object({
     appointmentId: objectIdSchema,
     patientId: objectIdSchema.optional(),
     temperature: z.coerce.number().min(25).max(45).optional(),
-    bloodPressure: z.string().trim().optional(),
+    bloodPressure: z.string().trim().regex(bloodPressurePattern, "Use format like 120/80").optional().or(z.literal("")),
     heartRate: z.coerce.number().min(20).max(250).optional(),
     weight: z.coerce.number().min(0).optional(),
     height: z.coerce.number().min(0).optional(),
@@ -34,8 +35,8 @@ export const consultationSchema = z.object({
     appointmentId: objectIdSchema,
     patientId: objectIdSchema.optional(),
     doctorId: objectIdSchema.optional(),
-    diagnosis: z.string().trim().min(2),
-    clinicalNotes: z.string().trim().min(3),
+    diagnosis: z.string().trim().min(2, "Diagnosis is required").max(120),
+    clinicalNotes: z.string().trim().min(3, "Clinical notes are required").max(1000),
     finalized: z.boolean().optional().default(false)
   })
 });
@@ -46,11 +47,11 @@ export const prescriptionSchema = z.object({
     patientId: objectIdSchema.optional(),
     doctorId: objectIdSchema.optional(),
     items: z.array(z.object({
-      medicineName: z.string().trim().min(2),
-      dosage: z.string().trim().min(1),
-      frequency: z.string().trim().min(1),
-      duration: z.string().trim().min(1),
-      instructions: z.string().trim().optional().default("")
+      medicineName: z.string().trim().min(2, "Medicine is required").max(120),
+      dosage: z.string().trim().min(1, "Dosage is required").max(40),
+      frequency: z.string().trim().min(1, "Frequency is required").max(60),
+      duration: z.string().trim().min(1, "Duration is required").max(40),
+      instructions: z.string().trim().max(250).optional().default("")
     })).min(1)
   })
 });
@@ -60,7 +61,7 @@ export const labRequestSchema = z.object({
     appointmentId: objectIdSchema,
     patientId: objectIdSchema.optional(),
     doctorId: objectIdSchema.optional(),
-    testName: z.string().trim().min(2),
+    testName: z.string().trim().min(2, "Test name is required").max(120),
     priority: z.enum(["routine", "urgent"]).optional().default("routine")
   })
 });
@@ -69,7 +70,7 @@ export const labUpdateSchema = z.object({
   params: idParamSchema.shape.params,
   body: z.object({
     status: z.enum(["verified", "in_progress", "completed", "cancelled"]),
-    resultSummary: z.string().trim().optional(),
-    resultUrl: z.string().trim().optional()
+    resultSummary: z.string().trim().max(500).optional(),
+    resultUrl: z.string().trim().url("Enter a valid report URL").optional().or(z.literal(""))
   })
 });

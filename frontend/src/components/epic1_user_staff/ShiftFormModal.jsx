@@ -4,15 +4,16 @@ import { z } from "zod";
 import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
 import { Modal } from "../shared/Modal.jsx";
+import { optionalText, requiredFutureDateTime } from "../../utils/validationSchemas.js";
 import { roleLabel, staffName } from "./e1Constants.js";
 
 const shiftSchema = z
   .object({
     staffId: z.string().min(1, "Select an active staff member"),
-    startTime: z.string().min(1, "Start time is required"),
+    startTime: requiredFutureDateTime("Start time"),
     endTime: z.string().min(1, "End time is required"),
-    location: z.string().trim().min(2, "Location is required"),
-    notes: z.string().optional()
+    location: z.string().trim().min(2, "Location is required").max(120, "Location is too long"),
+    notes: optionalText("Notes", 250)
   })
   .refine((data) => new Date(data.endTime) > new Date(data.startTime), {
     path: ["endTime"],

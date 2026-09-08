@@ -7,10 +7,10 @@ import { e1Api } from "../../services/e1Api.js";
 import { FormInput } from "../shared/forms/FormInput.jsx";
 
 const centerSchema = z.object({
-  name: z.string().trim().min(2, "Center name is required"),
+  name: z.string().trim().min(2, "Center name is required").max(120, "Center name is too long"),
   latitude: z.coerce.number().min(-90, "Latitude is required").max(90),
   longitude: z.coerce.number().min(-180, "Longitude is required").max(180),
-  radiusMeters: z.coerce.number().min(10, "Minimum radius is 10m").max(1000, "Maximum radius is 1000m")
+  radiusMeters: z.coerce.number().int("Radius must be a whole number").min(10, "Minimum radius is 10m").max(1000, "Maximum radius is 1000m")
 });
 
 export const CenterLocationPanel = ({ onToast }) => {

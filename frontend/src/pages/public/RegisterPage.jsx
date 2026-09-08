@@ -9,6 +9,7 @@ import { FormSelect } from "../../components/shared/forms/FormSelect.jsx";
 import { SubmitButton } from "../../components/shared/forms/SubmitButton.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { DASHBOARD_PATH_BY_ROLE } from "../../utils/roles.js";
+import { requiredName, requiredPastDate, requiredPhone, stripDigits, stripNonPhone } from "../../utils/validationSchemas.js";
 
 const passwordSchema = z
   .string()
@@ -20,12 +21,12 @@ const passwordSchema = z
 
 const schema = z
   .object({
-    firstName: z.string().min(2, "First name is required"),
-    lastName: z.string().min(2, "Last name is required"),
+    firstName: requiredName("First name"),
+    lastName: requiredName("Last name"),
     email: z.string().email("Enter a valid email"),
-    phone: z.string().min(7, "Phone number is required"),
-    address: z.string().optional(),
-    dateOfBirth: z.string().min(1, "Date of birth is required"),
+    phone: requiredPhone,
+    address: z.string().trim().min(5, "Address is required").max(250, "Address is too long"),
+    dateOfBirth: requiredPastDate("Date of birth"),
     gender: z.enum(["female", "male", "other", "prefer_not_to_say"]),
     password: passwordSchema,
     confirmPassword: z.string()
@@ -81,12 +82,14 @@ export const RegisterPage = () => {
             <FormInput
               label="First Name"
               placeholder="John"
+              sanitize={stripDigits}
               error={errors.firstName?.message}
               {...register("firstName")}
             />
             <FormInput
               label="Last Name"
               placeholder="Doe"
+              sanitize={stripDigits}
               error={errors.lastName?.message}
               {...register("lastName")}
             />
@@ -100,6 +103,8 @@ export const RegisterPage = () => {
             <FormInput
               label="Phone Number"
               placeholder="+94 77 123 4567"
+              inputMode="tel"
+              sanitize={stripNonPhone}
               error={errors.phone?.message}
               {...register("phone")}
             />

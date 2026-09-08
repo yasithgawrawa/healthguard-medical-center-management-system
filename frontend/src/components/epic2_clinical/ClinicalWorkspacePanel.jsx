@@ -12,6 +12,7 @@ import { StatusBadge } from "../shared/StatusBadge.jsx";
 import { Toast } from "../shared/Toast.jsx";
 import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
+import { bloodPressurePattern, optionalVitalsNumber } from "../../utils/validationSchemas.js";
 
 const patientName = (appointment) => {
   const patient = appointment?.patientId || {};
@@ -26,35 +27,35 @@ const doctorName = (item) => {
 const formatDateTime = (value) => (value ? new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "-");
 
 const vitalsSchema = z.object({
-  temperature: z.string().optional(),
-  bloodPressure: z.string().optional(),
-  heartRate: z.string().optional(),
-  spo2: z.string().optional()
+  temperature: optionalVitalsNumber("Temperature", 25, 45),
+  bloodPressure: z.string().trim().regex(bloodPressurePattern, "Use format like 120/80").optional().or(z.literal("")),
+  heartRate: optionalVitalsNumber("Heart rate", 20, 250),
+  spo2: optionalVitalsNumber("SpO2", 50, 100)
 });
 
 const consultationSchema = z.object({
-  diagnosis: z.string().trim().min(2, "Diagnosis is required"),
+  diagnosis: z.string().trim().min(2, "Diagnosis is required").max(120, "Diagnosis is too long"),
   clinicalNotes: z.string().trim().min(3, "Clinical notes are required"),
   finalized: z.boolean().optional()
 });
 
 const prescriptionSchema = z.object({
-  medicineName: z.string().trim().min(2, "Medicine is required"),
-  dosage: z.string().trim().min(1, "Dosage is required"),
-  frequency: z.string().trim().min(1, "Frequency is required"),
-  duration: z.string().trim().min(1, "Duration is required"),
-  instructions: z.string().optional()
+  medicineName: z.string().trim().min(2, "Medicine is required").max(120, "Medicine name is too long"),
+  dosage: z.string().trim().min(1, "Dosage is required").max(40, "Dosage is too long"),
+  frequency: z.string().trim().min(1, "Frequency is required").max(60, "Frequency is too long"),
+  duration: z.string().trim().min(1, "Duration is required").max(40, "Duration is too long"),
+  instructions: z.string().trim().max(250, "Instructions are too long").optional().or(z.literal(""))
 });
 
 const labRequestSchema = z.object({
-  testName: z.string().trim().min(2, "Test name is required"),
+  testName: z.string().trim().min(2, "Test name is required").max(120, "Test name is too long"),
   priority: z.string().min(1, "Priority is required")
 });
 
 const labUpdateSchema = z.object({
   status: z.string().min(1, "Status is required"),
-  resultSummary: z.string().optional(),
-  resultUrl: z.string().optional()
+  resultSummary: z.string().trim().max(500, "Result summary is too long").optional().or(z.literal("")),
+  resultUrl: z.string().trim().url("Enter a valid report URL").optional().or(z.literal(""))
 });
 
 const buildNumber = (value) => (value === "" || value === undefined ? undefined : Number(value));
@@ -196,7 +197,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
           {modal.type === "vitals" ? (
             <div className="form-grid">
               <FormInput label="Temperature" type="number" step="0.1" error={errors.temperature?.message} {...register("temperature")} />
-              <FormInput label="Blood Pressure" error={errors.bloodPressure?.message} {...register("bloodPressure")} />
+              <FormInput label="Blood Pressure" placeholder="120/80" error={errors.bloodPressure?.message} {...register("bloodPressure")} />
               <FormInput label="Heart Rate" type="number" error={errors.heartRate?.message} {...register("heartRate")} />
               <FormInput label="SpO2" type="number" error={errors.spo2?.message} {...register("spo2")} />
             </div>

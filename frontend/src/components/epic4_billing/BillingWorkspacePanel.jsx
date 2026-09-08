@@ -12,9 +12,18 @@ import { StatusBadge } from "../shared/StatusBadge.jsx";
 import { Toast } from "../shared/Toast.jsx";
 import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
+import { requiredMoney, requiredQuantity } from "../../utils/validationSchemas.js";
 
-const invoiceSchema = z.object({ appointmentId: z.string().min(1), description: z.string().min(2), quantity: z.coerce.number().min(1), unitPrice: z.coerce.number().min(0) });
-const paymentSchema = z.object({ amount: z.coerce.number().min(0.01), method: z.string().min(1) });
+const invoiceSchema = z.object({
+  appointmentId: z.string().min(1, "Select appointment"),
+  description: z.string().trim().min(2, "Description is required").max(120, "Description is too long"),
+  quantity: requiredQuantity(),
+  unitPrice: requiredMoney("Unit price")
+});
+const paymentSchema = z.object({
+  amount: z.coerce.number({ invalid_type_error: "Amount is required" }).min(0.01, "Amount must be greater than 0").max(10000000, "Amount is too high"),
+  method: z.string().min(1, "Payment method is required")
+});
 const name = (user) => [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Patient";
 
 export const BillingWorkspacePanel = () => {
@@ -83,8 +92,8 @@ export const BillingWorkspacePanel = () => {
       />
       <Modal open={Boolean(modal.type)} title={modal.type === "payment" ? "Record Payment" : "Create Invoice"} onClose={() => setModal({ type: null, record: null })}>
         <form onSubmit={handleSubmit(submit)}>
-          {modal.type === "invoice" ? <div className="form-grid"><FormSelect label="Appointment" error={errors.appointmentId?.message} {...register("appointmentId")}><option value="">Select appointment</option>{appointments.map((item) => <option value={item._id} key={item._id}>{name(item.patientId)} - {new Date(item.appointmentDate).toLocaleDateString()}</option>)}</FormSelect><FormInput label="Description" error={errors.description?.message} {...register("description")} /><FormInput label="Quantity" type="number" error={errors.quantity?.message} {...register("quantity")} /><FormInput label="Unit Price" type="number" error={errors.unitPrice?.message} {...register("unitPrice")} /></div> : null}
-          {modal.type === "payment" ? <div className="form-grid"><FormInput label="Amount" type="number" error={errors.amount?.message} {...register("amount")} /><FormSelect label="Method" error={errors.method?.message} {...register("method")}><option value="cash">Cash</option><option value="card">Card</option><option value="bank_transfer">Bank Transfer</option></FormSelect></div> : null}
+          {modal.type === "invoice" ? <div className="form-grid"><FormSelect label="Appointment" error={errors.appointmentId?.message} {...register("appointmentId")}><option value="">Select appointment</option>{appointments.map((item) => <option value={item._id} key={item._id}>{name(item.patientId)} - {new Date(item.appointmentDate).toLocaleDateString()}</option>)}</FormSelect><FormInput label="Description" error={errors.description?.message} {...register("description")} /><FormInput label="Quantity" type="number" min="1" step="1" error={errors.quantity?.message} {...register("quantity")} /><FormInput label="Unit Price" type="number" min="0" step="0.01" error={errors.unitPrice?.message} {...register("unitPrice")} /></div> : null}
+          {modal.type === "payment" ? <div className="form-grid"><FormInput label="Amount" type="number" min="0.01" step="0.01" error={errors.amount?.message} {...register("amount")} /><FormSelect label="Method" error={errors.method?.message} {...register("method")}><option value="cash">Cash</option><option value="card">Card</option><option value="bank_transfer">Bank Transfer</option></FormSelect></div> : null}
           <div className="modal-actions"><button className="button-secondary" type="button" onClick={() => setModal({ type: null, record: null })} disabled={busy}>Cancel</button><button className="button-primary" type="submit" disabled={busy}><CreditCard size={16} /> {busy ? "Saving..." : "Save"}</button></div>
         </form>
       </Modal>

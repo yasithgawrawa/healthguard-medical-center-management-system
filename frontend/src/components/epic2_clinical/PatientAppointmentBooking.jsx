@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarCheck, RefreshCw, Send } from "lucide-react";
 import { patientApi } from "../../services/patientApi.js";
+import { stripDigits } from "../../utils/validationSchemas.js";
 
 const initialForm = {
   doctorId: "",
@@ -16,6 +17,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const selectedDoctor = useMemo(
     () => doctors.find((doctor) => doctor._id === form.doctorId),
@@ -32,13 +34,31 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
 
   const setField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
+    setFieldErrors((current) => ({ ...current, [field]: "" }));
+  };
+
+  const validate = () => {
+    const nextErrors = {};
+    if (!form.doctorId) nextErrors.doctorId = "Select a doctor";
+    if (!form.appointmentDate) {
+      nextErrors.appointmentDate = "Appointment date and time is required";
+    } else if (new Date(form.appointmentDate) <= new Date()) {
+      nextErrors.appointmentDate = "Appointment date and time must be in the future";
+    }
+    if (form.slotLabel.trim().length < 2) nextErrors.slotLabel = "Slot is required";
+    if (/\d/.test(form.slotLabel)) nextErrors.slotLabel = "Slot cannot contain numbers";
+    if (form.reason.trim().length < 5) nextErrors.reason = "Reason must be at least 5 characters";
+    if (form.reason.trim().length > 300) nextErrors.reason = "Reason is too long";
+    setFieldErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
 
   const submit = async (event) => {
     event.preventDefault();
-    setSubmitting(true);
     setMessage("");
     setError("");
+    if (!validate()) return;
+    setSubmitting(true);
 
     try {
       await patientApi.bookAppointment(form);
@@ -83,6 +103,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
                 </option>
               ))}
             </select>
+            {fieldErrors.doctorId ? <small>{fieldErrors.doctorId}</small> : null}
           </label>
           <label className="form-field">
             <span>Date and Time</span>
@@ -93,6 +114,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
               required
               disabled={submitting}
             />
+            {fieldErrors.appointmentDate ? <small>{fieldErrors.appointmentDate}</small> : null}
           </label>
         </div>
 
@@ -102,11 +124,12 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
             <span>Slot</span>
             <input
               value={form.slotLabel}
-              onChange={(event) => setField("slotLabel", event.target.value)}
+              onChange={(event) => setField("slotLabel", stripDigits(event.target.value))}
               placeholder="Morning Slot"
               required
               disabled={submitting}
             />
+            {fieldErrors.slotLabel ? <small>{fieldErrors.slotLabel}</small> : null}
           </label>
           <label className="form-field">
             <span>Reason</span>
@@ -118,6 +141,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
               required
               disabled={submitting}
             />
+            {fieldErrors.reason ? <small>{fieldErrors.reason}</small> : null}
           </label>
           {selectedDoctor ? (
             <p className="section-description" style={{ margin: "0 0 12px" }}>
