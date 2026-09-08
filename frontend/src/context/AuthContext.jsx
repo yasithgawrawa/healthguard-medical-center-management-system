@@ -47,6 +47,7 @@ export const AuthProvider = ({ children }) => {
   );
 
   const logout = useCallback(() => {
+    sessionStorage.setItem("healthguard_logout_redirect", "1");
     localStorage.removeItem("healthguard_token");
     setUser(null);
   }, []);

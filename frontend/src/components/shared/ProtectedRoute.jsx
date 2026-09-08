@@ -10,6 +10,10 @@ export const ProtectedRoute = ({ allowedRoles }) => {
   }
 
   if (!user) {
+    if (sessionStorage.getItem("healthguard_logout_redirect")) {
+      sessionStorage.removeItem("healthguard_logout_redirect");
+      return <Navigate to="/" replace />;
+    }
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
