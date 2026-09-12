@@ -71,7 +71,7 @@ console.log(`[✓] Primary Location registered: ${primaryLocation.name}`);
 // 2. Initial Super Admin Account
 const defaultPassword = process.env.SEED_ADMIN_PASSWORD || "Admin@12345";
 const passwordHash = await bcrypt.hash(defaultPassword, 12);
-const adminEmail = (process.env.SEED_ADMIN_EMAIL || "admin@healthguard.local").toLowerCase().trim();
+const adminEmail = (process.env.SEED_ADMIN_EMAIL || "admin@healthguard.com").toLowerCase().trim();
 
 const adminUser = await User.create({
   firstName: "System",
