@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { Bell, CalendarCheck, CreditCard, Download, FileText, Pill, RefreshCw } from "lucide-react";
+import { Bell, CalendarCheck, CreditCard, Download, FileText, Pill, Printer, RefreshCw } from "lucide-react";
 import { patientApi } from "../../services/patientApi.js";
-import { downloadInvoicePDF, printLabReportPDF } from "../../utils/invoicePrintTemplate.js";
+import { printInvoicePDF, printLabReportPDF } from "../../utils/invoicePrintTemplate.js";
 
 const formatDate = (value) => {
   if (!value) return "Not set";
@@ -90,7 +90,7 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
   };
 
   const printInvoice = (invoice) => {
-    downloadInvoicePDF(invoice);
+    printInvoicePDF(invoice);
   };
 
   const markNotificationRead = async (id) => {
@@ -217,10 +217,10 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
               className="table-link-button"
               type="button"
               onClick={() => printInvoice(item)}
-              title="Download as PDF"
+              title="View & Print as PDF"
             >
-              <Download size={12} style={{ display: "inline", marginRight: "3px" }} />
-              {item.status === "paid" ? "Download Receipt" : "Download Invoice"}
+              <Printer size={12} style={{ display: "inline", marginRight: "3px" }} />
+              {item.status === "paid" ? "Receipt PDF" : "Invoice PDF"}
             </button>
           </div>
         </>

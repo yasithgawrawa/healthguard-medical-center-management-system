@@ -53,7 +53,7 @@ class PdfWriter {
     this.currentStream = [];
     this.y = this.H - this.margin; // current Y position (top-down)
     this.fonts = { Helvetica: "F1", HelveticaBold: "F2", HelveticaOblique: "F3" };
-    this._objCount = 0;
+    this._objCount = 6;  // Objects 1-6 are reserved for catalog, pagesDict, info, and 3 standard fonts
     this._pageObjectIds = [];
     this.filename = "document.pdf";
   }
@@ -162,15 +162,6 @@ class PdfWriter {
       this._finalizePage();
     }
 
-    // Build object array:
-    // Obj 1: Catalog
-    // Obj 2: Pages (placeholder, we'll build it last)
-    // Obj 3: Info
-    // Obj 4: Helvetica font
-    // Obj 5: Helvetica-Bold font
-    // Obj 6: Helvetica-Oblique font
-    // Obj 7+: content streams and page objects
-
     const catalog = `<< /Type /Catalog /Pages 2 0 R >>`;
     const info = `<< /Producer (Health Guard PDF v1.0) /CreationDate (D:${new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14)}Z) >>`;
     const pagesDict = `<< /Type /Pages /Kids [${this._pageObjectIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${this._pageObjectIds.length} >>`;
@@ -189,10 +180,7 @@ class PdfWriter {
       { id: 6, content: helveticaOblique },
     ];
 
-    // Re-offset generated object IDs by 6
-    const shiftedObjs = this.objects.map((o) => ({ id: o.id + 6, content: o.content.replace(/(\d+) 0 R/g, (m, n) => `${parseInt(n) + 6} 0 R`) }));
-
-    const allObjs = [...fixedObjs, ...shiftedObjs];
+    const allObjs = [...fixedObjs, ...this.objects].sort((a, b) => a.id - b.id);
 
     // Build xref table
     let pdfParts = [`%PDF-1.4\n%\xE2\xE3\xCF\xD3\n`];

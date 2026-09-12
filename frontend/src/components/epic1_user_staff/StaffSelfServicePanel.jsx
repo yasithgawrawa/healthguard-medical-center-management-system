@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Clock, Download, LogIn, LogOut, MapPin, Plane, X } from "lucide-react";
+import { Clock, Download, LogIn, LogOut, MapPin, Plane, Printer, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useOutletContext } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -12,7 +12,7 @@ import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
 import { e1Api } from "../../services/e1Api.js";
 import { billingApi } from "../../services/billingApi.js";
-import { downloadPayslipPDF } from "../../utils/invoicePrintTemplate.js";
+import { printPayslipPDF } from "../../utils/invoicePrintTemplate.js";
 import { formatDate, formatTime, LEAVE_TYPES } from "./e1Constants.js";
 
 const leaveRequestSchema = z
@@ -302,11 +302,11 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
               <button
                 className="table-link-button"
                 type="button"
-                onClick={() => downloadPayslipPDF(item)}
-                title="Download payslip as PDF"
+                onClick={() => printPayslipPDF(item)}
+                title="View & Print payslip as PDF"
               >
-                <Download size={13} style={{ display: "inline", marginRight: "4px" }} />
-                Download PDF
+                <Printer size={13} style={{ display: "inline", marginRight: "4px" }} />
+                Payslip PDF
               </button>
             ) }
           ]}

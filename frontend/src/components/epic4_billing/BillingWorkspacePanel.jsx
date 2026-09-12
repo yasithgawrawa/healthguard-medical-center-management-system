@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle, CreditCard, DollarSign, Download, Receipt } from "lucide-react";
+import { CheckCircle, CreditCard, DollarSign, Download, Printer, Receipt } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -9,7 +9,7 @@ import { e1Api } from "../../services/e1Api.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { ROLES } from "../../utils/roles.js";
 import { requiredMoney, requiredQuantity } from "../../utils/validationSchemas.js";
-import { printInvoicePDF, printPayslipPDF, downloadInvoicePDF, downloadPayslipPDF } from "../../utils/invoicePrintTemplate.js";
+import { printInvoicePDF, printPayslipPDF } from "../../utils/invoicePrintTemplate.js";
 import { DataTable } from "../shared/DataTable.jsx";
 import { Modal } from "../shared/Modal.jsx";
 import { SearchBar } from "../shared/SearchBar.jsx";
@@ -202,11 +202,11 @@ export const BillingWorkspacePanel = () => {
   };
 
   const printInvoice = (invoice) => {
-    downloadInvoicePDF(invoice);
+    printInvoicePDF(invoice);
   };
 
   const printPayslip = (item) => {
-    downloadPayslipPDF(item);
+    printPayslipPDF(item);
   };
 
   const patientUnpaidCounts = useMemo(() => {
@@ -362,13 +362,14 @@ export const BillingWorkspacePanel = () => {
                         </button>
                       ) : null}
                       <button
-                        className="table-link-button"
+                        className="button-secondary"
+                        style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 10px", fontSize: "0.8rem", fontWeight: 600 }}
                         type="button"
                         onClick={() => printInvoice(item)}
-                        title={item.status === "paid" ? "Download Official Payment Receipt" : "Download Invoice PDF"}
+                        title={item.status === "paid" ? "View & Print Official Payment Receipt PDF" : "View & Print Invoice PDF"}
                       >
-                        <Download size={13} style={{ display: "inline", marginRight: "3px" }} />
-                        {item.status === "paid" ? "Receipt" : "Invoice"}
+                        <Printer size={13} />
+                        {item.status === "paid" ? "Receipt PDF" : "Invoice PDF"}
                       </button>
                     </div>
                   );
