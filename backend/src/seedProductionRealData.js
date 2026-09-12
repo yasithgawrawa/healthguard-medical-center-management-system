@@ -66,7 +66,7 @@ console.log("   ✓ All 20 collections purged successfully.");
 // ============================================================================
 // STEP 2: COMMON TIME & CRYPTO HELPERS
 // ============================================================================
-const defaultPassword = process.env.SEED_ADMIN_PASSWORD || "Admin@12345";
+const defaultPassword = process.env.SEED_ADMIN_PASSWORD || "Pass@12345";
 const passwordHash = await bcrypt.hash(defaultPassword, 12);
 const now = new Date();
 const currentMonth = now.toISOString().slice(0, 7);

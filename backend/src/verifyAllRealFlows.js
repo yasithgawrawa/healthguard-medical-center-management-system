@@ -48,7 +48,7 @@ try {
   const labUser = await User.findOne({ email: "lab@healthguard.com" });
   const patientUser = await User.findOne({ email: "saman.kumara82@gmail.com" });
 
-  const isPasswordValid = await bcrypt.compare("Admin@12345", adminUser.passwordHash);
+  const isPasswordValid = await bcrypt.compare("Pass@12345", adminUser.passwordHash);
   recordStep("1. Auth & RBAC", "Admin Credential Check", isPasswordValid, "Bcrypt hash verified against default password");
 
   const token = jwt.sign({ id: adminUser._id, role: adminUser.role }, env.JWT_SECRET, { expiresIn: "1h" });
