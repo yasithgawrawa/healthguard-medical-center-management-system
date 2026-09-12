@@ -58,6 +58,7 @@ export const BillingWorkspacePanel = () => {
   const [summary, setSummary] = useState({ invoiced: 0, collected: 0, outstanding: 0, payrollExpense: 0 });
   const [activeTab, setActiveTab] = useState("invoices");
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [modal, setModal] = useState({ type: null, record: null });
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
@@ -117,8 +118,13 @@ export const BillingWorkspacePanel = () => {
 
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return invoices.filter((item) => [name(item.patientId), item.status, item.subtotal, item.outstandingAmount].join(" ").toLowerCase().includes(query));
-  }, [invoices, search]);
+    return invoices.filter((item) => {
+      const text = [name(item.patientId), item.status, item.subtotal, item.outstandingAmount, item.items?.map((i) => i.description).join(" ")].join(" ").toLowerCase();
+      const matchesQuery = !query || text.includes(query);
+      const matchesStatus = statusFilter === "all" ? true : statusFilter === "pending" ? item.status !== "paid" : item.status === statusFilter;
+      return matchesQuery && matchesStatus;
+    });
+  }, [invoices, search, statusFilter]);
 
   const submit = async (values) => {
     setBusy(true);
@@ -222,7 +228,37 @@ export const BillingWorkspacePanel = () => {
 
       {activeTab === "invoices" ? (
         <>
-          <div className="table-toolbar compact-toolbar"><SearchBar value={search} onChange={setSearch} placeholder="Search patient, amount or status" /></div>
+          <div className="table-toolbar compact-toolbar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+            <div style={{ flex: 1, minWidth: "260px" }}>
+              <SearchBar value={search} onChange={setSearch} placeholder="Search patient, medicine, or bill details..." />
+            </div>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className={statusFilter === "all" ? "button-primary" : "button-secondary"}
+                onClick={() => setStatusFilter("all")}
+                style={{ padding: "5px 12px", fontSize: "0.82rem" }}
+              >
+                All ({invoices.length})
+              </button>
+              <button
+                type="button"
+                className={statusFilter === "pending" ? "button-primary" : "button-secondary"}
+                onClick={() => setStatusFilter("pending")}
+                style={{ padding: "5px 12px", fontSize: "0.82rem" }}
+              >
+                ⏳ Pending Bills ({invoices.filter((i) => i.status !== "paid").length})
+              </button>
+              <button
+                type="button"
+                className={statusFilter === "paid" ? "button-primary" : "button-secondary"}
+                onClick={() => setStatusFilter("paid")}
+                style={{ padding: "5px 12px", fontSize: "0.82rem" }}
+              >
+                ✓ Settled Paid ({invoices.filter((i) => i.status === "paid").length})
+              </button>
+            </div>
+          </div>
           <DataTable
             rows={rows}
             columns={[
@@ -250,7 +286,37 @@ export const BillingWorkspacePanel = () => {
               { key: "paid", header: "Paid", render: (item) => money(item.paidAmount) },
               { key: "outstanding", header: "Outstanding", render: (item) => money(item.outstandingAmount) },
               { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
-              { key: "actions", header: "Actions", render: (item) => <div className="inline-actions">{isCashier ? <button className="table-link-button" type="button" onClick={() => { reset({ amount: item.outstandingAmount || "", method: "cash" }); setModal({ type: "payment", record: item }); }} disabled={item.outstandingAmount <= 0}>Record Payment</button> : null}<button className="table-link-button" type="button" onClick={() => printInvoice(item)} title="Download as PDF"><Download size={13} style={{ display: "inline", marginRight: "4px" }} />Download PDF</button></div> }
+              {
+                key: "actions",
+                header: "Actions",
+                render: (item) => (
+                  <div className="inline-actions">
+                    {isCashier && item.outstandingAmount > 0 ? (
+                      <button
+                        className="button-primary"
+                        style={{ padding: "4px 10px", fontSize: "0.82rem" }}
+                        type="button"
+                        onClick={() => {
+                          reset({ amount: item.outstandingAmount || "", method: "cash" });
+                          setModal({ type: "payment", record: item });
+                        }}
+                      >
+                        <CreditCard size={13} style={{ display: "inline", marginRight: "3px" }} />
+                        Collect
+                      </button>
+                    ) : null}
+                    <button
+                      className="table-link-button"
+                      type="button"
+                      onClick={() => printInvoice(item)}
+                      title={item.status === "paid" ? "Download Official Payment Receipt" : "Download Invoice PDF"}
+                    >
+                      <Download size={13} style={{ display: "inline", marginRight: "3px" }} />
+                      {item.status === "paid" ? "Receipt" : "Invoice"}
+                    </button>
+                  </div>
+                )
+              }
             ]}
           />
         </>
@@ -300,7 +366,35 @@ export const BillingWorkspacePanel = () => {
         onClose={() => setModal({ type: null, record: null })}
       >
         <form onSubmit={handleSubmit(submit)}>
-          {modal.type === "invoice" ? <div className="form-grid"><FormSelect label="Completed Appointment" error={errors.appointmentId?.message} {...register("appointmentId")}><option value="">Select completed appointment</option>{appointments.filter((item) => item.status === "completed").map((item) => <option value={item._id} key={item._id}>{name(item.patientId)} - {new Date(item.appointmentDate).toLocaleDateString()}</option>)}</FormSelect><FormInput label="Description" placeholder="Consultation" error={errors.description?.message} {...register("description")} /><FormInput label="Quantity" placeholder="1" type="number" min="1" step="1" error={errors.quantity?.message} {...register("quantity")} /><FormInput label="Unit Price" placeholder="1500.00" type="number" min="0" step="0.01" error={errors.unitPrice?.message} {...register("unitPrice")} /></div> : null}
+          {modal.type === "invoice" ? (
+            <div className="form-grid">
+              <FormSelect
+                label="Completed Appointment"
+                error={errors.appointmentId?.message}
+                {...register("appointmentId", {
+                  onChange: (e) => {
+                    if (e.target.value) {
+                      setValue("description", "Doctor Consultation Fee", { shouldValidate: true });
+                      setValue("quantity", 1, { shouldValidate: true });
+                      setValue("unitPrice", 1500, { shouldValidate: true });
+                    }
+                  }
+                })}
+              >
+                <option value="">Select completed appointment</option>
+                {appointments
+                  .filter((item) => item.status === "completed")
+                  .map((item) => (
+                    <option value={item._id} key={item._id}>
+                      {name(item.patientId)} - {new Date(item.appointmentDate).toLocaleDateString()} ({item.slotLabel || "Visit"})
+                    </option>
+                  ))}
+              </FormSelect>
+              <FormInput label="Description" placeholder="Doctor Consultation Fee" error={errors.description?.message} {...register("description")} />
+              <FormInput label="Quantity" placeholder="1" type="number" min="1" step="1" error={errors.quantity?.message} {...register("quantity")} />
+              <FormInput label="Unit Price (Rs.)" placeholder="1500.00" type="number" min="0" step="0.01" error={errors.unitPrice?.message} {...register("unitPrice")} />
+            </div>
+          ) : null}
           {modal.type === "payment" ? <div className="form-grid"><FormInput label="Amount" placeholder="1500.00" type="number" min="0.01" step="0.01" error={errors.amount?.message} {...register("amount")} /><FormSelect label="Method" error={errors.method?.message} {...register("method")}><option value="cash">Cash</option><option value="card">Card</option><option value="bank_transfer">Bank Transfer</option></FormSelect></div> : null}
           {modal.type === "payroll" ? (
             <>
