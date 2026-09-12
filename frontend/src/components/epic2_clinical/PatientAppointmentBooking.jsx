@@ -82,7 +82,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
         slotLabel: form.slotLabel,
         reason: form.reason
       });
-      setMessage("Appointment booked and saved to MongoDB.");
+      setMessage("Appointment booked successfully.");
       setForm(doctors.length === 1 ? { ...initialForm, doctorId: doctors[0]._id } : initialForm);
       onBooked?.();
     } catch (err) {
@@ -97,7 +97,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
       <div className="operation-header">
         <div>
           <h2>Book An Appointment</h2>
-          <p>Select a doctor, appointment time, slot and reason. The booking is saved to MongoDB under your patient account.</p>
+          <p>Select a doctor, appointment time, slot and reason. The booking is saved under your patient account.</p>
         </div>
         <CalendarCheck size={24} color="var(--brand-600)" />
       </div>

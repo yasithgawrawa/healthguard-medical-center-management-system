@@ -53,7 +53,7 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
       ]);
       setData({ appointments, labs, prescriptions, invoices, notifications });
     } catch (err) {
-      setError(err.response?.data?.message || "Unable to load patient records from MongoDB");
+      setError(err.response?.data?.message || "Unable to load patient records");
     } finally {
       setLoading(false);
     }
@@ -220,7 +220,7 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
       <div className="operation-header">
         <div>
           <h2>My Health Guard Records</h2>
-          <p>Live patient data loaded from MongoDB through protected APIs.</p>
+          <p>Live patient care records loaded through protected health APIs.</p>
         </div>
         <button type="button" onClick={load} disabled={loading}>
           <RefreshCw size={15} className={loading ? "spin-animation" : ""} />
