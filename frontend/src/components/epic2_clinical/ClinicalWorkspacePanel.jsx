@@ -11,7 +11,6 @@ import {
   HeartPulse,
   Microscope,
   Phone,
-  Pill,
   Play,
   Plus,
   RefreshCw,
@@ -94,39 +93,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
   const [labCatalog, setLabCatalog] = useState([]);
-  const [prescriptionItems, setPrescriptionItems] = useState([]);
   const [orderedLabTests, setOrderedLabTests] = useState([]);
-
-  const addPrescriptionItem = (initial = null) => {
-    setPrescriptionItems((prev) => [
-      ...prev,
-      initial
-        ? {
-            medicineName: initial.name,
-            dosage: initial.dosage,
-            frequency: initial.freq,
-            durationDays: initial.days,
-            instructions: initial.inst
-          }
-        : {
-            medicineName: "",
-            dosage: "500mg",
-            frequency: "TDS",
-            durationDays: 5,
-            instructions: "After meals"
-          }
-    ]);
-  };
-
-  const removePrescriptionItem = (index) => {
-    setPrescriptionItems((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const updatePrescriptionItem = (index, field, value) => {
-    setPrescriptionItems((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
-    );
-  };
 
   const [isCustomTest, setIsCustomTest] = useState(false);
 
@@ -244,7 +211,6 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
         priority: "routine"
       });
     } else if (type === "consultation") {
-      setPrescriptionItems([]);
       setOrderedLabTests([]);
       const existing = record.consultation || {};
       reset({
@@ -371,21 +337,6 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
       }
       if (modal.type === "consultation") {
         await clinicalApi.saveConsultation({ appointmentId: record._id, ...values });
-        const validMedicines = prescriptionItems.filter((m) => m.medicineName && m.medicineName.trim().length >= 2);
-        if (validMedicines.length > 0) {
-          await clinicalApi.createPrescription({
-            appointmentId: record._id,
-            patientId: record.patientId?._id || record.patientId,
-            medicines: validMedicines.map((m) => ({
-              medicineName: m.medicineName.trim(),
-              dosage: m.dosage ? m.dosage.trim() : "Standard",
-              frequency: m.frequency ? m.frequency.trim() : "TDS",
-              durationDays: Number(m.durationDays) || 5,
-              instructions: m.instructions ? m.instructions.trim() : "As directed"
-            })),
-            notes: values.clinicalNotes ? values.clinicalNotes.slice(0, 250) : "Issued during consultation"
-          });
-        }
 
         const validLabOrders = orderedLabTests.filter((t) => {
           const finalName = t.testName === "__custom__" ? t.customName : t.testName;
@@ -404,19 +355,10 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
       }
       if (modal.type === "lab-request") await clinicalApi.createLabRequest({ appointmentId: record._id, ...values });
       if (modal.type === "lab-update") await clinicalApi.updateLabRequest(record._id, values);
-      const hasPrescription = modal.type === "consultation" && prescriptionItems.some((m) => m.medicineName?.trim());
       const hasLab = modal.type === "consultation" && orderedLabTests.some((t) => (t.testName === "__custom__" ? t.customName : t.testName)?.trim());
       let successMessage = "Workflow updated successfully";
       if (modal.type === "consultation") {
-        if (hasPrescription && hasLab) {
-          successMessage = "Consultation, digital prescription, and lab request saved successfully";
-        } else if (hasPrescription) {
-          successMessage = "Consultation and digital prescription saved successfully";
-        } else if (hasLab) {
-          successMessage = "Consultation and lab request saved successfully";
-        } else {
-          successMessage = "Consultation saved successfully";
-        }
+        successMessage = hasLab ? "Consultation and lab request saved successfully" : "Consultation saved successfully";
       }
       setToast({ type: "success", message: successMessage });
       setModal({ type: null, record: null });
@@ -1053,115 +995,6 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                 error={errors.clinicalNotes?.message}
                 {...register("clinicalNotes")}
               />
-
-              {/* Prescribed Medications (Optional) */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "14px 16px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                  <div>
-                    <h4 style={{ margin: 0, fontSize: "0.88rem", color: "#1e3a8a", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
-                      <Pill size={15} color="#0284c7" /> Prescriptions & Medications (Optional)
-                    </h4>
-                    <span style={{ fontSize: "0.78rem", color: "#64748b" }}>Add medicines if dispensing from pharmacy</span>
-                  </div>
-                  <button
-                    type="button"
-                    className="button-secondary"
-                    style={{ height: "30px", padding: "0 10px", fontSize: "0.78rem", display: "inline-flex", alignItems: "center", gap: "5px" }}
-                    onClick={() => addPrescriptionItem()}
-                  >
-                    <Plus size={13} /> Add Medicine
-                  </button>
-                </div>
-
-                {prescriptionItems.length === 0 ? (
-                  <div style={{ padding: "10px", textAlign: "center", fontSize: "0.8rem", color: "#94a3b8", background: "#ffffff", borderRadius: "6px", border: "1px dashed #cbd5e1" }}>
-                    No medicines added (optional). Click <strong>"+ Add Medicine"</strong> if dispensing from pharmacy.
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    {prescriptionItems.map((item, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "2fr 1fr 1.2fr 0.8fr 1.5fr auto",
-                          gap: "6px",
-                          alignItems: "center",
-                          background: "#ffffff",
-                          padding: "8px 10px",
-                          borderRadius: "6px",
-                          border: "1px solid #e2e8f0"
-                        }}
-                      >
-                        <div>
-                          <input
-                            type="text"
-                            placeholder="Medicine Name"
-                            value={item.medicineName}
-                            onChange={(e) => updatePrescriptionItem(idx, "medicineName", e.target.value)}
-                            style={{ width: "100%", padding: "5px 8px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px" }}
-                            required
-                          />
-                        </div>
-                        <div>
-                          <input
-                            type="text"
-                            placeholder="Dosage"
-                            value={item.dosage}
-                            onChange={(e) => updatePrescriptionItem(idx, "dosage", e.target.value)}
-                            style={{ width: "100%", padding: "5px 8px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px" }}
-                          />
-                        </div>
-                        <div>
-                          <select
-                            value={item.frequency}
-                            onChange={(e) => updatePrescriptionItem(idx, "frequency", e.target.value)}
-                            style={{ width: "100%", padding: "5px 6px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px" }}
-                          >
-                            <option value="OD">OD (Once daily)</option>
-                            <option value="BD">BD (Twice daily)</option>
-                            <option value="TDS">TDS (3 times daily)</option>
-                            <option value="QDS">QDS (4 times daily)</option>
-                            <option value="PRN">PRN (As needed)</option>
-                            <option value="Stat">Stat (Immediately)</option>
-                          </select>
-                        </div>
-                        <div>
-                          <input
-                            type="number"
-                            min="1"
-                            max="365"
-                            placeholder="Days"
-                            value={item.durationDays}
-                            onChange={(e) => updatePrescriptionItem(idx, "durationDays", e.target.value)}
-                            style={{ width: "100%", padding: "5px 8px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px" }}
-                            required
-                          />
-                        </div>
-                        <div>
-                          <input
-                            type="text"
-                            placeholder="Instructions"
-                            value={item.instructions}
-                            onChange={(e) => updatePrescriptionItem(idx, "instructions", e.target.value)}
-                            style={{ width: "100%", padding: "5px 8px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px" }}
-                          />
-                        </div>
-                        <div>
-                          <button
-                            type="button"
-                            onClick={() => removePrescriptionItem(idx)}
-                            style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px", color: "#ef4444" }}
-                            title="Remove medicine"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
 
               {/* Laboratory Investigations (Optional) */}
               <div style={{ display: "flex", flexDirection: "column", gap: "10px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "14px 16px" }}>
