@@ -57,7 +57,7 @@ export const LoginPage = () => {
           <FormInput
             label="Email Address"
             type="email"
-            placeholder="name@healthguard.local"
+            placeholder="name@healthguard.com"
             error={errors.email?.message}
             {...register("email")}
           />

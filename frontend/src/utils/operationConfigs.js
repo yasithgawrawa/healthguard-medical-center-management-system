@@ -21,7 +21,7 @@ export const e1StaffActions = [
     fields: [
       { name: "firstName", label: "First name", required: true, placeholder: "Amara" },
       { name: "lastName", label: "Last name", required: true, placeholder: "Perera" },
-      { name: "email", label: "Email", type: "email", required: true, placeholder: "doctor@healthguard.local" },
+      { name: "email", label: "Email", type: "email", required: true, placeholder: "doctor@healthguard.com" },
       { name: "phone", label: "Phone", required: true, placeholder: "+94 77 123 4501" },
       { name: "employeeId", label: "Employee ID", required: true, placeholder: "HG-DOC-001" },
       { name: "department", label: "Department", required: true, placeholder: "OPD" },

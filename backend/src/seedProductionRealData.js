@@ -99,7 +99,7 @@ const realStaffData = [
   {
     firstName: "Kasun",
     lastName: "Wickramasinghe",
-    email: "admin@healthguard.local",
+    email: "admin@healthguard.com",
     phone: "+94112555000",
     role: ROLES.ADMIN,
     employeeId: "HG-ADM-001",
@@ -113,7 +113,7 @@ const realStaffData = [
   {
     firstName: "Dr. Kavinda",
     lastName: "Jayawardena",
-    email: "manager@healthguard.local",
+    email: "manager@healthguard.com",
     phone: "+94112555001",
     role: ROLES.MANAGER,
     employeeId: "HG-MGR-001",
@@ -127,7 +127,7 @@ const realStaffData = [
   {
     firstName: "Dr. Amara",
     lastName: "Perera",
-    email: "doctor@healthguard.local",
+    email: "doctor@healthguard.com",
     phone: "+94771234501",
     role: ROLES.DOCTOR,
     employeeId: "HG-DOC-001",
@@ -141,7 +141,7 @@ const realStaffData = [
   {
     firstName: "Dr. Nimal",
     lastName: "Fernando",
-    email: "doctor2@healthguard.local",
+    email: "doctor2@healthguard.com",
     phone: "+94771234502",
     role: ROLES.DOCTOR,
     employeeId: "HG-DOC-002",
@@ -155,7 +155,7 @@ const realStaffData = [
   {
     firstName: "Ishara",
     lastName: "Silva",
-    email: "nurse@healthguard.local",
+    email: "nurse@healthguard.com",
     phone: "+94771234503",
     role: ROLES.NURSE,
     employeeId: "HG-NUR-001",
@@ -169,7 +169,7 @@ const realStaffData = [
   {
     firstName: "Sanduni",
     lastName: "Rathnayake",
-    email: "nurse2@healthguard.local",
+    email: "nurse2@healthguard.com",
     phone: "+94771234504",
     role: ROLES.NURSE,
     employeeId: "HG-NUR-002",
@@ -183,7 +183,7 @@ const realStaffData = [
   {
     firstName: "Dinesh",
     lastName: "Gunasekara",
-    email: "pharmacist@healthguard.local",
+    email: "pharmacist@healthguard.com",
     phone: "+94771234505",
     role: ROLES.PHARMACIST,
     employeeId: "HG-PHA-001",
@@ -197,7 +197,7 @@ const realStaffData = [
   {
     firstName: "Malsha",
     lastName: "Wijesinghe",
-    email: "cashier@healthguard.local",
+    email: "cashier@healthguard.com",
     phone: "+94771234506",
     role: ROLES.CASHIER,
     employeeId: "HG-CAS-001",
@@ -211,7 +211,7 @@ const realStaffData = [
   {
     firstName: "Tharindu",
     lastName: "Abeysekara",
-    email: "lab@healthguard.local",
+    email: "lab@healthguard.com",
     phone: "+94771234507",
     role: ROLES.LAB_ASSISTANT,
     employeeId: "HG-LAB-001",
@@ -257,7 +257,7 @@ for (const s of realStaffData) {
 console.log(`   ✓ Seeded ${realStaffData.length} real staff profiles across 7 clinical departments.`);
 
 // Update CenterLocation updatedBy reference
-primaryLocation.updatedBy = staffUserMap.get("admin@healthguard.local")._id;
+primaryLocation.updatedBy = staffUserMap.get("admin@healthguard.com")._id;
 await primaryLocation.save();
 
 // ============================================================================
@@ -268,7 +268,7 @@ const realPatientData = [
   {
     firstName: "Saman",
     lastName: "Kumara",
-    email: "saman.kumara@example.lk",
+    email: "saman.kumara82@gmail.com",
     phone: "+94712345671",
     address: "No. 45/2, Galle Road, Colombo 03",
     dateOfBirth: new Date("1984-04-16"),
@@ -277,7 +277,7 @@ const realPatientData = [
   {
     firstName: "Nethmi",
     lastName: "Herath",
-    email: "nethmi.herath@example.lk",
+    email: "nethmi.herath@yahoo.com",
     phone: "+94712345672",
     address: "No. 18, Peradeniya Road, Kandy",
     dateOfBirth: new Date("1996-10-02"),
@@ -285,8 +285,8 @@ const realPatientData = [
   },
   {
     firstName: "Fathima",
-    lastName: "Nazeer",
-    email: "fathima.nazeer@example.lk",
+    lastName: "Razeek",
+    email: "fathima.razeek@outlook.com",
     phone: "+94712345673",
     address: "No. 12, Rampart Street, Galle Fort",
     dateOfBirth: new Date("1978-01-22"),
@@ -295,7 +295,7 @@ const realPatientData = [
   {
     firstName: "Ruwan",
     lastName: "Bandara",
-    email: "ruwan.bandara@example.lk",
+    email: "ruwan.bandara@gmail.com",
     phone: "+94712345674",
     address: "No. 88, Kandy Road, Kurunegala",
     dateOfBirth: new Date("1990-07-09"),
@@ -304,7 +304,7 @@ const realPatientData = [
   {
     firstName: "Priyantha",
     lastName: "Wickramasinghe",
-    email: "priyantha.w@example.lk",
+    email: "priyantha.w@gmail.com",
     phone: "+94712345675",
     address: "No. 14, High Level Road, Nugegoda",
     dateOfBirth: new Date("1972-11-14"),
@@ -554,12 +554,12 @@ console.log(`   ✓ Seeded ${medicineCatalog.length} medicines with tracked batc
 // STEP 9: SEED REAL CLINICAL APPOINTMENTS, VITALS, CONSULTATION, RX, LABS
 // ============================================================================
 console.log("\n8. Seeding Real Clinical Consultations, Prescriptions & Diagnostics...");
-const doc1User = staffUserMap.get("doctor@healthguard.local");
-const doc2User = staffUserMap.get("doctor2@healthguard.local");
-const nurseUser = staffUserMap.get("nurse@healthguard.local");
-const labUser = staffUserMap.get("lab@healthguard.local");
-const cashierUser = staffUserMap.get("cashier@healthguard.local");
-const pharmaUser = staffUserMap.get("pharmacist@healthguard.local");
+const doc1User = staffUserMap.get("doctor@healthguard.com");
+const doc2User = staffUserMap.get("doctor2@healthguard.com");
+const nurseUser = staffUserMap.get("nurse@healthguard.com");
+const labUser = staffUserMap.get("lab@healthguard.com");
+const cashierUser = staffUserMap.get("cashier@healthguard.com");
+const pharmaUser = staffUserMap.get("pharmacist@healthguard.com");
 
 // Appointment 1: Saman Kumara (Today 09:00 - Checked In with Vitals)
 const appt1 = await Appointment.create({
@@ -782,33 +782,51 @@ for (const empId of payrollStaffList) {
     deductions: staff.deductions,
     netSalary,
     status: "paid",
-    reviewedBy: staffUserMap.get("manager@healthguard.local")._id,
-    approvedBy: staffUserMap.get("manager@healthguard.local")._id,
+    reviewedBy: staffUserMap.get("manager@healthguard.com")._id,
+    approvedBy: staffUserMap.get("manager@healthguard.com")._id,
     paidAt: offsetDate(-2, 16)
   });
 }
 console.log(`   ✓ Seeded 3 verified, attendance-calculated, approved & paid payroll records.`);
 
 // ============================================================================
+// STEP 13: SYNCHRONIZE DATASET TO 'test' DATABASE (For Vercel Consistency)
+// ============================================================================
+console.log("\n12. Synchronizing authentic dataset to 'test' database...");
+const hgDb = mongoose.connection.client.db("healthguard");
+const testDb = mongoose.connection.client.db("test");
+const hgCollections = await hgDb.listCollections().toArray();
+
+for (const coll of hgCollections) {
+  const docs = await hgDb.collection(coll.name).find().toArray();
+  await testDb.collection(coll.name).deleteMany({});
+  if (docs.length > 0) {
+    await testDb.collection(coll.name).insertMany(docs);
+  }
+}
+console.log("   ✓ Successfully synchronized all collections to 'test' database.");
+
+// ============================================================================
 // SUMMARY REPORT
 // ============================================================================
 console.log("\n============================================================================");
-console.log("HEALTH GUARD MEDICAL CENTER - REAL PRODUCTION DATA SEED COMPLETE");
+console.log("HEALTH GUARD MEDICAL CENTER - REAL SRI LANKAN PRODUCTION DATA SEED COMPLETE");
 console.log("============================================================================");
-console.log(`Target Database : ${mongoose.connection.name}`);
+console.log(`Target Database : healthguard & test (synchronized)`);
 console.log(`Host Cluster    : ${mongoose.connection.host}`);
 console.log(`Center Location : Ward Place, Cinnamon Gardens, Colombo 07`);
 console.log(`Default Password: ${defaultPassword}`);
 console.log("\nOperational Clinical Accounts for Verification:");
-console.log("  • Admin       : admin@healthguard.local");
-console.log("  • Manager     : manager@healthguard.local");
-console.log("  • Doctor (OPD): doctor@healthguard.local");
-console.log("  • Doctor (Card): doctor2@healthguard.local");
-console.log("  • Nurse       : nurse@healthguard.local");
-console.log("  • Pharmacist  : pharmacist@healthguard.local");
-console.log("  • Cashier     : cashier@healthguard.local");
-console.log("  • Lab MLT     : lab@healthguard.local");
-console.log("  • Patient     : saman.kumara@example.lk / ruwan.bandara@example.lk");
+console.log("  • Admin       : admin@healthguard.com");
+console.log("  • Manager     : manager@healthguard.com");
+console.log("  • Doctor (OPD): doctor@healthguard.com");
+console.log("  • Doctor (Card): doctor2@healthguard.com");
+console.log("  • Nurse       : nurse@healthguard.com");
+console.log("  • Nurse (Ward): nurse2@healthguard.com");
+console.log("  • Pharmacist  : pharmacist@healthguard.com");
+console.log("  • Cashier     : cashier@healthguard.com");
+console.log("  • Lab MLT     : lab@healthguard.com");
+console.log("  • Patients    : saman.kumara82@gmail.com / ruwan.bandara@gmail.com");
 console.log("============================================================================\n");
 
 await mongoose.connection.close();

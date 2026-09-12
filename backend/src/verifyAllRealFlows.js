@@ -40,13 +40,13 @@ try {
   // --------------------------------------------------------------------------
   // FLOW 1: AUTHENTICATION & RBAC
   // --------------------------------------------------------------------------
-  const adminUser = await User.findOne({ email: "admin@healthguard.local" }).select("+passwordHash");
-  const doctorUser = await User.findOne({ email: "doctor@healthguard.local" });
-  const nurseUser = await User.findOne({ email: "nurse@healthguard.local" });
-  const pharmaUser = await User.findOne({ email: "pharmacist@healthguard.local" });
-  const cashierUser = await User.findOne({ email: "cashier@healthguard.local" });
-  const labUser = await User.findOne({ email: "lab@healthguard.local" });
-  const patientUser = await User.findOne({ email: "saman.kumara@example.lk" });
+  const adminUser = await User.findOne({ email: "admin@healthguard.com" }).select("+passwordHash");
+  const doctorUser = await User.findOne({ email: "doctor@healthguard.com" });
+  const nurseUser = await User.findOne({ email: "nurse@healthguard.com" });
+  const pharmaUser = await User.findOne({ email: "pharmacist@healthguard.com" });
+  const cashierUser = await User.findOne({ email: "cashier@healthguard.com" });
+  const labUser = await User.findOne({ email: "lab@healthguard.com" });
+  const patientUser = await User.findOne({ email: "saman.kumara82@gmail.com" });
 
   const isPasswordValid = await bcrypt.compare("Admin@12345", adminUser.passwordHash);
   recordStep("1. Auth & RBAC", "Admin Credential Check", isPasswordValid, "Bcrypt hash verified against default password");

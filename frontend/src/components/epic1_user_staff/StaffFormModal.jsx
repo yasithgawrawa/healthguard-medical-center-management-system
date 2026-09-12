@@ -87,7 +87,7 @@ export const StaffFormModal = ({ open, mode = "create", staff, onClose, onSubmit
         <div className="form-grid">
           <FormInput label="First Name" placeholder="Amara" sanitize={stripDigits} error={errors.firstName?.message} {...register("firstName")} />
           <FormInput label="Last Name" placeholder="Perera" sanitize={stripDigits} error={errors.lastName?.message} {...register("lastName")} />
-          <FormInput label="Email" type="email" placeholder="doctor@healthguard.local" disabled={isEdit} error={errors.email?.message} {...register("email")} />
+          <FormInput label="Email" type="email" placeholder="doctor@healthguard.com" disabled={isEdit} error={errors.email?.message} {...register("email")} />
           <FormInput label="Phone" placeholder="+94 77 123 4501" inputMode="tel" sanitize={stripNonPhone} error={errors.phone?.message} {...register("phone")} />
         </div>
 
