@@ -24,11 +24,13 @@ export const textNoNumbersSchema = (label, max = 120) =>
     .regex(textNoNumbersPattern, `${label} cannot contain numbers`);
 
 export const phoneSchema = z
-  .string()
+  .string({ required_error: "Phone number is required", invalid_type_error: "Phone number is required" })
   .trim()
-  .min(9, "Phone number is required")
-  .max(20, "Phone number is too long")
-  .regex(phonePattern, "Enter a valid Sri Lankan phone number");
+  .min(1, "Phone number is required")
+  .refine((val) => {
+    const cleaned = String(val || "").replace(/[\s\-().]/g, "");
+    return /^(?:\+94|0)?[1-9]\d{8}$/.test(cleaned);
+  }, "Enter a valid Sri Lankan phone number");
 
 export const employeeIdSchema = z
   .string()

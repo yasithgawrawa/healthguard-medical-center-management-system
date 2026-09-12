@@ -14,17 +14,19 @@ export const stripNonBatch = (value) => String(value || "").replace(/[^A-Za-z0-9
 
 export const requiredName = (label = "Name") =>
   z
-    .string()
+    .string({ required_error: `${label} is required`, invalid_type_error: `${label} is required` })
     .trim()
-    .min(2, `${label} is required`)
+    .min(1, `${label} is required`)
+    .min(2, `${label} must be at least 2 characters`)
     .max(60, `${label} is too long`)
     .regex(namePattern, `${label} can only contain letters, spaces, apostrophes, periods or hyphens`);
 
 export const requiredTextNoNumbers = (label, max = 120) =>
   z
-    .string()
+    .string({ required_error: `${label} is required`, invalid_type_error: `${label} is required` })
     .trim()
-    .min(2, `${label} is required`)
+    .min(1, `${label} is required`)
+    .min(2, `${label} must be at least 2 characters`)
     .max(max, `${label} is too long`)
     .regex(textNoNumbersPattern, `${label} cannot contain numbers`);
 
@@ -32,16 +34,19 @@ export const optionalText = (label, max = 500) =>
   z.string().trim().max(max, `${label} is too long`).optional().or(z.literal(""));
 
 export const requiredPhone = z
-  .string()
+  .string({ required_error: "Phone number is required", invalid_type_error: "Phone number is required" })
   .trim()
-  .min(9, "Phone number is required")
-  .max(20, "Phone number is too long")
-  .regex(phonePattern, "Enter a valid Sri Lankan phone number");
+  .min(1, "Phone number is required")
+  .refine((val) => {
+    const cleaned = String(val || "").replace(/[\s\-().]/g, "");
+    return /^(?:\+94|0)?[1-9]\d{8}$/.test(cleaned);
+  }, "Enter a valid Sri Lankan phone number (e.g. +94 77 123 4567 or 077 123 4567)");
 
 export const requiredEmployeeId = z
-  .string()
+  .string({ required_error: "Employee ID is required", invalid_type_error: "Employee ID is required" })
   .trim()
-  .min(2, "Employee ID is required")
+  .min(1, "Employee ID is required")
+  .min(2, "Employee ID must be at least 2 characters")
   .max(30, "Employee ID is too long")
   .regex(employeeIdPattern, "Employee ID can only contain letters, numbers, hyphens or slashes");
 
@@ -58,7 +63,27 @@ export const optionalVitalsNumber = (label, min, max) =>
   );
 
 export const requiredFutureDateTime = (label) =>
-  z.string().min(1, `${label} is required`).refine((value) => new Date(value) > new Date(), `${label} must be in the future`);
+  z
+    .string({ required_error: `${label} is required` })
+    .min(1, `${label} is required`)
+    .refine((value) => new Date(value) > new Date(), `${label} must be in the future`);
 
-export const requiredPastDate = (label) =>
-  z.string().min(1, `${label} is required`).refine((value) => new Date(value) <= new Date(), `${label} cannot be in the future`);
+export const requiredPastDate = (label = "Date of birth") =>
+  z
+    .string({ required_error: `${label} is required`, invalid_type_error: `${label} is required` })
+    .trim()
+    .min(1, `${label} is required`)
+    .refine((val) => {
+      const selected = new Date(val);
+      if (isNaN(selected.getTime())) return false;
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      return selected <= today;
+    }, `${label} cannot be in the future`)
+    .refine((val) => {
+      const selected = new Date(val);
+      if (isNaN(selected.getTime())) return false;
+      const minDate = new Date();
+      minDate.setFullYear(minDate.getFullYear() - 120);
+      return selected >= minDate;
+    }, `Please enter a valid ${label.toLowerCase()} (within the last 120 years)`);
