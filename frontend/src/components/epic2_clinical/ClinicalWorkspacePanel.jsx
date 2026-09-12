@@ -219,6 +219,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
 
   const selectedTestName = watch("testName");
   const selectedPriority = watch("priority");
+  const selectedStatus = watch("status");
 
   const standardCatalogList = useMemo(() => {
     if (labCatalog && labCatalog.length > 0) return labCatalog;
@@ -321,11 +322,18 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
 
       let defaultSummary = record.resultSummary || "";
       if (!defaultSummary && initialParams.length > 0) {
-        defaultSummary = `${record.testName} completed. All observed values recorded within specified clinical limits.`;
+        defaultSummary = `${record.testName} completed. All observed values are recorded within specified clinical limits.`;
       }
 
+      // Default to "completed" when opening to enter results, or preserve in_progress/cancelled
+      const initialStatus = record.status === "cancelled"
+        ? "cancelled"
+        : record.status === "in_progress"
+        ? "in_progress"
+        : "completed";
+
       reset({
-        status: record.status || "verified",
+        status: initialStatus,
         resultSummary: defaultSummary,
         resultUrl: record.resultUrl || ""
       });
@@ -1434,31 +1442,181 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                 </div>
               </div>
 
-              {/* Status and Specimen */}
-              <div className="form-grid">
-                <FormSelect label="Investigation Status *" error={errors.status?.message} {...register("status")}>
-                  <option value="verified">Verified (Sample Received / In Lab)</option>
-                  <option value="in_progress">In Progress (Testing Underway)</option>
-                  <option value="completed">Completed (Report Finalized)</option>
-                  <option value="cancelled">Cancelled</option>
-                </FormSelect>
+              {/* Interactive Status Selector */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <label style={{ fontWeight: 700, fontSize: "0.86rem", color: "#0f172a" }}>
+                    Investigation Status <span style={{ color: "#ef4444" }}>*</span>
+                  </label>
+                  <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                    Select current stage of the investigation
+                  </span>
+                </div>
 
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(135px, 1fr))", gap: "8px" }}>
+                  {[
+                    {
+                      id: "completed",
+                      title: "Completed",
+                      badge: "Report Ready",
+                      desc: "Results verified & ready to publish",
+                      color: "#16a34a",
+                      activeBg: "#dcfce7",
+                      activeBorder: "#16a34a"
+                    },
+                    {
+                      id: "in_progress",
+                      title: "In Progress",
+                      badge: "Testing",
+                      desc: "Sample undergoing analysis",
+                      color: "#0284c7",
+                      activeBg: "#e0f2fe",
+                      activeBorder: "#0284c7"
+                    },
+                    {
+                      id: "verified",
+                      title: "Sample Received",
+                      badge: "At Lab",
+                      desc: "Specimen received at lab desk",
+                      color: "#0d9488",
+                      activeBg: "#ccfbf1",
+                      activeBorder: "#0d9488"
+                    },
+                    {
+                      id: "cancelled",
+                      title: "Cancelled",
+                      badge: "Void",
+                      desc: "Test cancelled or rejected",
+                      color: "#e11d48",
+                      activeBg: "#ffe4e6",
+                      activeBorder: "#e11d48"
+                    }
+                  ].map((opt) => {
+                    const isSelected = (selectedStatus || "completed") === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setValue("status", opt.id, { shouldValidate: true, shouldDirty: true })}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "3px",
+                          padding: "10px 12px",
+                          borderRadius: "8px",
+                          border: `2px solid ${isSelected ? opt.activeBorder : "#e2e8f0"}`,
+                          backgroundColor: isSelected ? opt.activeBg : "#ffffff",
+                          cursor: "pointer",
+                          textAlign: "left",
+                          transition: "all 0.15s ease",
+                          boxShadow: isSelected ? "0 2px 4px rgba(0,0,0,0.06)" : "none"
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                          <span style={{ fontWeight: 700, fontSize: "0.85rem", color: isSelected ? opt.color : "#334155" }}>
+                            {opt.title}
+                          </span>
+                          {isSelected ? (
+                            <CheckCircle2 size={15} color={opt.color} />
+                          ) : (
+                            <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#cbd5e1" }} />
+                          )}
+                        </div>
+                        <span style={{ fontSize: "0.72rem", color: isSelected ? "#334155" : "#64748b", lineHeight: "1.3" }}>
+                          {opt.desc}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <input type="hidden" {...register("status")} />
+                {errors.status && (
+                  <p className="form-error" style={{ color: "#ef4444", fontSize: "0.78rem", marginTop: "2px" }}>
+                    {errors.status.message}
+                  </p>
+                )}
+
+                {/* Status Notice Banner */}
+                <div
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: "6px",
+                    fontSize: "0.78rem",
+                    fontWeight: 500,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    backgroundColor:
+                      selectedStatus === "completed" ? "#f0fdf4" :
+                      selectedStatus === "in_progress" ? "#f0f9ff" :
+                      selectedStatus === "cancelled" ? "#fff1f2" : "#f0fdfa",
+                    border: `1px solid ${
+                      selectedStatus === "completed" ? "#bbf7d0" :
+                      selectedStatus === "in_progress" ? "#bae6fd" :
+                      selectedStatus === "cancelled" ? "#fecdd3" : "#99f6e4"
+                    }`,
+                    color:
+                      selectedStatus === "completed" ? "#166534" :
+                      selectedStatus === "in_progress" ? "#075985" :
+                      selectedStatus === "cancelled" ? "#9f1239" : "#115e59"
+                  }}
+                >
+                  <strong>Notice:</strong>
+                  <span>
+                    {(selectedStatus || "completed") === "completed" && "Results are verified and finalized. Official diagnostic report will be published for the consulting doctor and patient portal."}
+                    {selectedStatus === "in_progress" && "Specimen analysis is currently running on laboratory analyzers. Report is in draft."}
+                    {selectedStatus === "verified" && "Specimen received and verified at the lab reception. Ready for processing."}
+                    {selectedStatus === "cancelled" && "This investigation is cancelled. No diagnostic report will be published."}
+                  </span>
+                </div>
+              </div>
+
+              {/* Specimen and Autofill Row */}
+              <div className="form-grid" style={{ marginTop: "2px" }}>
                 <div>
-                  <label className="form-label" style={{ fontWeight: 600, fontSize: "0.84rem", marginBottom: "6px", display: "block", color: "#0f172a" }}>
+                  <label className="form-label" style={{ fontWeight: 600, fontSize: "0.82rem", marginBottom: "5px", display: "block", color: "#0f172a" }}>
                     Specimen Type
                   </label>
                   <select
                     value={specimenType}
                     onChange={(e) => setSpecimenType(e.target.value)}
                     className="form-select"
-                    style={{ width: "100%", padding: "9px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.88rem", backgroundColor: "#fff" }}
+                    style={{ width: "100%", padding: "8px 10px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.85rem", backgroundColor: "#fff" }}
                   >
                     <option value="Venous Blood">Venous Blood (Whole Blood / Serum)</option>
                     <option value="Plasma">Plasma</option>
-                    <option value="Midstream Urine">Midstream Urine</option>
+                    <option value="Midstream Urine">Midstream Clean-Catch Urine</option>
                     <option value="Nasopharyngeal Swab">Nasopharyngeal Swab</option>
                     <option value="Other Specimen">Other Specimen</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="form-label" style={{ fontWeight: 600, fontSize: "0.82rem", marginBottom: "5px", display: "block", color: "#0f172a" }}>
+                    Analytes Quick Actions
+                  </label>
+                  <div style={{ display: "flex", gap: "6px" }}>
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      style={{ height: "35px", flex: 1, fontSize: "0.78rem", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "5px" }}
+                      onClick={() => autoFillStandardParams(modal.record?.testName)}
+                      title="Reload standard clinical analytes template for this test"
+                    >
+                      <RefreshCw size={12} />
+                      Standard Analytes
+                    </button>
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      style={{ height: "35px", padding: "0 12px", fontSize: "0.78rem", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
+                      onClick={addLabParamRow}
+                      title="Add additional custom analyte row"
+                    >
+                      <Plus size={13} />
+                      Add Row
+                    </button>
+                  </div>
                 </div>
               </div>
 
