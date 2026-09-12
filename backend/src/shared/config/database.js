@@ -15,8 +15,9 @@ export const connectDatabase = async () => {
   try {
     cachedConnection = await mongoose.connect(env.MONGODB_URI, {
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 45000
+      serverSelectionTimeoutMS: 25000,
+      socketTimeoutMS: 45000,
+      family: 4 // Use IPv4 first to prevent IPv6 DNS stall on Windows
     });
     console.log(`MongoDB connected: ${mongoose.connection.host}/${mongoose.connection.name}`);
     return cachedConnection;
