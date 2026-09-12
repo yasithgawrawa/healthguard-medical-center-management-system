@@ -44,6 +44,13 @@ export const consultationSchema = z.object({
     doctorId: objectIdSchema.optional(),
     diagnosis: z.string().trim().min(2, "Diagnosis is required").max(120),
     clinicalNotes: z.string().trim().min(3, "Clinical notes are required").max(1000),
+    chiefComplaints: z.string().trim().max(300).optional().or(z.literal("")),
+    examinationFindings: z.string().trim().max(500).optional().or(z.literal("")),
+    secondaryDiagnosis: z.string().trim().max(150).optional().or(z.literal("")),
+    severity: z.enum(["mild", "moderate", "severe", "chronic", "routine"]).optional(),
+    patientAdvice: z.string().trim().max(500).optional().or(z.literal("")),
+    followUpPlan: z.string().trim().max(100).optional().or(z.literal("")),
+    handwrittenPrescriptionIssued: z.boolean().optional(),
     finalized: z.boolean().optional().default(false)
   })
 });

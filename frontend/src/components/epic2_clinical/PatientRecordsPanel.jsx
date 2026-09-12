@@ -134,6 +134,22 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
           <strong>{formatDate(item.appointmentDate)}</strong>
           <span>{item.doctorId ? `Dr. ${item.doctorId.firstName} ${item.doctorId.lastName}` : "Doctor pending"}</span>
           <small>{item.reason}</small>
+          {item.consultation?.diagnosis ? (
+            <div style={{ marginTop: "6px", padding: "6px 10px", background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: "6px", fontSize: "0.82rem" }}>
+              <strong style={{ color: "#0369a1" }}>Diagnosis: </strong>
+              <span style={{ color: "#0f172a" }}>{item.consultation.diagnosis}</span>
+              {item.consultation.patientAdvice ? (
+                <div style={{ marginTop: "3px", color: "#475569" }}>
+                  <em>Care Advice: {item.consultation.patientAdvice}</em>
+                </div>
+              ) : null}
+              {item.consultation.followUpPlan ? (
+                <div style={{ marginTop: "3px", color: "#0284c7", fontWeight: 600 }}>
+                  📅 Follow-up: {item.consultation.followUpPlan}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           <div className="record-item-header">
             <small>{item.status}</small>
             {canCancel(item) ? (

@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ClipboardPlus, FlaskConical, HeartPulse, Microscope, Pill, Stethoscope, Thermometer } from "lucide-react";
+import { Activity, ClipboardPlus, FlaskConical, HeartPulse, Microscope, Pill, Stethoscope, Thermometer } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -12,6 +12,7 @@ import { StatusBadge } from "../shared/StatusBadge.jsx";
 import { Toast } from "../shared/Toast.jsx";
 import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
+import { FormTextarea } from "../shared/forms/FormTextarea.jsx";
 import { bloodPressurePattern, optionalVitalsNumber } from "../../utils/validationSchemas.js";
 
 const patientName = (appointment) => {
@@ -34,8 +35,14 @@ const vitalsSchema = z.object({
 });
 
 const consultationSchema = z.object({
-  diagnosis: z.string().trim().min(2, "Diagnosis is required").max(120, "Diagnosis is too long"),
+  diagnosis: z.string().trim().min(2, "Primary diagnosis is required").max(120, "Diagnosis is too long"),
   clinicalNotes: z.string().trim().min(3, "Clinical notes are required").max(1000, "Clinical notes cannot exceed 1000 characters"),
+  chiefComplaints: z.string().trim().max(300, "Chief complaints too long").optional().or(z.literal("")),
+  examinationFindings: z.string().trim().max(500, "Examination findings too long").optional().or(z.literal("")),
+  secondaryDiagnosis: z.string().trim().max(150, "Secondary diagnosis too long").optional().or(z.literal("")),
+  severity: z.string().optional().or(z.literal("")),
+  patientAdvice: z.string().trim().max(500, "Patient advice too long").optional().or(z.literal("")),
+  followUpPlan: z.string().trim().max(100, "Follow-up plan too long").optional().or(z.literal("")),
   handwrittenPrescriptionIssued: z.boolean().optional(),
   finalized: z.boolean().optional()
 });
@@ -100,7 +107,25 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
   }, [mode]);
 
   const openModal = (type, record) => {
-    reset(type === "lab-update" ? { status: record.status || "verified", resultSummary: record.resultSummary || "", resultUrl: record.resultUrl || "" } : {});
+    if (type === "lab-update") {
+      reset({ status: record.status || "verified", resultSummary: record.resultSummary || "", resultUrl: record.resultUrl || "" });
+    } else if (type === "consultation") {
+      const existing = record.consultation || {};
+      reset({
+        diagnosis: existing.diagnosis || "",
+        clinicalNotes: existing.clinicalNotes || "",
+        chiefComplaints: existing.chiefComplaints || record.reason || "",
+        examinationFindings: existing.examinationFindings || "",
+        secondaryDiagnosis: existing.secondaryDiagnosis || "",
+        severity: existing.severity || "moderate",
+        patientAdvice: existing.patientAdvice || "Rest adequately and drink plenty of warm fluids. Complete prescribed medications as instructed.",
+        followUpPlan: existing.followUpPlan || "Review in 3 days",
+        handwrittenPrescriptionIssued: existing.handwrittenPrescriptionIssued !== undefined ? existing.handwrittenPrescriptionIssued : true,
+        finalized: existing.finalized !== undefined ? existing.finalized : true
+      });
+    } else {
+      reset({});
+    }
     setModal({ type, record });
   };
 
@@ -195,7 +220,24 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
         </div>
       ) : null}
 
-      <Modal open={Boolean(modal.type)} title="Update Workflow" subtitle={modal.record ? patientName(modal.record) || modal.record.testName : ""} onClose={() => setModal({ type: null, record: null })}>
+      <Modal
+        open={Boolean(modal.type)}
+        title={
+          modal.type === "consultation"
+            ? "Clinical Consultation & Diagnosis"
+            : modal.type === "vitals"
+            ? "Record Vital Signs"
+            : modal.type === "status"
+            ? "Update Appointment Status"
+            : modal.type === "lab-request"
+            ? "Order Laboratory Investigation"
+            : modal.type === "lab-update"
+            ? "Update Laboratory Result"
+            : "Update Workflow"
+        }
+        subtitle={modal.record ? `${patientName(modal.record)} • ${modal.record.slotLabel || "Standard Visit"}` : ""}
+        onClose={() => setModal({ type: null, record: null })}
+      >
         <form onSubmit={handleSubmit(submit)}>
           {modal.type === "status" ? (
             <FormSelect label="Status" error={errors.status?.message} {...register("status")}>
@@ -212,22 +254,169 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
             </div>
           ) : null}
           {modal.type === "consultation" ? (
-            <>
-              <FormInput label="Diagnosis" placeholder="e.g. Acute Bronchitis" error={errors.diagnosis?.message} {...register("diagnosis")} />
-              <FormInput label="Clinical Notes" placeholder="Clinical observations and treatment plan" error={errors.clinicalNotes?.message} {...register("clinicalNotes")} />
-              <div style={{ marginTop: "12px", padding: "12px 14px", background: "var(--brand-50, #f0fdf4)", border: "1px solid var(--brand-200, #bbf7d0)", borderRadius: "8px" }}>
-                <label className="checkbox-line" style={{ fontWeight: 600, color: "var(--brand-900, #166534)", margin: 0 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+              {/* Patient & Visit Context Header Card */}
+              <div
+                style={{
+                  background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
+                  border: "1px solid #bae6fd",
+                  borderRadius: "10px",
+                  padding: "14px 16px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px"
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <Stethoscope size={18} color="#0284c7" />
+                    <strong style={{ fontSize: "1rem", color: "#0c4a6e" }}>
+                      {patientName(modal.record)}
+                    </strong>
+                    <span style={{ fontSize: "0.82rem", color: "#64748b" }}>
+                      ({formatDateTime(modal.record.appointmentDate)})
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      background: "#0284c7",
+                      color: "#ffffff",
+                      fontSize: "0.74rem",
+                      fontWeight: 700,
+                      padding: "3px 10px",
+                      borderRadius: "12px",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.04em"
+                    }}
+                  >
+                    Clinical Evaluation
+                  </span>
+                </div>
+                {modal.record.reason ? (
+                  <div style={{ fontSize: "0.85rem", color: "#334155" }}>
+                    <strong>Reported Patient Reason: </strong>
+                    <span>{modal.record.reason}</span>
+                  </div>
+                ) : null}
+                {modal.record?.vitals ? (
+                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center", background: "#ffffff", padding: "6px 12px", borderRadius: "6px", border: "1px solid #e2e8f0", fontSize: "0.82rem" }}>
+                    <strong style={{ color: "#0369a1", display: "flex", alignItems: "center", gap: "4px" }}>
+                      <Activity size={14} /> Recorded Vitals:
+                    </strong>
+                    {modal.record.vitals.temperature ? <span>🌡️ Temp: <strong>{modal.record.vitals.temperature}°C</strong></span> : null}
+                    {modal.record.vitals.bloodPressure ? <span>🩸 BP: <strong>{modal.record.vitals.bloodPressure}</strong></span> : null}
+                    {modal.record.vitals.heartRate ? <span>❤️ Pulse: <strong>{modal.record.vitals.heartRate} bpm</strong></span> : null}
+                    {modal.record.vitals.spo2 ? <span>💨 SpO2: <strong>{modal.record.vitals.spo2}%</strong></span> : null}
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Section 1: Clinical Presentation & Physical Examination */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <h4 style={{ margin: 0, fontSize: "0.88rem", color: "#1e3a8a", textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 700 }}>
+                  1. Clinical Presentation & Physical Examination
+                </h4>
+                <div className="form-grid">
+                  <FormInput
+                    label="Chief Complaints & Symptoms"
+                    placeholder="e.g. High fever for 3 days, sore throat, cough"
+                    error={errors.chiefComplaints?.message}
+                    {...register("chiefComplaints")}
+                  />
+                  <FormInput
+                    label="Physical Examination & Clinical Findings"
+                    placeholder="e.g. Pharynx congested, bilateral lungs clear, no wheeze"
+                    error={errors.examinationFindings?.message}
+                    {...register("examinationFindings")}
+                  />
+                </div>
+              </div>
+
+              {/* Section 2: Diagnosis & Acuity */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <h4 style={{ margin: 0, fontSize: "0.88rem", color: "#1e3a8a", textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 700 }}>
+                  2. Assessment & Diagnosis
+                </h4>
+                <div className="form-grid">
+                  <FormInput
+                    label="Primary Diagnosis *"
+                    placeholder="e.g. Acute Upper Respiratory Tract Infection (URTI)"
+                    error={errors.diagnosis?.message}
+                    {...register("diagnosis")}
+                  />
+                  <FormInput
+                    label="Secondary / Differential Diagnosis"
+                    placeholder="e.g. Tension headache, mild dehydration"
+                    error={errors.secondaryDiagnosis?.message}
+                    {...register("secondaryDiagnosis")}
+                  />
+                  <FormSelect label="Severity / Acuity Level" error={errors.severity?.message} {...register("severity")}>
+                    <option value="mild">Mild (Routine outpatient care)</option>
+                    <option value="moderate">Moderate (Symptomatic care required)</option>
+                    <option value="severe">Severe (Urgent / closely monitored)</option>
+                    <option value="chronic">Chronic / Maintenance follow-up</option>
+                    <option value="routine">Routine Wellness / Check-up</option>
+                  </FormSelect>
+                  <FormSelect label="Follow-Up Recommendation" error={errors.followUpPlan?.message} {...register("followUpPlan")}>
+                    <option value="No routine follow-up needed">No routine follow-up needed</option>
+                    <option value="Review in 3 days">Review in 3 days</option>
+                    <option value="Review in 5 days">Review in 5 days</option>
+                    <option value="Review in 1 week">Review in 1 week</option>
+                    <option value="Review in 2 weeks">Review in 2 weeks</option>
+                    <option value="Review in 1 month">Review in 1 month</option>
+                    <option value="Return immediately if symptoms worsen">Return immediately if symptoms worsen</option>
+                  </FormSelect>
+                </div>
+              </div>
+
+              {/* Section 3: Treatment Plan & Patient Instructions */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <h4 style={{ margin: 0, fontSize: "0.88rem", color: "#1e3a8a", textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 700 }}>
+                  3. Treatment Plan & Patient Instructions
+                </h4>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <FormTextarea
+                    label="Clinical Observations & Treatment Notes *"
+                    rows={3}
+                    placeholder="Detailed observations, treatment rationale, and clinical assessment..."
+                    error={errors.clinicalNotes?.message}
+                    {...register("clinicalNotes")}
+                  />
+                  <FormTextarea
+                    label="Patient Care & Lifestyle Instructions"
+                    rows={2}
+                    placeholder="Non-pharmacological advice (e.g. bed rest, hydration, salt water gargling, dietary precautions)..."
+                    error={errors.patientAdvice?.message}
+                    {...register("patientAdvice")}
+                  />
+                </div>
+              </div>
+
+              {/* Section 4: Handwritten Prescription & Finalize Visit */}
+              <div
+                style={{
+                  padding: "14px 16px",
+                  background: "#f0fdf4",
+                  border: "1px solid #bbf7d0",
+                  borderRadius: "10px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "6px"
+                }}
+              >
+                <label className="checkbox-line" style={{ fontWeight: 700, color: "#166534", margin: 0 }}>
                   <input type="checkbox" defaultChecked={true} {...register("handwrittenPrescriptionIssued")} />
                   Handwritten physical prescription paper given to patient
                 </label>
-                <span style={{ display: "block", color: "var(--slate-600, #64748b)", fontSize: "0.82rem", marginTop: "4px" }}>
-                  The patient will present this physical slip to the pharmacy counter for medication dispensing.
+                <span style={{ display: "block", color: "#475569", fontSize: "0.83rem", paddingLeft: "24px" }}>
+                  Doctor writes medicine details on the physical paper slip and hands it to the patient for pharmacy dispensing.
                 </span>
               </div>
-              <label className="checkbox-line" style={{ marginTop: "12px", fontWeight: 700 }}>
-                <input type="checkbox" {...register("finalized")} /> Finalize consultation & complete visit
+
+              <label className="checkbox-line" style={{ fontWeight: 700, marginTop: "2px" }}>
+                <input type="checkbox" {...register("finalized")} /> Finalize consultation & mark visit as completed
               </label>
-            </>
+            </div>
           ) : null}
           {modal.type === "lab-request" ? (
             <div className="form-grid">

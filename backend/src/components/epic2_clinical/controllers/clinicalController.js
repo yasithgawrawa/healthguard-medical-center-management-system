@@ -67,8 +67,25 @@ export const listAppointments = async (req, res) => {
   const appointments = await Appointment.find(filter)
     .populate("patientId", "firstName lastName email phone")
     .populate("doctorId", "firstName lastName email")
-    .sort({ appointmentDate: -1 });
-  return successResponse(res, "Appointment list loaded", appointments);
+    .sort({ appointmentDate: -1 })
+    .lean();
+
+  const apptIds = appointments.map((a) => a._id);
+  const [vitalsList, consultationsList] = await Promise.all([
+    Vitals.find({ appointmentId: { $in: apptIds } }).lean(),
+    Consultation.find({ appointmentId: { $in: apptIds } }).lean()
+  ]);
+
+  const vitalsMap = new Map(vitalsList.map((v) => [v.appointmentId.toString(), v]));
+  const consultMap = new Map(consultationsList.map((c) => [c.appointmentId.toString(), c]));
+
+  const enriched = appointments.map((a) => ({
+    ...a,
+    vitals: vitalsMap.get(a._id.toString()) || null,
+    consultation: consultMap.get(a._id.toString()) || null
+  }));
+
+  return successResponse(res, "Appointment list loaded", enriched);
 };
 
 export const listDoctors = async (req, res) => {
