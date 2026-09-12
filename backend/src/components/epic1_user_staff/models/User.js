@@ -59,6 +59,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       select: false
+    },
+    consultationFee: {
+      type: Number,
+      min: 0,
+      default: 1500
     }
   },
   { timestamps: true }
@@ -80,6 +85,7 @@ userSchema.methods.toSafeJSON = function toSafeJSON() {
     gender: this.gender,
     role: this.role,
     status: this.status,
+    consultationFee: this.consultationFee ?? 1500,
     createdAt: this.createdAt,
     updatedAt: this.updatedAt
   };

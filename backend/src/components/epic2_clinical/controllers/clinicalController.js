@@ -1,6 +1,7 @@
 import { Appointment } from "../models/Appointment.js";
 import { Consultation } from "../models/Consultation.js";
 import { LabRequest } from "../models/LabRequest.js";
+import { LabTestCatalog } from "../models/LabTestCatalog.js";
 import { Notification } from "../models/Notification.js";
 import { Prescription } from "../models/Prescription.js";
 import { Vitals } from "../models/Vitals.js";
@@ -30,7 +31,7 @@ export const createAppointment = async (req, res) => {
   // Automatically initialize patient visit invoice with doctor consultation fee
   try {
     const docName = `Dr. ${doctor.firstName} ${doctor.lastName}`;
-    const consultationFee = 1500;
+    const consultationFee = Number(doctor.consultationFee || 1500);
     await Invoice.create({
       patientId: appointment.patientId,
       appointmentId: appointment._id,
@@ -115,7 +116,7 @@ export const listAppointments = async (req, res) => {
 
 export const listDoctors = async (req, res) => {
   const doctors = await User.find({ role: ROLES.DOCTOR, status: "active" })
-    .select("firstName lastName email")
+    .select("firstName lastName email consultationFee")
     .sort({ firstName: 1 });
 
   return successResponse(res, "Doctor list loaded", doctors);
@@ -219,7 +220,13 @@ export const createLabRequest = async (req, res) => {
 
   // Append lab investigation fee to the patient's unified visit invoice
   try {
-    const testFee = req.body.priority === "urgent" ? 1200 : 750;
+    let testFee = req.body.priority === "urgent" ? 1200 : 750;
+    const catalogItem = await LabTestCatalog.findOne({ testName: req.body.testName });
+    if (catalogItem) {
+      testFee = req.body.priority === "urgent"
+        ? (catalogItem.urgentPrice || Math.round(catalogItem.price * 1.4))
+        : catalogItem.price;
+    }
     let visitInvoice = await Invoice.findOne({ appointmentId: appointment._id, status: { $ne: "cancelled" } });
     if (!visitInvoice) {
       visitInvoice = await Invoice.findOne({ patientId: appointment.patientId, status: { $in: ["issued", "partially_paid", "draft"] } }).sort({ createdAt: -1 });
@@ -298,4 +305,69 @@ export const markNotificationRead = async (req, res) => {
   notification.readAt = notification.readAt || new Date();
   await notification.save();
   return successResponse(res, "Notification marked as read", notification);
+};
+
+export const listLabTestCatalog = async (req, res) => {
+  let tests = await LabTestCatalog.find().sort({ category: 1, testName: 1 });
+  if (tests.length === 0) {
+    // Auto-seed default tests if empty
+    const defaults = [
+      { testName: "Full Blood Count (FBC)", category: "Hematology", price: 850, urgentPrice: 1200 },
+      { testName: "Fasting Blood Sugar (FBS)", category: "Biochemistry", price: 650, urgentPrice: 950 },
+      { testName: "Lipid Profile", category: "Biochemistry", price: 1800, urgentPrice: 2400 },
+      { testName: "Urine Full Report (UFR)", category: "Clinical Pathology", price: 550, urgentPrice: 800 },
+      { testName: "Serum Creatinine", category: "Biochemistry", price: 750, urgentPrice: 1100 },
+      { testName: "Liver Function Test (LFT)", category: "Biochemistry", price: 2200, urgentPrice: 2800 },
+      { testName: "HbA1c Glycated Hemoglobin", category: "Biochemistry", price: 1400, urgentPrice: 1900 },
+      { testName: "Serum Electrolytes", category: "Biochemistry", price: 1200, urgentPrice: 1650 }
+    ];
+    tests = await LabTestCatalog.insertMany(defaults);
+  }
+  return successResponse(res, "Lab test catalog loaded", tests);
+};
+
+export const createLabTestCatalog = async (req, res) => {
+  const { testName, category, price, urgentPrice, description } = req.body;
+  if (!testName || price === undefined) throw new AppError("Test name and price are required", 400);
+  const item = await LabTestCatalog.create({
+    testName: testName.trim(),
+    category: category || "Routine Investigation",
+    price: Number(price),
+    urgentPrice: urgentPrice ? Number(urgentPrice) : Math.round(Number(price) * 1.4),
+    description: description || "",
+    updatedBy: req.user._id
+  });
+  return successResponse(res, "Lab test added to catalog", item, 201);
+};
+
+export const updateLabTestPrice = async (req, res) => {
+  const { price, urgentPrice, category, description } = req.body;
+  const item = await LabTestCatalog.findById(req.params.id);
+  if (!item) throw new AppError("Lab test not found in catalog", 404);
+
+  if (price !== undefined) item.price = Number(price);
+  if (urgentPrice !== undefined) item.urgentPrice = Number(urgentPrice);
+  if (category) item.category = category;
+  if (description !== undefined) item.description = description;
+  item.updatedBy = req.user._id;
+
+  await item.save();
+  return successResponse(res, `Price updated for ${item.testName}`, item);
+};
+
+export const updateDoctorFee = async (req, res) => {
+  const targetDoctorId = req.user.role === ROLES.DOCTOR ? req.user._id : req.body.doctorId;
+  if (!targetDoctorId) throw new AppError("Doctor ID is required", 400);
+
+  const fee = Number(req.body.consultationFee);
+  if (isNaN(fee) || fee < 0) throw new AppError("A valid consultation fee is required", 400);
+
+  const doctor = await User.findOneAndUpdate(
+    { _id: targetDoctorId, role: ROLES.DOCTOR },
+    { consultationFee: fee },
+    { new: true }
+  ).select("firstName lastName email consultationFee");
+
+  if (!doctor) throw new AppError("Doctor not found", 404);
+  return successResponse(res, `Consultation fee updated to Rs. ${fee.toFixed(2)}`, doctor);
 };

@@ -1,7 +1,8 @@
-import { AlertTriangle, CalendarPlus, ClipboardCheck, ClipboardList, DollarSign, Users } from "lucide-react";
+import { AlertTriangle, CalendarPlus, ClipboardCheck, ClipboardList, DollarSign, FlaskConical, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BillingWorkspacePanel } from "../../components/epic4_billing/BillingWorkspacePanel.jsx";
 import { InventoryWorkspacePanel } from "../../components/epic3_inventory/InventoryWorkspacePanel.jsx";
+import { ManagerLabPricingPanel } from "../../components/epic2_clinical/ManagerLabPricingPanel.jsx";
 import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
 import { DashboardQuickActions } from "../../components/shared/DashboardQuickActions.jsx";
 import { WorkforceManagementPanel } from "../../components/epic1_user_staff/WorkforceManagementPanel.jsx";
@@ -46,7 +47,7 @@ export const ManagerDashboard = () => {
       <div className="dashboard-header-banner">
         <div>
           <h1>Manager Overview</h1>
-          <p>Plan shifts, monitor attendance, review leave requests and track clinic finances.</p>
+          <p>Plan shifts, monitor attendance, review leave requests, adjust investigation pricing, and track clinic finances.</p>
         </div>
         <div className="dashboard-live-indicator">
           <div className="live-dot" />
@@ -87,6 +88,7 @@ export const ManagerDashboard = () => {
 
       <DashboardQuickActions
         actions={[
+          { label: "Lab Tariffs & Pricing", detail: "Adjust test prices & doctor fees", icon: FlaskConical, href: "#manager-tariffs" },
           { label: "Create Shift", detail: "Schedule active staff", icon: CalendarPlus, href: "#manager-workforce" },
           { label: "Review Attendance", detail: "Search staff attendance records", icon: ClipboardCheck, href: "#manager-workforce" },
           { label: "Review Leave", detail: "Approve or reject requests", icon: ClipboardList, href: "#manager-workforce" },
@@ -95,6 +97,7 @@ export const ManagerDashboard = () => {
       />
 
       <WorkforceManagementPanel />
+      <ManagerLabPricingPanel />
       <InventoryWorkspacePanel />
       <BillingWorkspacePanel />
     </div>

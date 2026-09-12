@@ -159,6 +159,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
   const [modal, setModal] = useState({ type: null, record: null });
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
+  const [labCatalog, setLabCatalog] = useState([]);
 
   const schema = modal.type === "vitals" ? vitalsSchema : modal.type === "consultation" ? consultationSchema : modal.type === "lab-request" ? labRequestSchema : labUpdateSchema;
   const {
@@ -174,12 +175,14 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
       if (mode === "lab") {
         setLabs(await clinicalApi.listLabRequests());
       } else {
-        const [appointmentData, labData] = await Promise.all([
+        const [appointmentData, labData, catalogData] = await Promise.all([
           clinicalApi.listAppointments(),
-          mode === "doctor" ? clinicalApi.listLabRequests() : Promise.resolve([])
+          mode === "doctor" ? clinicalApi.listLabRequests() : Promise.resolve([]),
+          mode === "doctor" ? clinicalApi.listLabTests().catch(() => []) : Promise.resolve([])
         ]);
         setAppointments(appointmentData);
         setLabs(labData);
+        setLabCatalog(catalogData || []);
       }
     } catch (error) {
       setToast({ type: "error", message: error.response?.data?.message || "Unable to load clinical workspace" });
@@ -870,12 +873,38 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
             </div>
           ) : null}
           {modal.type === "lab-request" ? (
-            <div className="form-grid">
-              <FormInput label="Test Name" placeholder="Fasting Blood Sugar" error={errors.testName?.message} {...register("testName")} />
-              <FormSelect label="Priority" error={errors.priority?.message} {...register("priority")}>
-                <option value="routine">Routine</option>
-                <option value="urgent">Urgent</option>
-              </FormSelect>
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              {labCatalog.length > 0 ? (
+                <div>
+                  <label className="form-label" style={{ fontWeight: 600, fontSize: "0.82rem", marginBottom: "6px", display: "block", color: "#1e3a8a" }}>
+                    Select Standard Investigation (Manager Tariffs):
+                  </label>
+                  <select
+                    className="form-select"
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setValue("testName", e.target.value, { shouldValidate: true, shouldDirty: true });
+                      }
+                    }}
+                    defaultValue=""
+                  >
+                    <option value="">-- Choose from standard catalog or type below --</option>
+                    {labCatalog.map((t) => (
+                      <option key={t._id} value={t.testName}>
+                        {t.testName} (Routine: Rs. {t.price.toFixed(2)}{t.urgentPrice ? ` | Urgent: Rs. ${t.urgentPrice.toFixed(2)}` : ""})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+              <div className="form-grid">
+                <FormInput label="Test Name *" placeholder="Fasting Blood Sugar" error={errors.testName?.message} {...register("testName")} />
+                <FormSelect label="Priority" error={errors.priority?.message} {...register("priority")}>
+                  <option value="routine">Routine</option>
+                  <option value="urgent">Urgent</option>
+                </FormSelect>
+              </div>
             </div>
           ) : null}
           {modal.type === "lab-update" ? (

@@ -23,6 +23,10 @@ import {
   listAppointments,
   listDoctors,
   listLabRequests,
+  listLabTestCatalog,
+  createLabTestCatalog,
+  updateLabTestPrice,
+  updateDoctorFee,
   listNotifications,
   listPrescriptions,
   markNotificationRead,
@@ -38,7 +42,8 @@ router.use(authenticate);
 router.post("/appointments", authorizeRoles(ROLES.PATIENT, ROLES.ADMIN, ROLES.NURSE), validateRequest(appointmentSchema), asyncHandler(createAppointment));
 router.get("/appointments/slots", authorizeRoles(ROLES.PATIENT, ROLES.ADMIN, ROLES.NURSE), validateRequest(slotQuerySchema), asyncHandler(listAppointmentSlots));
 router.get("/appointments", asyncHandler(listAppointments));
-router.get("/doctors", authorizeRoles(ROLES.PATIENT, ROLES.ADMIN, ROLES.NURSE), asyncHandler(listDoctors));
+router.get("/doctors", authorizeRoles(ROLES.PATIENT, ROLES.ADMIN, ROLES.NURSE, ROLES.DOCTOR, ROLES.MANAGER), asyncHandler(listDoctors));
+router.patch("/doctors/fee", authorizeRoles(ROLES.DOCTOR, ROLES.MANAGER, ROLES.ADMIN), asyncHandler(updateDoctorFee));
 router.get("/notifications", authorizeRoles(ROLES.PATIENT), asyncHandler(listNotifications));
 router.patch("/notifications/:id/read", authorizeRoles(ROLES.PATIENT), validateRequest(idParamSchema), asyncHandler(markNotificationRead));
 router.patch("/appointments/:id/cancel", authorizeRoles(ROLES.PATIENT, ROLES.ADMIN), validateRequest(idParamSchema), asyncHandler(cancelAppointment));
@@ -50,5 +55,8 @@ router.get("/prescriptions", authorizeRoles(ROLES.DOCTOR, ROLES.PHARMACIST, ROLE
 router.post("/lab-requests", authorizeRoles(ROLES.DOCTOR), validateRequest(labRequestSchema), asyncHandler(createLabRequest));
 router.get("/lab-requests", authorizeRoles(ROLES.DOCTOR, ROLES.LAB_ASSISTANT, ROLES.PATIENT), asyncHandler(listLabRequests));
 router.patch("/lab-requests/:id", authorizeRoles(ROLES.LAB_ASSISTANT), validateRequest(labUpdateSchema), asyncHandler(updateLabRequest));
+router.get("/lab-tests", asyncHandler(listLabTestCatalog));
+router.post("/lab-tests", authorizeRoles(ROLES.MANAGER, ROLES.ADMIN), asyncHandler(createLabTestCatalog));
+router.patch("/lab-tests/:id", authorizeRoles(ROLES.MANAGER, ROLES.ADMIN), asyncHandler(updateLabTestPrice));
 
 export default router;
