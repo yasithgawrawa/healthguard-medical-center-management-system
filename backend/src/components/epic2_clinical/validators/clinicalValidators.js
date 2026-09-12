@@ -84,8 +84,18 @@ export const labUpdateSchema = z.object({
   params: idParamSchema.shape.params,
   body: z.object({
     status: z.enum(["verified", "in_progress", "completed", "cancelled"]),
-    resultSummary: z.string().trim().max(500).optional(),
-    resultUrl: z.string().trim().url("Enter a valid report URL").optional().or(z.literal(""))
+    resultSummary: z.string().trim().max(1000).optional().or(z.literal("")),
+    resultUrl: z.string().trim().url("Enter a valid report URL").optional().or(z.literal("")),
+    parameters: z.array(z.object({
+      parameter: z.string().trim().max(120).optional(),
+      value: z.string().trim().max(120).optional(),
+      unit: z.string().trim().max(60).optional(),
+      referenceRange: z.string().trim().max(120).optional(),
+      flag: z.string().trim().max(40).optional()
+    })).optional(),
+    specimenType: z.string().trim().max(80).optional(),
+    sampleCollectedAt: z.coerce.date().optional(),
+    reportedAt: z.coerce.date().optional()
   }).refine((data) => {
     if (data.status === "completed" && (!data.resultSummary || data.resultSummary.trim().length < 3)) {
       return false;

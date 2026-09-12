@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Bell, CalendarCheck, CreditCard, Download, FileText, Pill, RefreshCw } from "lucide-react";
 import { patientApi } from "../../services/patientApi.js";
-import { downloadInvoicePDF } from "../../utils/invoicePrintTemplate.js";
+import { downloadInvoicePDF, printLabReportPDF } from "../../utils/invoicePrintTemplate.js";
 
 const formatDate = (value) => {
   if (!value) return "Not set";
@@ -172,7 +172,20 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
           <span>{item.status}</span>
           <small>{item.resultSummary || "Result not uploaded yet"}</small>
           {item.status === "requested" ? <small>New lab request from your doctor</small> : null}
-          {item.resultUrl ? <a className="table-link-button" href={item.resultUrl} target="_blank" rel="noreferrer">Open report</a> : null}
+          <div style={{ display: "flex", gap: "8px", marginTop: "6px", flexWrap: "wrap" }}>
+            {["completed", "verified"].includes(item.status) ? (
+              <button
+                className="table-link-button"
+                type="button"
+                style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#0284c7", fontWeight: 600 }}
+                onClick={() => printLabReportPDF(item)}
+              >
+                <Download size={12} />
+                Download Report PDF
+              </button>
+            ) : null}
+            {item.resultUrl ? <a className="table-link-button" href={item.resultUrl} target="_blank" rel="noreferrer">External link</a> : null}
+          </div>
         </>
       )
     },

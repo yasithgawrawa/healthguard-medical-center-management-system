@@ -801,3 +801,151 @@ export function printPayslipPDF(payroll) {
 
   openPrintWindow(`Payslip ${monthLabel} – ${staffName} | Health Guard`, body);
 }
+
+export function printLabReportPDF(labRequest) {
+  const patient = labRequest?.patientId;
+  const patientName = typeof patient === "object" ? fullName(patient) : "Patient";
+  const patientPhone = typeof patient === "object" ? (patient?.phone || "—") : "—";
+  const patientGender = typeof patient === "object" && patient?.gender ? String(patient.gender).toUpperCase() : "—";
+
+  let patientAge = "—";
+  if (typeof patient === "object" && patient?.dateOfBirth) {
+    const dob = new Date(patient.dateOfBirth);
+    const ageDiff = Date.now() - dob.getTime();
+    const ageDate = new Date(ageDiff);
+    patientAge = `${Math.abs(ageDate.getUTCFullYear() - 1970)} Y`;
+  }
+
+  const doctor = labRequest?.doctorId;
+  const doctorName = typeof doctor === "object" ? fullName(doctor) : "Consultant Medical Officer";
+
+  const labId = shortId(labRequest?._id);
+  const testName = labRequest?.testName || "Laboratory Investigation";
+  const priority = (labRequest?.priority || "routine").toUpperCase();
+  const status = (labRequest?.status || "completed").replace(/_/g, " ").toUpperCase();
+  const isCompleted = labRequest?.status === "completed" || labRequest?.status === "verified";
+  const specimenType = labRequest?.specimenType || "Venous Blood";
+  const collectedDate = labRequest?.sampleCollectedAt ? fmtDateTime(labRequest.sampleCollectedAt) : fmtDateTime(labRequest?.createdAt);
+  const reportedDate = labRequest?.reportedAt ? fmtDateTime(labRequest.reportedAt) : fmtDateTime(labRequest?.updatedAt);
+
+  const parameters = Array.isArray(labRequest?.parameters) && labRequest.parameters.length > 0
+    ? labRequest.parameters
+    : [];
+
+  const parameterRows = parameters.length > 0
+    ? parameters.map((p, idx) => {
+        const flag = (p.flag || "normal").toLowerCase();
+        const isAbnormal = flag === "high" || flag === "low" || flag === "abnormal";
+        const flagBadge = isAbnormal
+          ? `<span class="badge" style="background:#fee2e2;color:#b91c1c;font-weight:700">${flag.toUpperCase()}</span>`
+          : `<span class="badge" style="background:#f0fdf4;color:#15803d">${flag.toUpperCase()}</span>`;
+
+        return `
+          <tr>
+            <td style="font-weight:600;color:#0f172a">${p.parameter || `Parameter ${idx + 1}`}</td>
+            <td style="font-weight:700;color:${isAbnormal ? "#b91c1c" : "#0f172a"}">${p.value || "—"}</td>
+            <td style="color:#64748b">${p.unit || "—"}</td>
+            <td style="color:#475569">${p.referenceRange || "—"}</td>
+            <td style="text-align:center">${flagBadge}</td>
+          </tr>
+        `;
+      }).join("")
+    : `
+      <tr>
+        <td colspan="5" style="padding:16px;text-align:center;color:#64748b">
+          ${labRequest?.resultSummary || "Test completed. Refer to clinical notes or attached digital report."}
+        </td>
+      </tr>
+    `;
+
+  const body = `
+    <div class="doc-header">
+      <div>
+        <div class="brand-name">HEALTH GUARD MEDICAL CENTER</div>
+        <div class="brand-sub">Department of Pathology & Clinical Diagnostics</div>
+        <div class="brand-sub">Ward Place, Colombo 07, Sri Lanka · +94 11 234 5678 · lab@healthguard.lk</div>
+      </div>
+      <div>
+        <div class="doc-type" style="font-size:13pt;color:#0284c7">DIAGNOSTIC LAB REPORT</div>
+        <div class="doc-sub">Report Ref: #LAB-${labId}</div>
+        <div class="doc-sub">Priority: <strong>${priority}</strong></div>
+      </div>
+    </div>
+
+    <div class="meta-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 18px;">
+      <div>
+        <div class="meta-label">Patient Name</div>
+        <div class="meta-value" style="font-size:10.5pt;font-weight:700;color:#0f172a">${patientName}</div>
+        <div style="font-size:8pt;color:#64748b;margin-top:2px">Phone: ${patientPhone}</div>
+      </div>
+      <div>
+        <div class="meta-label">Age / Gender</div>
+        <div class="meta-value">${patientAge} / ${patientGender}</div>
+        <div style="font-size:8pt;color:#64748b;margin-top:2px">Specimen: ${specimenType}</div>
+      </div>
+      <div>
+        <div class="meta-label">Referring Doctor</div>
+        <div class="meta-value">Dr. ${doctorName}</div>
+        <div style="font-size:8pt;color:#64748b;margin-top:2px">Investigation: <strong>${testName}</strong></div>
+      </div>
+      <div>
+        <div class="meta-label">Report Status</div>
+        <div class="meta-value">
+          <span class="badge" style="${isCompleted ? "background:#dcfce7;color:#15803d" : "background:#fef3c7;color:#92400e"}">
+            ${status}
+          </span>
+        </div>
+        <div style="font-size:8pt;color:#64748b;margin-top:2px">Reported: ${reportedDate}</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;background:#f8fafc;padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:9pt">
+      <div><strong>Investigation:</strong> <span style="color:#0369a1;font-weight:700">${testName}</span></div>
+      <div>Sample Collected: <strong>${collectedDate}</strong></div>
+    </div>
+
+    <table style="margin-bottom:18px">
+      <thead>
+        <tr>
+          <th>Investigation / Analyte</th>
+          <th>Observed Result</th>
+          <th>Unit</th>
+          <th>Biological Reference Range</th>
+          <th style="text-align:center;width:90px">Interpretation</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${parameterRows}
+      </tbody>
+    </table>
+
+    ${labRequest?.resultSummary ? `
+      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px 16px;margin-bottom:16px">
+        <strong style="color:#0369a1;font-size:9pt;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.04em">
+          Clinical Remarks & Interpretation
+        </strong>
+        <div style="font-size:9.5pt;color:#0f172a;line-height:1.5">${labRequest.resultSummary}</div>
+      </div>
+    ` : ""}
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:24px;padding-top:14px;border-top:1px dashed #cbd5e1;font-size:8.5pt;color:#475569">
+      <div>
+        <div style="font-weight:700;color:#0f172a">Medical Laboratory Technologist (MLT)</div>
+        <div>Verified Electronically · Health Guard Central Lab</div>
+        <div style="font-size:7.5pt;color:#94a3b8;margin-top:2px">Reg No: SLMC/MLT/7821</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-weight:700;color:#0f172a">Consultant Clinical Pathologist</div>
+        <div>Health Guard Medical Center Diagnostic Services</div>
+        <div style="font-size:7.5pt;color:#94a3b8;margin-top:2px">Accredited Laboratory System ISO 15189</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Health Guard Medical Center · Official Diagnostic Report · Report Ref: #LAB-${labId} · Generated: ${new Date().toLocaleString("en-LK")}
+    </div>
+  `;
+
+  openPrintWindow(`Lab Report #LAB-${labId} (${testName}) | Health Guard`, body);
+}
+

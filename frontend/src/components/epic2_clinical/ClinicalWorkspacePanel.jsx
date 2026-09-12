@@ -13,6 +13,7 @@ import {
   Phone,
   Play,
   Plus,
+  Printer,
   RefreshCw,
   Sparkles,
   Stethoscope,
@@ -35,10 +36,76 @@ import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
 import { FormTextarea } from "../shared/forms/FormTextarea.jsx";
 import { bloodPressurePattern, optionalVitalsNumber } from "../../utils/validationSchemas.js";
+import { printLabReportPDF } from "../../utils/invoicePrintTemplate.js";
 
-const patientName = (appointment) => {
-  const patient = appointment?.patientId || {};
+const patientName = (item) => {
+  const patient = item?.patientId || {};
+  if (typeof patient === "string") return "Patient";
   return [patient.firstName, patient.lastName].filter(Boolean).join(" ") || "Patient";
+};
+
+const getStandardLabParameters = (testName = "") => {
+  const t = String(testName || "").toLowerCase();
+  if (t.includes("fasting blood sugar") || t.includes("fbs")) {
+    return [
+      { parameter: "Fasting Blood Glucose", value: "95", unit: "mg/dL", referenceRange: "70 - 99", flag: "normal" }
+    ];
+  }
+  if (t.includes("lipid")) {
+    return [
+      { parameter: "Total Cholesterol", value: "185", unit: "mg/dL", referenceRange: "< 200", flag: "normal" },
+      { parameter: "Triglycerides", value: "128", unit: "mg/dL", referenceRange: "< 150", flag: "normal" },
+      { parameter: "HDL Cholesterol", value: "48", unit: "mg/dL", referenceRange: "> 40", flag: "normal" },
+      { parameter: "LDL Cholesterol", value: "111", unit: "mg/dL", referenceRange: "< 100", flag: "normal" },
+      { parameter: "VLDL Cholesterol", value: "26", unit: "mg/dL", referenceRange: "< 30", flag: "normal" }
+    ];
+  }
+  if (t.includes("blood count") || t.includes("fbc")) {
+    return [
+      { parameter: "Hemoglobin (Hb)", value: "14.2", unit: "g/dL", referenceRange: "12.0 - 16.0", flag: "normal" },
+      { parameter: "Total WBC Count", value: "7.4", unit: "×10³/µL", referenceRange: "4.0 - 11.0", flag: "normal" },
+      { parameter: "Platelet Count", value: "245", unit: "×10³/µL", referenceRange: "150 - 450", flag: "normal" },
+      { parameter: "Hematocrit (PCV)", value: "42.0", unit: "%", referenceRange: "36.0 - 48.0", flag: "normal" },
+      { parameter: "Neutrophils", value: "62", unit: "%", referenceRange: "40 - 70", flag: "normal" },
+      { parameter: "Lymphocytes", value: "30", unit: "%", referenceRange: "20 - 45", flag: "normal" }
+    ];
+  }
+  if (t.includes("creatinine") || t.includes("renal") || t.includes("electrolyte")) {
+    return [
+      { parameter: "Serum Creatinine", value: "0.9", unit: "mg/dL", referenceRange: "0.6 - 1.2", flag: "normal" },
+      { parameter: "Blood Urea", value: "24", unit: "mg/dL", referenceRange: "15 - 40", flag: "normal" },
+      { parameter: "Sodium (Na+)", value: "140", unit: "mmol/L", referenceRange: "135 - 145", flag: "normal" },
+      { parameter: "Potassium (K+)", value: "4.2", unit: "mmol/L", referenceRange: "3.5 - 5.1", flag: "normal" }
+    ];
+  }
+  if (t.includes("dengue")) {
+    return [
+      { parameter: "Dengue NS1 Antigen", value: "Negative", unit: "Qualitative", referenceRange: "Negative", flag: "normal" },
+      { parameter: "Dengue IgM Antibody", value: "Negative", unit: "Qualitative", referenceRange: "Negative", flag: "normal" },
+      { parameter: "Dengue IgG Antibody", value: "Negative", unit: "Qualitative", referenceRange: "Negative", flag: "normal" }
+    ];
+  }
+  if (t.includes("urine") || t.includes("ufr")) {
+    return [
+      { parameter: "Color / Appearance", value: "Pale Yellow, Clear", unit: "Visual", referenceRange: "Clear Yellow", flag: "normal" },
+      { parameter: "Reaction / pH", value: "6.0", unit: "pH", referenceRange: "4.5 - 8.0", flag: "normal" },
+      { parameter: "Albumin / Protein", value: "Nil", unit: "Qualitative", referenceRange: "Nil", flag: "normal" },
+      { parameter: "Sugar / Glucose", value: "Nil", unit: "Qualitative", referenceRange: "Nil", flag: "normal" },
+      { parameter: "Pus Cells (WBC)", value: "0 - 2", unit: "/HPF", referenceRange: "0 - 5", flag: "normal" },
+      { parameter: "Red Blood Cells (RBC)", value: "Nil", unit: "/HPF", referenceRange: "Nil", flag: "normal" }
+    ];
+  }
+  if (t.includes("ecg")) {
+    return [
+      { parameter: "Ventricular Rate", value: "72", unit: "bpm", referenceRange: "60 - 100", flag: "normal" },
+      { parameter: "PR Interval", value: "156", unit: "ms", referenceRange: "120 - 200", flag: "normal" },
+      { parameter: "QRS Duration", value: "88", unit: "ms", referenceRange: "80 - 120", flag: "normal" },
+      { parameter: "Rhythm & Interpretation", value: "Normal Sinus Rhythm", unit: "Impression", referenceRange: "Sinus Rhythm", flag: "normal" }
+    ];
+  }
+  return [
+    { parameter: testName || "Primary Parameter", value: "", unit: "", referenceRange: "Normal", flag: "normal" }
+  ];
 };
 
 const doctorName = (item) => {
@@ -68,7 +135,7 @@ const labRequestSchema = z.object({
 
 const labUpdateSchema = z.object({
   status: z.string().min(1, "Status is required"),
-  resultSummary: z.string().trim().max(500, "Result summary is too long").optional().or(z.literal("")),
+  resultSummary: z.string().trim().max(1000, "Result summary is too long").optional().or(z.literal("")),
   resultUrl: z.string().trim().url("Enter a valid report URL").optional().or(z.literal(""))
 }).refine((data) => {
   if (data.status === "completed" && (!data.resultSummary || data.resultSummary.trim().length < 3)) {
@@ -94,6 +161,49 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
   const [toast, setToast] = useState(null);
   const [labCatalog, setLabCatalog] = useState([]);
   const [orderedLabTests, setOrderedLabTests] = useState([]);
+  const [labParameters, setLabParameters] = useState([]);
+  const [specimenType, setSpecimenType] = useState("Venous Blood");
+
+  const addLabParamRow = () => {
+    setLabParameters((prev) => [
+      ...prev,
+      { parameter: "", value: "", unit: "", referenceRange: "", flag: "normal" }
+    ]);
+  };
+
+  const updateLabParamRow = (index, field, value) => {
+    setLabParameters((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
+    );
+  };
+
+  const removeLabParamRow = (index) => {
+    setLabParameters((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const autoFillStandardParams = (testName) => {
+    const standard = getStandardLabParameters(testName);
+    setLabParameters(standard);
+  };
+
+  const handlePrintCurrentReport = () => {
+    if (!modal.record) return;
+    const currentStatus = watch("status") || modal.record.status || "completed";
+    const currentSummary = watch("resultSummary") || modal.record.resultSummary || "";
+    const currentUrl = watch("resultUrl") || modal.record.resultUrl || "";
+
+    const reportPayload = {
+      ...modal.record,
+      status: currentStatus,
+      resultSummary: currentSummary,
+      resultUrl: currentUrl,
+      specimenType,
+      parameters: labParameters.filter((p) => (p.parameter && p.parameter.trim()) || (p.value && p.value.trim())),
+      reportedAt: modal.record.reportedAt || new Date()
+    };
+
+    printLabReportPDF(reportPayload);
+  };
 
   const [isCustomTest, setIsCustomTest] = useState(false);
 
@@ -202,7 +312,23 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
 
   const openModal = (type, record) => {
     if (type === "lab-update") {
-      reset({ status: record.status || "verified", resultSummary: record.resultSummary || "", resultUrl: record.resultUrl || "" });
+      const initialParams = Array.isArray(record.parameters) && record.parameters.length > 0
+        ? record.parameters
+        : getStandardLabParameters(record.testName);
+      setLabParameters(initialParams);
+      const defaultSpecimen = record.specimenType || (record.testName?.toLowerCase().includes("urine") ? "Midstream Urine" : "Venous Blood");
+      setSpecimenType(defaultSpecimen);
+
+      let defaultSummary = record.resultSummary || "";
+      if (!defaultSummary && initialParams.length > 0) {
+        defaultSummary = `${record.testName} completed. All observed values recorded within specified clinical limits.`;
+      }
+
+      reset({
+        status: record.status || "verified",
+        resultSummary: defaultSummary,
+        resultUrl: record.resultUrl || ""
+      });
     } else if (type === "lab-request") {
       const defaultTest = standardCatalogList[0]?.testName || "Full Blood Count (FBC)";
       setIsCustomTest(false);
@@ -354,11 +480,20 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
         }
       }
       if (modal.type === "lab-request") await clinicalApi.createLabRequest({ appointmentId: record._id, ...values });
-      if (modal.type === "lab-update") await clinicalApi.updateLabRequest(record._id, values);
+      if (modal.type === "lab-update") {
+        await clinicalApi.updateLabRequest(record._id, {
+          ...values,
+          parameters: labParameters.filter((p) => p.parameter?.trim() || p.value?.trim()),
+          specimenType
+        });
+      }
       const hasLab = modal.type === "consultation" && orderedLabTests.some((t) => (t.testName === "__custom__" ? t.customName : t.testName)?.trim());
       let successMessage = "Workflow updated successfully";
       if (modal.type === "consultation") {
         successMessage = hasLab ? "Consultation and lab request saved successfully" : "Consultation saved successfully";
+      }
+      if (modal.type === "lab-update") {
+        successMessage = "Laboratory result and parameters saved successfully";
       }
       setToast({ type: "success", message: successMessage });
       setModal({ type: null, record: null });
@@ -717,12 +852,33 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
   ];
 
   const labColumns = [
-    { key: "testName", header: "Test" },
+    { key: "testName", header: "Investigation / Test" },
+    { key: "patient", header: "Patient", render: (item) => patientName(item) },
     { key: "doctor", header: "Doctor", render: (item) => `Dr. ${doctorName(item)}` },
-    { key: "priority", header: "Priority", render: (item) => item.priority || "routine" },
+    { key: "priority", header: "Priority", render: (item) => <span style={{ textTransform: "capitalize", fontWeight: item.priority === "urgent" ? 700 : 500, color: item.priority === "urgent" ? "#e11d48" : "#475569" }}>{item.priority || "routine"}</span> },
     { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
     { key: "resultSummary", header: "Result Summary", render: (item) => item.resultSummary || "Pending" },
-    { key: "actions", header: "Actions", render: (item) => <button className="table-link-button" type="button" onClick={() => openModal("lab-update", item)}>Update</button> }
+    {
+      key: "actions",
+      header: "Actions",
+      render: (item) => (
+        <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+          <button className="table-link-button" type="button" onClick={() => openModal("lab-update", item)}>
+            Update
+          </button>
+          <button
+            type="button"
+            className="table-link-button"
+            style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#0284c7" }}
+            onClick={() => printLabReportPDF(item)}
+            title="Generate and print diagnostic report PDF"
+          >
+            <Printer size={12} />
+            Report PDF
+          </button>
+        </div>
+      )
+    }
   ];
 
   return (
@@ -1217,16 +1373,250 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
             </div>
           ) : null}
           {modal.type === "lab-update" ? (
-            <>
-              <FormSelect label="Status" error={errors.status?.message} {...register("status")}>
-                {["verified", "in_progress", "completed", "cancelled"].map((item) => <option value={item} key={item}>{item.replace(/_/g, " ")}</option>)}
-              </FormSelect>
-              <FormInput label="Result Summary" placeholder="FBS 112 mg/dL. Continue monitoring." error={errors.resultSummary?.message} {...register("resultSummary")} />
-              <FormInput label="Result URL" placeholder="https://example.lk/reports/fbs.pdf" error={errors.resultUrl?.message} {...register("resultUrl")} />
-            </>
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              {/* Patient & Test Header Card */}
+              <div
+                style={{
+                  background: "linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%)",
+                  border: "1px solid #bae6fd",
+                  borderRadius: "8px",
+                  padding: "12px 14px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "8px"
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "1rem", fontWeight: 700, color: "#0c4a6e" }}>
+                    {patientName(modal.record)}
+                  </div>
+                  <div style={{ fontSize: "0.8rem", color: "#475569", marginTop: "2px" }}>
+                    Investigation: <strong style={{ color: "#0369a1" }}>{modal.record?.testName}</strong> • Ref: <strong>#LAB-{String(modal.record?._id || "").slice(-6).toUpperCase()}</strong>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span
+                    style={{
+                      fontSize: "0.74rem",
+                      fontWeight: 700,
+                      padding: "3px 8px",
+                      borderRadius: "10px",
+                      background: modal.record?.priority === "urgent" ? "#fee2e2" : "#f1f5f9",
+                      color: modal.record?.priority === "urgent" ? "#e11d48" : "#475569"
+                    }}
+                  >
+                    {(modal.record?.priority || "routine").toUpperCase()}
+                  </span>
+                  <button
+                    type="button"
+                    style={{
+                      height: "30px",
+                      padding: "0 10px",
+                      fontSize: "0.78rem",
+                      fontWeight: 600,
+                      color: "#0284c7",
+                      background: "#ffffff",
+                      border: "1px solid #bae6fd",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px"
+                    }}
+                    onClick={handlePrintCurrentReport}
+                    title="Generate and print diagnostic report PDF"
+                  >
+                    <Printer size={13} />
+                    Print / PDF
+                  </button>
+                </div>
+              </div>
+
+              {/* Status and Specimen */}
+              <div className="form-grid">
+                <FormSelect label="Investigation Status *" error={errors.status?.message} {...register("status")}>
+                  <option value="verified">Verified (Sample Received / In Lab)</option>
+                  <option value="in_progress">In Progress (Testing Underway)</option>
+                  <option value="completed">Completed (Report Finalized)</option>
+                  <option value="cancelled">Cancelled</option>
+                </FormSelect>
+
+                <div>
+                  <label className="form-label" style={{ fontWeight: 600, fontSize: "0.84rem", marginBottom: "6px", display: "block", color: "#0f172a" }}>
+                    Specimen Type
+                  </label>
+                  <select
+                    value={specimenType}
+                    onChange={(e) => setSpecimenType(e.target.value)}
+                    className="form-select"
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.88rem", backgroundColor: "#fff" }}
+                  >
+                    <option value="Venous Blood">Venous Blood (Whole Blood / Serum)</option>
+                    <option value="Plasma">Plasma</option>
+                    <option value="Midstream Urine">Midstream Urine</option>
+                    <option value="Nasopharyngeal Swab">Nasopharyngeal Swab</option>
+                    <option value="Other Specimen">Other Specimen</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Structured Parameters Table */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "12px 14px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: "0.88rem", color: "#0f172a", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
+                      <FlaskConical size={14} color="#0284c7" /> Investigation Parameters & Analyte Readings
+                    </h4>
+                    <span style={{ fontSize: "0.76rem", color: "#64748b" }}>Enter measured analyte values and reference ranges for the report</span>
+                  </div>
+                  <div style={{ display: "flex", gap: "6px" }}>
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      style={{ height: "28px", padding: "0 8px", fontSize: "0.75rem" }}
+                      onClick={() => autoFillStandardParams(modal.record?.testName)}
+                      title="Reset to standard test parameters template"
+                    >
+                      Reset Template
+                    </button>
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      style={{ height: "28px", padding: "0 8px", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                      onClick={addLabParamRow}
+                    >
+                      <Plus size={12} /> Add Analyte
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "4px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 1fr 1.2fr 1fr auto", gap: "6px", padding: "0 6px", fontSize: "0.74rem", fontWeight: 700, color: "#475569" }}>
+                    <div>Parameter / Analyte</div>
+                    <div>Observed Value</div>
+                    <div>Unit</div>
+                    <div>Reference Interval</div>
+                    <div>Flag</div>
+                    <div></div>
+                  </div>
+
+                  {labParameters.map((p, pIdx) => (
+                    <div
+                      key={pIdx}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "2fr 1.2fr 1fr 1.2fr 1fr auto",
+                        gap: "6px",
+                        alignItems: "center",
+                        background: "#ffffff",
+                        padding: "6px 8px",
+                        borderRadius: "6px",
+                        border: "1px solid #e2e8f0"
+                      }}
+                    >
+                      <div>
+                        <input
+                          type="text"
+                          placeholder="e.g. Total Cholesterol"
+                          value={p.parameter}
+                          onChange={(e) => updateLabParamRow(pIdx, "parameter", e.target.value)}
+                          style={{ width: "100%", padding: "5px 6px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px" }}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <input
+                          type="text"
+                          placeholder="Value (e.g. 185)"
+                          value={p.value}
+                          onChange={(e) => updateLabParamRow(pIdx, "value", e.target.value)}
+                          style={{ width: "100%", padding: "5px 6px", fontSize: "0.78rem", fontWeight: 600, border: "1px solid #cbd5e1", borderRadius: "4px" }}
+                        />
+                      </div>
+                      <div>
+                        <input
+                          type="text"
+                          placeholder="Unit (mg/dL)"
+                          value={p.unit}
+                          onChange={(e) => updateLabParamRow(pIdx, "unit", e.target.value)}
+                          style={{ width: "100%", padding: "5px 6px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px" }}
+                        />
+                      </div>
+                      <div>
+                        <input
+                          type="text"
+                          placeholder="Ref (e.g. < 200)"
+                          value={p.referenceRange}
+                          onChange={(e) => updateLabParamRow(pIdx, "referenceRange", e.target.value)}
+                          style={{ width: "100%", padding: "5px 6px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px" }}
+                        />
+                      </div>
+                      <div>
+                        <select
+                          value={p.flag || "normal"}
+                          onChange={(e) => updateLabParamRow(pIdx, "flag", e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "5px 4px",
+                            fontSize: "0.76rem",
+                            fontWeight: 600,
+                            border: "1px solid #cbd5e1",
+                            borderRadius: "4px",
+                            color: p.flag === "high" || p.flag === "abnormal" ? "#e11d48" : p.flag === "low" ? "#d97706" : "#15803d"
+                          }}
+                        >
+                          <option value="normal">Normal</option>
+                          <option value="high">High</option>
+                          <option value="low">Low</option>
+                          <option value="abnormal">Abnormal</option>
+                        </select>
+                      </div>
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => removeLabParamRow(pIdx)}
+                          style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px", color: "#ef4444" }}
+                          title="Remove analyte"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Summary and Notes */}
+              <FormTextarea
+                label="Clinical Summary & Pathologist Remarks *"
+                rows={3}
+                placeholder="e.g. Fasting Blood Glucose within normal physiological limits. No evidence of impaired fasting glycemia."
+                error={errors.resultSummary?.message}
+                {...register("resultSummary")}
+              />
+
+              <FormInput
+                label="External Report URL (Optional)"
+                placeholder="https://example.lk/reports/lab-result.pdf"
+                error={errors.resultUrl?.message}
+                {...register("resultUrl")}
+              />
+            </div>
           ) : null}
           <div className="modal-actions">
             <button className="button-secondary" type="button" onClick={() => setModal({ type: null, record: null })} disabled={busy}>Cancel</button>
+            {modal.type === "lab-update" ? (
+              <button
+                className="button-secondary"
+                type="button"
+                onClick={handlePrintCurrentReport}
+                style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+              >
+                <Printer size={14} /> Print / Report PDF
+              </button>
+            ) : null}
             <button className="button-primary" type="submit" disabled={busy}>{busy ? "Saving..." : "Save"}</button>
           </div>
         </form>

@@ -266,7 +266,10 @@ export const listLabRequests = async (req, res) => {
   if (req.user.role === ROLES.PATIENT) filter.patientId = req.user._id;
   if (req.user.role === ROLES.DOCTOR) filter.doctorId = req.user._id;
   const requests = await LabRequest.find(filter)
+    .populate("patientId", "firstName lastName phone email dateOfBirth gender")
     .populate("doctorId", "firstName lastName")
+    .populate("verifiedBy", "firstName lastName")
+    .populate("appointmentId", "slotLabel appointmentDate reason")
     .sort({ createdAt: -1 });
   return successResponse(res, "Lab request list loaded", requests);
 };
@@ -278,8 +281,20 @@ export const updateLabRequest = async (req, res) => {
   request.status = req.body.status;
   request.resultSummary = req.body.resultSummary ?? request.resultSummary;
   request.resultUrl = req.body.resultUrl ?? request.resultUrl;
-  if (req.body.status === "verified") request.verifiedBy = req.user._id;
+  if (req.body.parameters !== undefined) request.parameters = req.body.parameters;
+  if (req.body.specimenType !== undefined) request.specimenType = req.body.specimenType;
+  if (req.body.sampleCollectedAt !== undefined) request.sampleCollectedAt = req.body.sampleCollectedAt;
+  if (req.body.reportedAt !== undefined) request.reportedAt = req.body.reportedAt;
+  if (["completed", "verified"].includes(req.body.status)) {
+    request.verifiedBy = req.user._id;
+    if (!request.reportedAt) request.reportedAt = new Date();
+  }
   await request.save();
+  const populated = await LabRequest.findById(request._id)
+    .populate("patientId", "firstName lastName phone email dateOfBirth gender")
+    .populate("doctorId", "firstName lastName")
+    .populate("verifiedBy", "firstName lastName")
+    .populate("appointmentId", "slotLabel appointmentDate reason");
   if (wasIncomplete && ["completed", "verified"].includes(request.status)) {
     await Notification.create({
       patientId: request.patientId,
@@ -291,7 +306,7 @@ export const updateLabRequest = async (req, res) => {
       createdBy: req.user._id
     });
   }
-  return successResponse(res, "Lab request updated successfully", request);
+  return successResponse(res, "Lab request updated successfully", populated);
 };
 
 export const listNotifications = async (req, res) => {
