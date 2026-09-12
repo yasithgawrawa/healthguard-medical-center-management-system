@@ -57,15 +57,8 @@ const vitalsSchema = z.object({
 });
 
 const consultationSchema = z.object({
-  diagnosis: z.string().trim().min(2, "Primary diagnosis is required").max(120, "Diagnosis is too long"),
+  diagnosis: z.string().trim().min(2, "Diagnosis is required").max(120, "Diagnosis cannot exceed 120 characters"),
   clinicalNotes: z.string().trim().min(3, "Clinical notes are required").max(1000, "Clinical notes cannot exceed 1000 characters"),
-  chiefComplaints: z.string().trim().max(300, "Chief complaints too long").optional().or(z.literal("")),
-  examinationFindings: z.string().trim().max(500, "Examination findings too long").optional().or(z.literal("")),
-  secondaryDiagnosis: z.string().trim().max(150, "Secondary diagnosis too long").optional().or(z.literal("")),
-  severity: z.string().optional().or(z.literal("")),
-  patientAdvice: z.string().trim().max(500, "Patient advice too long").optional().or(z.literal("")),
-  followUpPlan: z.string().trim().max(100, "Follow-up plan too long").optional().or(z.literal("")),
-  handwrittenPrescriptionIssued: z.boolean().optional(),
   finalized: z.boolean().optional()
 });
 
@@ -89,78 +82,6 @@ const labUpdateSchema = z.object({
 });
 
 const buildNumber = (value) => (value === "" || value === undefined ? undefined : Number(value));
-
-const CLINICAL_PRESETS = [
-  {
-    label: "Viral Flu / URTI",
-    diagnosis: "Acute Upper Respiratory Tract Infection (URTI) / Viral Flu",
-    chiefComplaints: "Fever, body aches, runny nose, sore throat for 2-3 days",
-    examinationFindings: "Pharyngeal congestion, clear chest auscultation, no wheezing or crackles",
-    severity: "mild",
-    clinicalNotes: "Symptomatic viral infection. Prescribed antipyretics, decongestant and hydration. Advised rest.",
-    patientAdvice: "Drink plenty of warm fluids, steam inhalation twice daily, adequate bed rest. Return if fever persists > 3 days.",
-    followUpPlan: "Review in 3 days"
-  },
-  {
-    label: "Hypertension Review",
-    diagnosis: "Essential Hypertension - Routine Clinical Review",
-    chiefComplaints: "Routine blood pressure follow-up, occasional mild occipital headache",
-    examinationFindings: "Heart sounds S1 S2 normal, no peripheral pedal edema, lungs clear",
-    severity: "moderate",
-    clinicalNotes: "Patient compliant with antihypertensive therapy. BP assessed and maintenance continued.",
-    patientAdvice: "Maintain low sodium diet (<2g salt/day), 30 mins brisk walking daily, avoid stress, monitor BP weekly.",
-    followUpPlan: "Review in 2 weeks"
-  },
-  {
-    label: "Type 2 Diabetes Review",
-    diagnosis: "Type 2 Diabetes Mellitus - Glycemic Follow-Up",
-    chiefComplaints: "Routine diabetic review, good compliance, no polyuria or polydipsia",
-    examinationFindings: "Peripheral pulses palpable, no diabetic foot ulcers, neurological sensation intact",
-    severity: "moderate",
-    clinicalNotes: "Regular glycemic control follow-up. Diet, lifestyle and medication adherence assessed.",
-    patientAdvice: "Follow diabetic meal plan, foot hygiene and daily inspection, regular fasting blood sugar log.",
-    followUpPlan: "Review in 1 month"
-  },
-  {
-    label: "Acute Gastritis",
-    diagnosis: "Acute Gastritis / Acid Peptic Disease",
-    chiefComplaints: "Burning epigastric pain post-meals, nausea, occasional acid reflux",
-    examinationFindings: "Mild epigastric tenderness, abdomen soft, bowel sounds normal",
-    severity: "mild",
-    clinicalNotes: "Suspected non-ulcer dyspepsia / acute gastritis triggered by irregular meal times.",
-    patientAdvice: "Eat small frequent meals, avoid spicy and oily food, avoid NSAIDs on empty stomach, drink plenty of water.",
-    followUpPlan: "Review in 5 days"
-  },
-  {
-    label: "Musculoskeletal Strain",
-    diagnosis: "Mechanical Musculoskeletal Strain / Lumbar Strain",
-    chiefComplaints: "Lower backache / muscular strain exacerbated by prolonged sitting or lifting",
-    examinationFindings: "Paraspinal muscle tenderness, straight leg raise negative, normal reflexes",
-    severity: "mild",
-    clinicalNotes: "Soft tissue strain. Prescribed analgesics, muscle relaxants and hot fermentation advice.",
-    patientAdvice: "Apply warm compress, practice ergonomic posture, avoid heavy weight lifting for 1 week.",
-    followUpPlan: "Review in 1 week"
-  },
-  {
-    label: "Allergic Rhinitis",
-    diagnosis: "Allergic Rhinitis & Bronchial Hyperresponsiveness",
-    chiefComplaints: "Sneezing bouts, watery nasal discharge, itchy eyes, dry nocturnal cough",
-    examinationFindings: "Pale nasal mucosa, conjunctival injection, vesicular breath sounds",
-    severity: "mild",
-    clinicalNotes: "Environmental allergen sensitivity. Prescribed antihistamines and nasal rinse.",
-    patientAdvice: "Avoid dust, pollen, cold environments. Use dust-mite covers, warm saline gargles.",
-    followUpPlan: "Review in 1 week"
-  }
-];
-
-const COMMON_MEDICINES = [
-  { name: "Amoxicillin 500mg Capsules", dosage: "500mg", freq: "TDS", days: 5, inst: "After meals" },
-  { name: "Paracetamol 500mg Tablets", dosage: "500mg", freq: "TDS", days: 3, inst: "For fever/pain after food" },
-  { name: "Omeprazole 20mg Capsules", dosage: "20mg", freq: "BD", days: 7, inst: "30 mins before meals" },
-  { name: "Cetirizine 10mg Tablets", dosage: "10mg", freq: "OD (Night)", days: 5, inst: "At bedtime" },
-  { name: "Metformin 500mg Tablets", dosage: "500mg", freq: "BD", days: 30, inst: "With meals" },
-  { name: "Salbutamol 100mcg Inhaler", dosage: "2 puffs", freq: "PRN", days: 14, inst: "As needed for bronchospasm" }
-];
 
 export const ClinicalWorkspacePanel = ({ mode }) => {
   const [appointments, setAppointments] = useState([]);
@@ -296,13 +217,6 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
       reset({
         diagnosis: existing.diagnosis || "",
         clinicalNotes: existing.clinicalNotes || "",
-        chiefComplaints: existing.chiefComplaints || record.reason || "",
-        examinationFindings: existing.examinationFindings || "",
-        secondaryDiagnosis: existing.secondaryDiagnosis || "",
-        severity: existing.severity || "moderate",
-        patientAdvice: existing.patientAdvice || "Rest adequately and drink plenty of warm fluids. Complete prescribed medications as instructed.",
-        followUpPlan: existing.followUpPlan || "Review in 3 days",
-        handwrittenPrescriptionIssued: existing.handwrittenPrescriptionIssued !== undefined ? existing.handwrittenPrescriptionIssued : true,
         finalized: existing.finalized !== undefined ? existing.finalized : true
       });
     } else {
@@ -1062,139 +976,31 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                 ) : null}
               </div>
 
-              {/* Fast Clinical Presets & Autofill */}
-              <div style={{ background: "#f8fafc", padding: "10px 14px", borderRadius: "8px", border: "1px dashed #cbd5e1" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
-                  <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", display: "flex", alignItems: "center", gap: "5px" }}>
-                    <Sparkles size={14} color="#f59e0b" /> Fast Clinical Presets (Click to autofill):
-                  </span>
-                  {modal.record?.reason || modal.record?.vitals ? (
-                    <button
-                      type="button"
-                      className="table-link-button"
-                      style={{ fontSize: "0.75rem", padding: "2px 6px" }}
-                      onClick={importTriageNotes}
-                      title="Autofill Chief Complaints using patient's reason and triage vitals"
-                    >
-                      Import Reason & Vitals
-                    </button>
-                  ) : null}
-                </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                  {CLINICAL_PRESETS.map((preset) => (
-                    <button
-                      key={preset.label}
-                      type="button"
-                      onClick={() => applyPreset(preset)}
-                      style={{
-                        fontSize: "0.78rem",
-                        padding: "4px 10px",
-                        borderRadius: "16px",
-                        background: "#ffffff",
-                        border: "1px solid #93c5fd",
-                        color: "#1d4ed8",
-                        cursor: "pointer",
-                        fontWeight: 500,
-                        transition: "all 0.15s ease"
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = "#dbeafe"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; }}
-                    >
-                      + {preset.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* Diagnosis */}
+              <FormInput
+                label="Diagnosis *"
+                placeholder="e.g. Acute Upper Respiratory Tract Infection, Hypertension, Gastritis"
+                error={errors.diagnosis?.message}
+                {...register("diagnosis")}
+              />
 
-              {/* Section 1: Clinical Presentation & Physical Examination */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                <h4 style={{ margin: 0, fontSize: "0.88rem", color: "#1e3a8a", textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 700 }}>
-                  1. Clinical Presentation & Physical Examination
-                </h4>
-                <div className="form-grid">
-                  <FormInput
-                    label="Chief Complaints & Symptoms"
-                    placeholder="e.g. High fever for 3 days, sore throat, cough"
-                    error={errors.chiefComplaints?.message}
-                    {...register("chiefComplaints")}
-                  />
-                  <FormInput
-                    label="Physical Examination & Clinical Findings"
-                    placeholder="e.g. Pharynx congested, bilateral lungs clear, no wheeze"
-                    error={errors.examinationFindings?.message}
-                    {...register("examinationFindings")}
-                  />
-                </div>
-              </div>
+              {/* Clinical Notes & Advice */}
+              <FormTextarea
+                label="Clinical Notes & Treatment Plan *"
+                rows={4}
+                placeholder="Clinical observations, diagnosis notes, patient advice..."
+                error={errors.clinicalNotes?.message}
+                {...register("clinicalNotes")}
+              />
 
-              {/* Section 2: Diagnosis & Acuity */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                <h4 style={{ margin: 0, fontSize: "0.88rem", color: "#1e3a8a", textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 700 }}>
-                  2. Assessment & Diagnosis
-                </h4>
-                <div className="form-grid">
-                  <FormInput
-                    label="Primary Diagnosis *"
-                    placeholder="e.g. Acute Upper Respiratory Tract Infection (URTI)"
-                    error={errors.diagnosis?.message}
-                    {...register("diagnosis")}
-                  />
-                  <FormInput
-                    label="Secondary / Differential Diagnosis"
-                    placeholder="e.g. Tension headache, mild dehydration"
-                    error={errors.secondaryDiagnosis?.message}
-                    {...register("secondaryDiagnosis")}
-                  />
-                  <FormSelect label="Severity / Acuity Level" error={errors.severity?.message} {...register("severity")}>
-                    <option value="mild">Mild (Routine outpatient care)</option>
-                    <option value="moderate">Moderate (Symptomatic care required)</option>
-                    <option value="severe">Severe (Urgent / closely monitored)</option>
-                    <option value="chronic">Chronic / Maintenance follow-up</option>
-                    <option value="routine">Routine Wellness / Check-up</option>
-                  </FormSelect>
-                  <FormSelect label="Follow-Up Recommendation" error={errors.followUpPlan?.message} {...register("followUpPlan")}>
-                    <option value="No routine follow-up needed">No routine follow-up needed</option>
-                    <option value="Review in 3 days">Review in 3 days</option>
-                    <option value="Review in 5 days">Review in 5 days</option>
-                    <option value="Review in 1 week">Review in 1 week</option>
-                    <option value="Review in 2 weeks">Review in 2 weeks</option>
-                    <option value="Review in 1 month">Review in 1 month</option>
-                    <option value="Return immediately if symptoms worsen">Return immediately if symptoms worsen</option>
-                  </FormSelect>
-                </div>
-              </div>
-
-              {/* Section 3: Treatment Plan & Patient Instructions */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                <h4 style={{ margin: 0, fontSize: "0.88rem", color: "#1e3a8a", textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 700 }}>
-                  3. Treatment Plan & Patient Instructions
-                </h4>
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                  <FormTextarea
-                    label="Clinical Observations & Treatment Notes *"
-                    rows={3}
-                    placeholder="Detailed observations, treatment rationale, and clinical assessment..."
-                    error={errors.clinicalNotes?.message}
-                    {...register("clinicalNotes")}
-                  />
-                  <FormTextarea
-                    label="Patient Care & Lifestyle Instructions"
-                    rows={2}
-                    placeholder="Non-pharmacological advice (e.g. bed rest, hydration, salt water gargling, dietary precautions)..."
-                    error={errors.patientAdvice?.message}
-                    {...register("patientAdvice")}
-                  />
-                </div>
-              </div>
-
-              {/* Section 4: Prescription & Medications (E2-US08) */}
+              {/* Prescribed Medications (Optional) */}
               <div style={{ display: "flex", flexDirection: "column", gap: "10px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "14px 16px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
                   <div>
-                    <h4 style={{ margin: 0, fontSize: "0.88rem", color: "#1e3a8a", textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
-                      <Pill size={15} color="#0284c7" /> 4. Prescription & Medications (E2-US08)
+                    <h4 style={{ margin: 0, fontSize: "0.88rem", color: "#1e3a8a", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
+                      <Pill size={15} color="#0284c7" /> Prescriptions & Medications (Optional)
                     </h4>
-                    <span style={{ fontSize: "0.78rem", color: "#64748b" }}>Add medicines for electronic pharmacy dispensing & patient records</span>
+                    <span style={{ fontSize: "0.78rem", color: "#64748b" }}>Add medicines if dispensing from pharmacy</span>
                   </div>
                   <button
                     type="button"
@@ -1206,35 +1012,9 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                   </button>
                 </div>
 
-                {/* Quick Medicine Shortcuts */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", alignItems: "center" }}>
-                  <span style={{ fontSize: "0.74rem", fontWeight: 600, color: "#64748b" }}>Quick add:</span>
-                  {COMMON_MEDICINES.map((m) => (
-                    <button
-                      key={m.name}
-                      type="button"
-                      onClick={() => addPrescriptionItem(m)}
-                      style={{
-                        fontSize: "0.74rem",
-                        padding: "2px 8px",
-                        borderRadius: "12px",
-                        background: "#ffffff",
-                        border: "1px solid #cbd5e1",
-                        color: "#334155",
-                        cursor: "pointer"
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#0284c7"; e.currentTarget.style.color = "#0284c7"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.color = "#334155"; }}
-                    >
-                      + {m.name.split(" ")[0]} {m.dosage}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Prescribed Items List */}
                 {prescriptionItems.length === 0 ? (
                   <div style={{ padding: "10px", textAlign: "center", fontSize: "0.8rem", color: "#94a3b8", background: "#ffffff", borderRadius: "6px", border: "1px dashed #cbd5e1" }}>
-                    No electronic medicines added. Click <strong>"+ Add Medicine"</strong> or a shortcut above to prescribe.
+                    No medicines added (optional). Click <strong>"+ Add Medicine"</strong> if dispensing from pharmacy.
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -1255,7 +1035,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                         <div>
                           <input
                             type="text"
-                            placeholder="Medicine Name (e.g. Amoxicillin 500mg)"
+                            placeholder="Medicine Name"
                             value={item.medicineName}
                             onChange={(e) => updatePrescriptionItem(idx, "medicineName", e.target.value)}
                             style={{ width: "100%", padding: "5px 8px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px" }}
@@ -1265,11 +1045,10 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                         <div>
                           <input
                             type="text"
-                            placeholder="Dosage (500mg)"
+                            placeholder="Dosage"
                             value={item.dosage}
                             onChange={(e) => updatePrescriptionItem(idx, "dosage", e.target.value)}
                             style={{ width: "100%", padding: "5px 8px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px" }}
-                            required
                           />
                         </div>
                         <div>
@@ -1278,10 +1057,9 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                             onChange={(e) => updatePrescriptionItem(idx, "frequency", e.target.value)}
                             style={{ width: "100%", padding: "5px 6px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px" }}
                           >
-                            <option value="TDS">TDS (Thrice daily)</option>
+                            <option value="OD">OD (Once daily)</option>
                             <option value="BD">BD (Twice daily)</option>
-                            <option value="OD (Morning)">OD (Morning)</option>
-                            <option value="OD (Night)">OD (Night)</option>
+                            <option value="TDS">TDS (3 times daily)</option>
                             <option value="QDS">QDS (4 times daily)</option>
                             <option value="PRN">PRN (As needed)</option>
                             <option value="Stat">Stat (Immediately)</option>
@@ -1302,7 +1080,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                         <div>
                           <input
                             type="text"
-                            placeholder="Instructions (e.g. After meals)"
+                            placeholder="Instructions"
                             value={item.instructions}
                             onChange={(e) => updatePrescriptionItem(idx, "instructions", e.target.value)}
                             style={{ width: "100%", padding: "5px 8px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px" }}
@@ -1322,30 +1100,9 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                     ))}
                   </div>
                 )}
-
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
-                  <label className="checkbox-line" style={{ fontWeight: 600, fontSize: "0.82rem", color: "#166534", margin: 0 }}>
-                    <input type="checkbox" defaultChecked={true} {...register("handwrittenPrescriptionIssued")} />
-                    Physical paper prescription slip also handed to patient
-                  </label>
-                </div>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: "8px", flexWrap: "wrap", gap: "8px" }}>
-                <span style={{ fontSize: "0.84rem", color: "#475569" }}>
-                  Need diagnostic pathology or blood investigation for this patient?
-                </span>
-                <button
-                  type="button"
-                  className="button-secondary"
-                  style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.82rem", padding: "6px 12px" }}
-                  onClick={() => openModal("lab-request", modal.record)}
-                >
-                  <FlaskConical size={14} /> Order Lab Investigation
-                </button>
-              </div>
-
-              <label className="checkbox-line" style={{ fontWeight: 700, marginTop: "2px" }}>
+              <label className="checkbox-line" style={{ fontWeight: 600, marginTop: "4px" }}>
                 <input type="checkbox" {...register("finalized")} /> Finalize consultation & mark visit as completed
               </label>
             </div>
