@@ -382,7 +382,7 @@ export const InventoryWorkspacePanel = () => {
           quantity: item.quantity
         }))
       });
-      setToast({ type: "success", message: `Sale ${sale.saleNumber} completed! Stock deducted.` });
+      setToast({ type: "success", message: `Medicines dispensed (${sale.saleNumber})! Order forwarded to Cashier desk for payment collection.` });
       setModal({ type: null, record: null });
       await loadData();
       // Open Bill modal immediately for printing/downloading
@@ -882,22 +882,35 @@ export const InventoryWorkspacePanel = () => {
               <SearchBar value={search} onChange={setSearch} placeholder="Search sales by bill number or patient..." />
             </div>
             <button type="button" onClick={() => openPosModal()} className="button-primary">
-              <ShoppingCart size={16} /> New Sale / Dispense
+              <ArrowDownCircle size={16} /> Dispense Medicines
             </button>
           </div>
           <DataTable
             rows={salesRows}
             columns={[
               { key: "createdAt", header: "Date & Time", render: (item) => new Date(item.createdAt).toLocaleString("en-LK") },
-              { key: "saleNumber", header: "Bill Number", render: (item) => <strong>{item.saleNumber || `PH-${item._id.slice(-6).toUpperCase()}`}</strong> },
+              { key: "saleNumber", header: "Dispensary Slip #", render: (item) => <strong>{item.saleNumber || `PH-${item._id.slice(-6).toUpperCase()}`}</strong> },
               {
                 key: "patient",
                 header: "Patient",
                 render: (item) => [item.patientId?.firstName, item.patientId?.lastName].filter(Boolean).join(" ") || "Walk-in Patient"
               },
               { key: "items", header: "Items Dispensed", render: (item) => `${item.items?.length || 0} item(s)` },
-              { key: "total", header: "Bill Total", render: (item) => <strong>{money(item.total)}</strong> },
-              { key: "paymentStatus", header: "Payment", render: () => <span style={{ color: "var(--success)", fontWeight: 700, background: "var(--success-bg)", padding: "2px 8px", borderRadius: "12px", fontSize: "12px" }}>PAID</span> },
+              { key: "total", header: "Amount Due", render: (item) => <strong>{money(item.total)}</strong> },
+              {
+                key: "paymentStatus",
+                header: "Cashier Status",
+                render: (item) =>
+                  item.paymentStatus === "paid" ? (
+                    <span style={{ color: "var(--success)", fontWeight: 700, background: "var(--success-bg)", padding: "2px 8px", borderRadius: "12px", fontSize: "12px" }}>
+                      Paid at Cashier
+                    </span>
+                  ) : (
+                    <span style={{ color: "#b45309", fontWeight: 700, background: "#fef3c7", padding: "2px 8px", borderRadius: "12px", fontSize: "12px" }}>
+                      Pending Cashier
+                    </span>
+                  )
+              },
               {
                 key: "actions",
                 header: "Actions",
@@ -1250,8 +1263,8 @@ export const InventoryWorkspacePanel = () => {
       {/* ========================================================================= */}
       <Modal
         open={modal.type === "pos"}
-        title="Pharmacy Point of Sale & Dispensing Counter"
-        subtitle="Dispense medicines to walk-in or registered patients and link doctor prescriptions."
+        title="Pharmacy Dispensary & Medicine Counter"
+        subtitle="Dispense prescribed medicines from active inventory. Orders are automatically forwarded to the Cashier desk for payment collection."
         onClose={() => setModal({ type: null, record: null })}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
@@ -1492,7 +1505,7 @@ export const InventoryWorkspacePanel = () => {
               disabled={busy || posCart.length === 0}
               style={{ minHeight: "46px", padding: "0 24px", fontSize: "0.95rem" }}
             >
-              <ShoppingCart size={18} /> {busy ? "Processing Sale..." : "Complete Sale & Print Bill"}
+              <ArrowDownCircle size={18} /> {busy ? "Dispensing..." : "Dispense Medicines & Send to Cashier"}
             </button>
           </div>
         </div>
@@ -1503,8 +1516,8 @@ export const InventoryWorkspacePanel = () => {
       {/* ========================================================================= */}
       <Modal
         open={Boolean(selectedBill)}
-        title="Pharmacy Bill & Receipt"
-        subtitle="Official dispensary sale record and verified payment receipt."
+        title="Medicine Dispensary Slip"
+        subtitle="Official dispensary order. Payment collection is processed at the Cashier counter."
         onClose={() => setSelectedBill(null)}
       >
         {selectedBill ? (
@@ -1555,15 +1568,23 @@ export const InventoryWorkspacePanel = () => {
 
               <div style={{ textAlign: "right", borderTop: "1.5px solid var(--line)", paddingTop: "12px" }}>
                 <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--brand-900)" }}>
-                  TOTAL PAID: <span style={{ color: "var(--accent-emerald)" }}>{money(selectedBill.total)}</span>
+                  TOTAL AMOUNT: <span style={{ color: "var(--brand-800)" }}>{money(selectedBill.total)}</span>
                 </div>
-                <div style={{ fontSize: "0.8rem", color: "var(--muted)", marginTop: "4px" }}>
-                  Payment Method: Cash / Card &bull; Status: Verified & Completed
+                <div style={{ fontSize: "0.85rem", marginTop: "6px" }}>
+                  {selectedBill.paymentStatus === "paid" ? (
+                    <span style={{ color: "var(--accent-emerald)", fontWeight: 700 }}>
+                      ✓ PAID AT CASHIER
+                    </span>
+                  ) : (
+                    <span style={{ color: "#b45309", fontWeight: 700, background: "#fef3c7", padding: "4px 10px", borderRadius: "6px", display: "inline-block" }}>
+                      ⏳ PAYMENT PENDING AT CASHIER DESK
+                    </span>
+                  )}
                 </div>
               </div>
 
-              <div style={{ textAlign: "center", marginTop: "20px", borderTop: "1px dashed var(--line)", paddingTop: "12px", fontSize: "0.82rem", color: "var(--muted)" }}>
-                Thank you for choosing Health Guard Medical Center. We wish you good health!
+              <div style={{ textAlign: "center", marginTop: "16px", borderTop: "1px dashed var(--line)", paddingTop: "12px", fontSize: "0.84rem", color: "var(--ink-700)" }}>
+                <strong>Note to Patient:</strong> Please take this dispensary slip to the Cashier Counter to complete payment and receive your official payment receipt.
               </div>
             </div>
 

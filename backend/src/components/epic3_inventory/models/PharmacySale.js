@@ -19,7 +19,8 @@ const pharmacySaleSchema = new mongoose.Schema(
     soldBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     items: { type: [saleItemSchema], validate: [(items) => items.length > 0, "At least one item is required"] },
     total: { type: Number, required: true, min: 0 },
-    paymentStatus: { type: String, enum: ["paid"], default: "paid" },
+    paymentStatus: { type: String, enum: ["pending_cashier", "paid"], default: "pending_cashier" },
+    invoiceId: { type: mongoose.Schema.Types.ObjectId, ref: "Invoice" },
     billIssuedAt: { type: Date, default: Date.now }
   },
   { timestamps: true }

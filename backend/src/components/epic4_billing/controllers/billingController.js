@@ -1,6 +1,7 @@
 import { Attendance } from "../../epic1_user_staff/models/Attendance.js";
 import { Staff } from "../../epic1_user_staff/models/Staff.js";
 import { Appointment } from "../../epic2_clinical/models/Appointment.js";
+import { PharmacySale } from "../../epic3_inventory/models/PharmacySale.js";
 import { Invoice } from "../models/Invoice.js";
 import { Payment } from "../models/Payment.js";
 import { Payroll } from "../models/Payroll.js";
@@ -54,6 +55,11 @@ export const recordPayment = async (req, res) => {
   invoice.paidAmount += req.body.amount;
   recalculateInvoice(invoice);
   await invoice.save();
+
+  if (invoice.status === "paid") {
+    await PharmacySale.updateMany({ invoiceId: invoice._id }, { paymentStatus: "paid" });
+  }
+
   return successResponse(res, "Payment recorded successfully", { payment, invoice }, 201);
 };
 

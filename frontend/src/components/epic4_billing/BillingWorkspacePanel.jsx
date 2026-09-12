@@ -227,6 +227,25 @@ export const BillingWorkspacePanel = () => {
             rows={rows}
             columns={[
               { key: "patient", header: "Patient", render: (item) => name(item.patientId) },
+              {
+                key: "details",
+                header: "Service / Order Details",
+                render: (item) => {
+                  const isPharmacy = item.items?.some((i) => i.description?.toLowerCase().includes("medicine"));
+                  return (
+                    <div>
+                      <span style={{ fontSize: "0.84rem", fontWeight: 600, color: isPharmacy ? "#0284c7" : "var(--brand-900)" }}>
+                        {item.items?.[0]?.description || "Medical Service"}
+                      </span>
+                      {item.items?.length > 1 ? (
+                        <span style={{ fontSize: "0.75rem", color: "var(--muted)", marginLeft: "4px" }}>
+                          (+{item.items.length - 1} more items)
+                        </span>
+                      ) : null}
+                    </div>
+                  );
+                }
+              },
               { key: "subtotal", header: "Total", render: (item) => money(item.subtotal) },
               { key: "paid", header: "Paid", render: (item) => money(item.paidAmount) },
               { key: "outstanding", header: "Outstanding", render: (item) => money(item.outstandingAmount) },
@@ -274,7 +293,12 @@ export const BillingWorkspacePanel = () => {
         />
       ) : null}
 
-      <Modal open={Boolean(modal.type)} title={modal.type === "payment" ? "Record Payment" : modal.type === "payroll" ? "Calculate Payroll" : "Create Invoice"} onClose={() => setModal({ type: null, record: null })}>
+      <Modal
+        open={Boolean(modal.type)}
+        title={modal.type === "payment" ? "Record Cashier Payment" : modal.type === "payroll" ? "Calculate Payroll" : "Create Invoice"}
+        subtitle={modal.type === "payment" && modal.record ? `Patient: ${name(modal.record.patientId)} • Due: ${money(modal.record.outstandingAmount)}` : ""}
+        onClose={() => setModal({ type: null, record: null })}
+      >
         <form onSubmit={handleSubmit(submit)}>
           {modal.type === "invoice" ? <div className="form-grid"><FormSelect label="Completed Appointment" error={errors.appointmentId?.message} {...register("appointmentId")}><option value="">Select completed appointment</option>{appointments.filter((item) => item.status === "completed").map((item) => <option value={item._id} key={item._id}>{name(item.patientId)} - {new Date(item.appointmentDate).toLocaleDateString()}</option>)}</FormSelect><FormInput label="Description" placeholder="Consultation" error={errors.description?.message} {...register("description")} /><FormInput label="Quantity" placeholder="1" type="number" min="1" step="1" error={errors.quantity?.message} {...register("quantity")} /><FormInput label="Unit Price" placeholder="1500.00" type="number" min="0" step="0.01" error={errors.unitPrice?.message} {...register("unitPrice")} /></div> : null}
           {modal.type === "payment" ? <div className="form-grid"><FormInput label="Amount" placeholder="1500.00" type="number" min="0.01" step="0.01" error={errors.amount?.message} {...register("amount")} /><FormSelect label="Method" error={errors.method?.message} {...register("method")}><option value="cash">Cash</option><option value="card">Card</option><option value="bank_transfer">Bank Transfer</option></FormSelect></div> : null}

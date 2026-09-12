@@ -5,6 +5,7 @@ import { Purchase } from "../models/Purchase.js";
 import { PharmacySale } from "../models/PharmacySale.js";
 import { Prescription } from "../../epic2_clinical/models/Prescription.js";
 import { Appointment } from "../../epic2_clinical/models/Appointment.js";
+import { Invoice } from "../../epic4_billing/models/Invoice.js";
 import { User } from "../../epic1_user_staff/models/User.js";
 import { AppError } from "../../../shared/utils/AppError.js";
 import { ROLES } from "../../../shared/constants/roles.js";
@@ -208,7 +209,7 @@ export const inventoryService = {
   },
 
   // --- SALES / POS ---
-  async createSale({ prescriptionId, patientId, items, soldById }) {
+  async createSale({ prescriptionId, patientId, items, soldById, paymentStatus }) {
     if (!items || items.length === 0) {
       throw new AppError("Sale must contain at least one item", 400);
     }
@@ -297,6 +298,34 @@ export const inventoryService = {
       }
     }
 
+    let createdInvoiceId = undefined;
+    if (patientId) {
+      try {
+        const latestAppt = await Appointment.findOne({ patientId }).sort({ appointmentDate: -1 });
+        const invoiceItems = processedItems.map(({ itemRecord, batch }) => ({
+          description: `Dispensed Medicine: ${itemRecord.medicineId?.name || "Medication"} (${batch?.batchNumber || "Dispensed"})`,
+          quantity: itemRecord.quantity,
+          unitPrice: itemRecord.unitPrice,
+          lineTotal: itemRecord.lineTotal
+        }));
+
+        const isPaid = paymentStatus === "paid";
+        const newInvoice = await Invoice.create({
+          patientId,
+          appointmentId: latestAppt?._id || undefined,
+          items: invoiceItems,
+          subtotal: grandTotal,
+          paidAmount: isPaid ? grandTotal : 0,
+          outstandingAmount: isPaid ? 0 : grandTotal,
+          status: isPaid ? "paid" : "issued",
+          createdBy: soldById
+        });
+        createdInvoiceId = newInvoice._id;
+      } catch (invoiceErr) {
+        // Fallback: don't abort dispensing if invoice generation encounters a transient error
+      }
+    }
+
     const sale = await PharmacySale.create({
       saleNumber,
       prescriptionId: effectivePrescriptionId || undefined,
@@ -304,7 +333,8 @@ export const inventoryService = {
       soldBy: soldById,
       items: processedItems.map((p) => p.itemRecord),
       total: grandTotal,
-      paymentStatus: "paid",
+      paymentStatus: paymentStatus || "pending_cashier",
+      invoiceId: createdInvoiceId,
       billIssuedAt: now
     });
 
@@ -372,9 +402,13 @@ export const inventoryService = {
 
     lines.push("------------------------------------------------------------");
     lines.push(`GRAND TOTAL: Rs. ${sale.total.toFixed(2)}`.padStart(60));
-    lines.push(`PAYMENT STATUS: PAID (Cash / Card)`.padStart(60));
+    lines.push(`PAYMENT STATUS: ${sale.paymentStatus === "paid" ? "PAID AT CASHIER" : "PENDING AT CASHIER DESK"}`.padStart(60));
     lines.push("============================================================");
-    lines.push("             Thank you for choosing Health Guard!           ");
+    if (sale.paymentStatus === "paid") {
+      lines.push("             Thank you for choosing Health Guard!           ");
+    } else {
+      lines.push("   Please present this slip at Cashier Desk to pay.         ");
+    }
     lines.push("      Keep medicines stored safely away from sunlight.      ");
     lines.push("============================================================");
 
