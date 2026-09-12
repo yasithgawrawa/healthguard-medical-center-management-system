@@ -1,5 +1,23 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Activity, ClipboardPlus, FlaskConical, HeartPulse, Microscope, Pill, Stethoscope, Thermometer } from "lucide-react";
+import {
+  Activity,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Eye,
+  FileText,
+  Filter,
+  FlaskConical,
+  HeartPulse,
+  Microscope,
+  Pill,
+  Play,
+  Sparkles,
+  Stethoscope,
+  Thermometer,
+  UserCheck,
+  Zap
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -68,11 +86,76 @@ const labUpdateSchema = z.object({
 
 const buildNumber = (value) => (value === "" || value === undefined ? undefined : Number(value));
 
+const CLINICAL_PRESETS = [
+  {
+    label: "Viral Flu / URTI",
+    diagnosis: "Acute Upper Respiratory Tract Infection (URTI) / Viral Flu",
+    chiefComplaints: "Fever, body aches, runny nose, sore throat for 2-3 days",
+    examinationFindings: "Pharyngeal congestion, clear chest auscultation, no wheezing or crackles",
+    severity: "mild",
+    clinicalNotes: "Symptomatic viral infection. Prescribed antipyretics, decongestant and hydration. Advised rest.",
+    patientAdvice: "Drink plenty of warm fluids, steam inhalation twice daily, adequate bed rest. Return if fever persists > 3 days.",
+    followUpPlan: "Review in 3 days"
+  },
+  {
+    label: "Hypertension Review",
+    diagnosis: "Essential Hypertension - Routine Clinical Review",
+    chiefComplaints: "Routine blood pressure follow-up, occasional mild occipital headache",
+    examinationFindings: "Heart sounds S1 S2 normal, no peripheral pedal edema, lungs clear",
+    severity: "moderate",
+    clinicalNotes: "Patient compliant with antihypertensive therapy. BP assessed and maintenance continued.",
+    patientAdvice: "Maintain low sodium diet (<2g salt/day), 30 mins brisk walking daily, avoid stress, monitor BP weekly.",
+    followUpPlan: "Review in 2 weeks"
+  },
+  {
+    label: "Type 2 Diabetes Review",
+    diagnosis: "Type 2 Diabetes Mellitus - Glycemic Follow-Up",
+    chiefComplaints: "Routine diabetic review, good compliance, no polyuria or polydipsia",
+    examinationFindings: "Peripheral pulses palpable, no diabetic foot ulcers, neurological sensation intact",
+    severity: "moderate",
+    clinicalNotes: "Regular glycemic control follow-up. Diet, lifestyle and medication adherence assessed.",
+    patientAdvice: "Follow diabetic meal plan, foot hygiene and daily inspection, regular fasting blood sugar log.",
+    followUpPlan: "Review in 1 month"
+  },
+  {
+    label: "Acute Gastritis",
+    diagnosis: "Acute Gastritis / Acid Peptic Disease",
+    chiefComplaints: "Burning epigastric pain post-meals, nausea, occasional acid reflux",
+    examinationFindings: "Mild epigastric tenderness, abdomen soft, bowel sounds normal",
+    severity: "mild",
+    clinicalNotes: "Suspected non-ulcer dyspepsia / acute gastritis triggered by irregular meal times.",
+    patientAdvice: "Eat small frequent meals, avoid spicy and oily food, avoid NSAIDs on empty stomach, drink plenty of water.",
+    followUpPlan: "Review in 5 days"
+  },
+  {
+    label: "Musculoskeletal Strain",
+    diagnosis: "Mechanical Musculoskeletal Strain / Lumbar Strain",
+    chiefComplaints: "Lower backache / muscular strain exacerbated by prolonged sitting or lifting",
+    examinationFindings: "Paraspinal muscle tenderness, straight leg raise negative, normal reflexes",
+    severity: "mild",
+    clinicalNotes: "Soft tissue strain. Prescribed analgesics, muscle relaxants and hot fermentation advice.",
+    patientAdvice: "Apply warm compress, practice ergonomic posture, avoid heavy weight lifting for 1 week.",
+    followUpPlan: "Review in 1 week"
+  },
+  {
+    label: "Allergic Rhinitis",
+    diagnosis: "Allergic Rhinitis & Bronchial Hyperresponsiveness",
+    chiefComplaints: "Sneezing bouts, watery nasal discharge, itchy eyes, dry nocturnal cough",
+    examinationFindings: "Pale nasal mucosa, conjunctival injection, vesicular breath sounds",
+    severity: "mild",
+    clinicalNotes: "Environmental allergen sensitivity. Prescribed antihistamines and nasal rinse.",
+    patientAdvice: "Avoid dust, pollen, cold environments. Use dust-mite covers, warm saline gargles.",
+    followUpPlan: "Review in 1 week"
+  }
+];
+
 export const ClinicalWorkspacePanel = ({ mode }) => {
   const [appointments, setAppointments] = useState([]);
   const [labs, setLabs] = useState([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [queueTab, setQueueTab] = useState("all");
+  const [dateScope, setDateScope] = useState("all");
   const [modal, setModal] = useState({ type: null, record: null });
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
@@ -82,6 +165,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors }
   } = useForm({ resolver: zodResolver(schema), mode: "onChange" });
 
@@ -129,14 +213,90 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
     setModal({ type, record });
   };
 
+  const startConsultation = async (appointment) => {
+    try {
+      if (appointment.status === "checked_in") {
+        await clinicalApi.updateAppointmentStatus(appointment._id, "in_consultation");
+        appointment.status = "in_consultation";
+      }
+      openModal("consultation", appointment);
+      await load();
+    } catch (error) {
+      setToast({ type: "error", message: error.response?.data?.message || "Failed to start consultation" });
+    }
+  };
+
+  const applyPreset = (preset) => {
+    setValue("diagnosis", preset.diagnosis, { shouldValidate: true, shouldDirty: true });
+    if (preset.chiefComplaints) setValue("chiefComplaints", preset.chiefComplaints, { shouldValidate: true, shouldDirty: true });
+    if (preset.examinationFindings) setValue("examinationFindings", preset.examinationFindings, { shouldValidate: true, shouldDirty: true });
+    if (preset.severity) setValue("severity", preset.severity, { shouldValidate: true, shouldDirty: true });
+    if (preset.clinicalNotes) setValue("clinicalNotes", preset.clinicalNotes, { shouldValidate: true, shouldDirty: true });
+    if (preset.patientAdvice) setValue("patientAdvice", preset.patientAdvice, { shouldValidate: true, shouldDirty: true });
+    if (preset.followUpPlan) setValue("followUpPlan", preset.followUpPlan, { shouldValidate: true, shouldDirty: true });
+  };
+
+  const importTriageNotes = () => {
+    if (!modal.record) return;
+    const parts = [];
+    if (modal.record.reason) parts.push(`Reported: ${modal.record.reason}`);
+    if (modal.record.vitals) {
+      const v = modal.record.vitals;
+      const vList = [];
+      if (v.temperature) vList.push(`Temp ${v.temperature}°C`);
+      if (v.bloodPressure) vList.push(`BP ${v.bloodPressure}`);
+      if (v.heartRate) vList.push(`Pulse ${v.heartRate} bpm`);
+      if (v.spo2) vList.push(`SpO2 ${v.spo2}%`);
+      if (vList.length) parts.push(`Vitals: ${vList.join(", ")}`);
+    }
+    setValue("chiefComplaints", parts.join(" | "), { shouldValidate: true, shouldDirty: true });
+  };
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+
   const sourceRows = mode === "lab" ? labs : appointments;
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return sourceRows.filter((item) => {
-      const text = [patientName(item), doctorName(item), item.reason, item.testName, item.status].join(" ").toLowerCase();
-      return (!query || text.includes(query)) && (!status || item.status === status);
+      const p = item.patientId || {};
+      const d = item.doctorId || {};
+      const diag = item.consultation?.diagnosis || "";
+      const text = [
+        p.firstName,
+        p.lastName,
+        p.phone,
+        d.firstName,
+        d.lastName,
+        item.reason,
+        item.testName,
+        item.status,
+        item.slotLabel,
+        diag
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      if (query && !text.includes(query)) return false;
+
+      if (mode === "lab") {
+        return !status || item.status === status;
+      }
+
+      if (dateScope === "today") {
+        const itemDate = (item.appointmentDate || "").slice(0, 10);
+        if (itemDate !== todayStr) return false;
+      }
+
+      if (queueTab === "waiting" && item.status !== "checked_in") return false;
+      if (queueTab === "in_consultation" && item.status !== "in_consultation") return false;
+      if (queueTab === "completed" && item.status !== "completed") return false;
+
+      if (status && item.status !== status) return false;
+
+      return true;
     });
-  }, [sourceRows, search, status]);
+  }, [sourceRows, search, status, queueTab, dateScope, mode, todayStr]);
 
   const submit = async (values) => {
     setBusy(true);
@@ -166,26 +326,169 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
   };
 
   const appointmentColumns = [
-    { key: "patient", header: "Patient", render: patientName },
-    { key: "date", header: "Date & Time", render: (item) => formatDateTime(item.appointmentDate) },
-    { key: "slotLabel", header: "Slot" },
-    { key: "reason", header: "Reason" },
+    {
+      key: "patient",
+      header: "Patient",
+      render: (item) => {
+        const p = item.patientId || {};
+        const name = [p.firstName, p.lastName].filter(Boolean).join(" ") || "Patient";
+        return (
+          <div>
+            <div style={{ fontWeight: 600, color: "#0f172a" }}>{name}</div>
+            {p.phone ? (
+              <div style={{ fontSize: "0.75rem", color: "#64748b" }}>📞 {p.phone}</div>
+            ) : null}
+          </div>
+        );
+      }
+    },
+    {
+      key: "date",
+      header: "Schedule & Slot",
+      render: (item) => {
+        const isToday = (item.appointmentDate || "").slice(0, 10) === todayStr;
+        return (
+          <div>
+            <div style={{ fontWeight: 600, fontSize: "0.82rem", color: isToday ? "#0284c7" : "#334155" }}>
+              {isToday ? "📅 Today" : formatDateTime(item.appointmentDate)}
+            </div>
+            <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
+              Slot: <strong>{item.slotLabel || "Standard"}</strong>
+            </div>
+          </div>
+        );
+      }
+    },
+    { key: "reason", header: "Reason / Complaint" },
+    {
+      key: "vitals",
+      header: "Triage Vitals",
+      render: (item) => {
+        const v = item.vitals;
+        if (!v || (!v.temperature && !v.bloodPressure && !v.heartRate && !v.spo2)) {
+          return <span style={{ fontSize: "0.78rem", color: "#94a3b8", fontStyle: "italic" }}>Pending vitals</span>;
+        }
+        const isFever = v.temperature && Number(v.temperature) >= 38.0;
+        const isHighBp = v.bloodPressure && parseInt(v.bloodPressure, 10) >= 140;
+        return (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", alignItems: "center" }}>
+            {v.temperature ? (
+              <span
+                style={{
+                  fontSize: "0.76rem",
+                  fontWeight: 600,
+                  padding: "2px 6px",
+                  borderRadius: "4px",
+                  background: isFever ? "#fef2f2" : "#f1f5f9",
+                  color: isFever ? "#dc2626" : "#334155",
+                  border: `1px solid ${isFever ? "#fca5a5" : "#e2e8f0"}`
+                }}
+                title={isFever ? "High Temperature / Fever" : "Body Temperature"}
+              >
+                🌡️ {v.temperature}°C
+              </span>
+            ) : null}
+            {v.bloodPressure ? (
+              <span
+                style={{
+                  fontSize: "0.76rem",
+                  fontWeight: 600,
+                  padding: "2px 6px",
+                  borderRadius: "4px",
+                  background: isHighBp ? "#fff7ed" : "#f1f5f9",
+                  color: isHighBp ? "#ea580c" : "#334155",
+                  border: `1px solid ${isHighBp ? "#fed7aa" : "#e2e8f0"}`
+                }}
+                title={isHighBp ? "Elevated Blood Pressure" : "Blood Pressure"}
+              >
+                🩸 {v.bloodPressure}
+              </span>
+            ) : null}
+            {v.heartRate ? (
+              <span style={{ fontSize: "0.76rem", color: "#475569", background: "#f8fafc", padding: "2px 6px", borderRadius: "4px", border: "1px solid #e2e8f0" }}>
+                ❤️ {v.heartRate} bpm
+              </span>
+            ) : null}
+            {v.spo2 ? (
+              <span style={{ fontSize: "0.76rem", color: "#0369a1", background: "#f0f9ff", padding: "2px 6px", borderRadius: "4px", border: "1px solid #bae6fd" }}>
+                💨 {v.spo2}%
+              </span>
+            ) : null}
+          </div>
+        );
+      }
+    },
     { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
     {
       key: "actions",
       header: "Actions",
-      render: (item) =>
-        mode === "nurse" ? (
-          <div className="inline-actions">
-            <button type="button" onClick={() => openModal("status", item)}>Status</button>
-            <button type="button" onClick={() => openModal("vitals", item)}>Vitals</button>
+      render: (item) => {
+        if (mode === "nurse") {
+          return (
+            <div className="inline-actions">
+              <button type="button" onClick={() => openModal("status", item)}>Status</button>
+              <button type="button" onClick={() => openModal("vitals", item)}>Vitals</button>
+            </div>
+          );
+        }
+        return (
+          <div className="inline-actions" style={{ flexWrap: "wrap", gap: "6px" }}>
+            {item.status === "checked_in" ? (
+              <button
+                type="button"
+                className="button-primary"
+                style={{ padding: "4px 10px", fontSize: "0.82rem", background: "#16a34a", borderColor: "#16a34a" }}
+                onClick={() => startConsultation(item)}
+                title="Call patient into doctor's room & begin consultation"
+              >
+                <Play size={13} style={{ display: "inline", marginRight: "3px" }} />
+                Call & Consult
+              </button>
+            ) : item.status === "in_consultation" ? (
+              <button
+                type="button"
+                className="button-primary"
+                style={{ padding: "4px 10px", fontSize: "0.82rem", background: "#0284c7", borderColor: "#0284c7" }}
+                onClick={() => openModal("consultation", item)}
+                title="Continue active consultation"
+              >
+                <Stethoscope size={13} style={{ display: "inline", marginRight: "3px" }} />
+                Continue Consult
+              </button>
+            ) : item.status === "completed" ? (
+              <button
+                type="button"
+                className="table-link-button"
+                style={{ padding: "4px 8px", fontSize: "0.82rem" }}
+                onClick={() => openModal("consultation", item)}
+                title="View finalized consultation notes"
+              >
+                <Eye size={13} style={{ display: "inline", marginRight: "3px" }} />
+                View Notes
+              </button>
+            ) : (
+              <button
+                type="button"
+                style={{ padding: "4px 8px", fontSize: "0.82rem" }}
+                onClick={() => openModal("consultation", item)}
+              >
+                Consult
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="table-link-button"
+              style={{ padding: "4px 8px", fontSize: "0.82rem" }}
+              onClick={() => openModal("lab-request", item)}
+              title="Request Laboratory Investigation"
+            >
+              <FlaskConical size={13} style={{ display: "inline", marginRight: "3px" }} />
+              Lab
+            </button>
           </div>
-        ) : (
-          <div className="inline-actions">
-            <button type="button" onClick={() => openModal("consultation", item)}>Consult</button>
-            <button type="button" onClick={() => openModal("lab-request", item)}>Lab</button>
-          </div>
-        )
+        );
+      }
     }
   ];
 
@@ -207,10 +510,114 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
           <p>{mode === "lab" ? "Update lab requests without handling raw database IDs." : "Select a patient row and continue the care workflow."}</p>
         </div>
       </div>
-      <div className="table-toolbar compact-toolbar">
-        <SearchBar value={search} onChange={setSearch} placeholder="Search patient, doctor, reason or status" />
-        <FilterSelect label="Status" value={status} onChange={setStatus} options={mode === "lab" ? ["requested", "verified", "in_progress", "completed", "cancelled"] : ["booked", "checked_in", "in_consultation", "completed", "cancelled"]} />
+
+      {/* Search & Filter Toolbar */}
+      <div className="table-toolbar compact-toolbar" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+          <div style={{ flex: 1, minWidth: "260px" }}>
+            <SearchBar value={search} onChange={setSearch} placeholder={mode === "lab" ? "Search lab test, doctor, or status..." : "Search patient name, phone, slot, diagnosis..."} />
+          </div>
+          {mode !== "lab" ? (
+            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+              <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#64748b" }}>Date:</span>
+              <button
+                type="button"
+                className={dateScope === "today" ? "button-primary" : "button-secondary"}
+                style={{ padding: "4px 10px", fontSize: "0.8rem" }}
+                onClick={() => setDateScope("today")}
+              >
+                📅 Today Only
+              </button>
+              <button
+                type="button"
+                className={dateScope === "all" ? "button-primary" : "button-secondary"}
+                style={{ padding: "4px 10px", fontSize: "0.8rem" }}
+                onClick={() => setDateScope("all")}
+              >
+                All Dates
+              </button>
+            </div>
+          ) : null}
+        </div>
+
+        {mode !== "lab" ? (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", borderTop: "1px solid #f1f5f9", paddingTop: "8px" }}>
+            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+              <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginRight: "4px" }}>
+                Queue View:
+              </span>
+              <button
+                type="button"
+                className={queueTab === "all" ? "button-primary" : "button-secondary"}
+                style={{ padding: "5px 12px", fontSize: "0.82rem" }}
+                onClick={() => { setQueueTab("all"); setStatus(""); }}
+              >
+                All Scheduled ({appointments.length})
+              </button>
+              <button
+                type="button"
+                className={queueTab === "waiting" ? "button-primary" : "button-secondary"}
+                style={{
+                  padding: "5px 12px",
+                  fontSize: "0.82rem",
+                  background: queueTab === "waiting" ? "#f59e0b" : undefined,
+                  borderColor: queueTab === "waiting" ? "#f59e0b" : undefined,
+                  color: queueTab === "waiting" ? "#ffffff" : undefined
+                }}
+                onClick={() => { setQueueTab("waiting"); setStatus(""); }}
+              >
+                ⏳ Waiting Room ({appointments.filter((a) => a.status === "checked_in").length})
+              </button>
+              <button
+                type="button"
+                className={queueTab === "in_consultation" ? "button-primary" : "button-secondary"}
+                style={{
+                  padding: "5px 12px",
+                  fontSize: "0.82rem",
+                  background: queueTab === "in_consultation" ? "#0284c7" : undefined,
+                  borderColor: queueTab === "in_consultation" ? "#0284c7" : undefined,
+                  color: queueTab === "in_consultation" ? "#ffffff" : undefined
+                }}
+                onClick={() => { setQueueTab("in_consultation"); setStatus(""); }}
+              >
+                🩺 In Consultation ({appointments.filter((a) => a.status === "in_consultation").length})
+              </button>
+              <button
+                type="button"
+                className={queueTab === "completed" ? "button-primary" : "button-secondary"}
+                style={{
+                  padding: "5px 12px",
+                  fontSize: "0.82rem",
+                  background: queueTab === "completed" ? "#16a34a" : undefined,
+                  borderColor: queueTab === "completed" ? "#16a34a" : undefined,
+                  color: queueTab === "completed" ? "#ffffff" : undefined
+                }}
+                onClick={() => { setQueueTab("completed"); setStatus(""); }}
+              >
+                ✓ Completed ({appointments.filter((a) => a.status === "completed").length})
+              </button>
+            </div>
+            <div style={{ minWidth: "150px" }}>
+              <FilterSelect
+                label="Filter Status"
+                value={status}
+                onChange={(val) => { setStatus(val); if (val) setQueueTab("custom"); }}
+                options={["booked", "checked_in", "in_consultation", "completed", "cancelled"]}
+              />
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <FilterSelect
+              label="Status"
+              value={status}
+              onChange={setStatus}
+              options={["requested", "verified", "in_progress", "completed", "cancelled"]}
+            />
+          </div>
+        )}
       </div>
+
       <DataTable columns={mode === "lab" ? labColumns : appointmentColumns} rows={rows} emptyText="No records match your filters." />
 
       {mode === "doctor" ? (
@@ -309,6 +716,50 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                     {modal.record.vitals.spo2 ? <span>💨 SpO2: <strong>{modal.record.vitals.spo2}%</strong></span> : null}
                   </div>
                 ) : null}
+              </div>
+
+              {/* Fast Clinical Presets & Autofill */}
+              <div style={{ background: "#f8fafc", padding: "10px 14px", borderRadius: "8px", border: "1px dashed #cbd5e1" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
+                  <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", display: "flex", alignItems: "center", gap: "5px" }}>
+                    <Sparkles size={14} color="#f59e0b" /> Fast Clinical Presets (Click to autofill):
+                  </span>
+                  {modal.record?.reason || modal.record?.vitals ? (
+                    <button
+                      type="button"
+                      className="table-link-button"
+                      style={{ fontSize: "0.75rem", padding: "2px 6px" }}
+                      onClick={importTriageNotes}
+                      title="Autofill Chief Complaints using patient's reason and triage vitals"
+                    >
+                      📋 Import Reason & Vitals
+                    </button>
+                  ) : null}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                  {CLINICAL_PRESETS.map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => applyPreset(preset)}
+                      style={{
+                        fontSize: "0.78rem",
+                        padding: "4px 10px",
+                        borderRadius: "16px",
+                        background: "#ffffff",
+                        border: "1px solid #93c5fd",
+                        color: "#1d4ed8",
+                        cursor: "pointer",
+                        fontWeight: 500,
+                        transition: "all 0.15s ease"
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = "#dbeafe"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; }}
+                    >
+                      + {preset.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Section 1: Clinical Presentation & Physical Examination */}
