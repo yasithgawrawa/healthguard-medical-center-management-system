@@ -95,6 +95,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
   const [toast, setToast] = useState(null);
   const [labCatalog, setLabCatalog] = useState([]);
   const [prescriptionItems, setPrescriptionItems] = useState([]);
+  const [orderedLabTests, setOrderedLabTests] = useState([]);
 
   const addPrescriptionItem = (initial = null) => {
     setPrescriptionItems((prev) => [
@@ -171,6 +172,37 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
     return standardCatalogList.find((t) => t.testName.toLowerCase() === selectedTestName.toLowerCase()) || null;
   }, [selectedTestName, isCustomTest, standardCatalogList]);
 
+  const addLabOrderItem = (initialTestName = "") => {
+    const defaultTest = initialTestName || standardCatalogList[0]?.testName || "Full Blood Count (FBC)";
+    setOrderedLabTests((prev) => [
+      ...prev,
+      {
+        testName: defaultTest,
+        customName: "",
+        priority: "routine"
+      }
+    ]);
+  };
+
+  const removeLabOrderItem = (index) => {
+    setOrderedLabTests((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateLabOrderItem = (index, field, value) => {
+    setOrderedLabTests((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
+    );
+  };
+
+  const existingLabOrdersForAppointment = useMemo(() => {
+    if (!modal.record || modal.type !== "consultation") return [];
+    const recId = modal.record._id?.toString();
+    return labs.filter((l) => {
+      const apptId = l.appointmentId?._id ? l.appointmentId._id.toString() : l.appointmentId?.toString();
+      return apptId === recId;
+    });
+  }, [modal.record, modal.type, labs]);
+
   const load = async () => {
     try {
       if (mode === "lab") {
@@ -213,6 +245,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
       });
     } else if (type === "consultation") {
       setPrescriptionItems([]);
+      setOrderedLabTests([]);
       const existing = record.consultation || {};
       reset({
         diagnosis: existing.diagnosis || "",
@@ -353,11 +386,39 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
             notes: values.clinicalNotes ? values.clinicalNotes.slice(0, 250) : "Issued during consultation"
           });
         }
+
+        const validLabOrders = orderedLabTests.filter((t) => {
+          const finalName = t.testName === "__custom__" ? t.customName : t.testName;
+          return finalName && finalName.trim().length >= 2;
+        });
+
+        for (const labOrder of validLabOrders) {
+          const finalName = labOrder.testName === "__custom__" ? labOrder.customName.trim() : labOrder.testName.trim();
+          await clinicalApi.createLabRequest({
+            appointmentId: record._id,
+            patientId: record.patientId?._id || record.patientId,
+            testName: finalName,
+            priority: labOrder.priority || "routine"
+          });
+        }
       }
       if (modal.type === "lab-request") await clinicalApi.createLabRequest({ appointmentId: record._id, ...values });
       if (modal.type === "lab-update") await clinicalApi.updateLabRequest(record._id, values);
       const hasPrescription = modal.type === "consultation" && prescriptionItems.some((m) => m.medicineName?.trim());
-      setToast({ type: "success", message: hasPrescription ? "Consultation and digital prescription saved successfully" : "Workflow updated successfully" });
+      const hasLab = modal.type === "consultation" && orderedLabTests.some((t) => (t.testName === "__custom__" ? t.customName : t.testName)?.trim());
+      let successMessage = "Workflow updated successfully";
+      if (modal.type === "consultation") {
+        if (hasPrescription && hasLab) {
+          successMessage = "Consultation, digital prescription, and lab request saved successfully";
+        } else if (hasPrescription) {
+          successMessage = "Consultation and digital prescription saved successfully";
+        } else if (hasLab) {
+          successMessage = "Consultation and lab request saved successfully";
+        } else {
+          successMessage = "Consultation saved successfully";
+        }
+      }
+      setToast({ type: "success", message: successMessage });
       setModal({ type: null, record: null });
       await load();
     } catch (error) {
@@ -1098,6 +1159,133 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Laboratory Investigations (Optional) */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "14px 16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: "0.88rem", color: "#1e3a8a", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
+                      <FlaskConical size={15} color="#0284c7" /> Laboratory Investigations (Optional)
+                    </h4>
+                    <span style={{ fontSize: "0.78rem", color: "#64748b" }}>Order diagnostic investigations if lab testing is required</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    style={{ height: "30px", padding: "0 10px", fontSize: "0.78rem", display: "inline-flex", alignItems: "center", gap: "5px" }}
+                    onClick={() => addLabOrderItem()}
+                  >
+                    <Plus size={13} /> Add Lab Test
+                  </button>
+                </div>
+
+                {existingLabOrdersForAppointment.length > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "8px 10px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "6px" }}>
+                    <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "#166534" }}>Existing Lab Orders for this Visit:</span>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                      {existingLabOrdersForAppointment.map((el, i) => (
+                        <span key={i} style={{ fontSize: "0.75rem", background: "#ffffff", border: "1px solid #86efac", padding: "2px 8px", borderRadius: "4px", color: "#14532d" }}>
+                          <strong>{el.testName}</strong> ({el.priority || "routine"}) - <span style={{ textTransform: "capitalize" }}>{el.status?.replace(/_/g, " ")}</span>
+                          {el.resultSummary ? ` • ${el.resultSummary}` : ""}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {orderedLabTests.length === 0 ? (
+                  <div style={{ padding: "10px", textAlign: "center", fontSize: "0.8rem", color: "#94a3b8", background: "#ffffff", borderRadius: "6px", border: "1px dashed #cbd5e1" }}>
+                    No lab tests added (optional). Click <strong>"+ Add Lab Test"</strong> if diagnostic testing is required.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {orderedLabTests.map((item, idx) => {
+                      const match = standardCatalogList.find((t) => t.testName === item.testName);
+                      const rate = match
+                        ? item.priority === "urgent" && match.urgentPrice
+                          ? match.urgentPrice
+                          : match.price
+                        : null;
+
+                      return (
+                        <div
+                          key={idx}
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: item.testName === "__custom__" ? "1.4fr 1.4fr 1fr auto auto" : "2.2fr 1fr auto auto",
+                            gap: "6px",
+                            alignItems: "center",
+                            background: "#ffffff",
+                            padding: "8px 10px",
+                            borderRadius: "6px",
+                            border: "1px solid #e2e8f0"
+                          }}
+                        >
+                          <div>
+                            <select
+                              value={item.testName}
+                              onChange={(e) => updateLabOrderItem(idx, "testName", e.target.value)}
+                              style={{ width: "100%", padding: "5px 6px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px", backgroundColor: "#fff" }}
+                            >
+                              {catalogCategories.map((cat) => (
+                                <optgroup key={cat} label={cat}>
+                                  {groupedCatalog[cat].map((t) => (
+                                    <option key={t._id || t.testName} value={t.testName}>
+                                      {t.testName}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              ))}
+                              <optgroup label="Other">
+                                <option value="__custom__">+ Custom Test Name</option>
+                              </optgroup>
+                            </select>
+                          </div>
+
+                          {item.testName === "__custom__" ? (
+                            <div>
+                              <input
+                                type="text"
+                                placeholder="Custom Test Name"
+                                value={item.customName || ""}
+                                onChange={(e) => updateLabOrderItem(idx, "customName", e.target.value)}
+                                style={{ width: "100%", padding: "5px 8px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px" }}
+                                required
+                              />
+                            </div>
+                          ) : null}
+
+                          <div>
+                            <select
+                              value={item.priority || "routine"}
+                              onChange={(e) => updateLabOrderItem(idx, "priority", e.target.value)}
+                              style={{ width: "100%", padding: "5px 6px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px" }}
+                            >
+                              <option value="routine">Routine</option>
+                              <option value="urgent">Urgent / STAT</option>
+                            </select>
+                          </div>
+
+                          <div style={{ fontSize: "0.78rem", color: item.priority === "urgent" ? "#e11d48" : "#15803d", fontWeight: 600, padding: "0 4px", whiteSpace: "nowrap" }}>
+                            {rate ? `Rs. ${rate.toFixed(0)}` : ""}
+                          </div>
+
+                          <div>
+                            <button
+                              type="button"
+                              onClick={() => removeLabOrderItem(idx)}
+                              style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px", color: "#ef4444" }}
+                              title="Remove lab test"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
