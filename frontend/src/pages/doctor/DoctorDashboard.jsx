@@ -54,6 +54,13 @@ export const DoctorDashboard = () => {
 
   useEffect(() => {
     loadData();
+    const handleFocus = () => loadData();
+    window.addEventListener("focus", handleFocus);
+    const interval = setInterval(loadData, 15000);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      clearInterval(interval);
+    };
   }, [user]);
 
   const handleSaveFee = async (e) => {

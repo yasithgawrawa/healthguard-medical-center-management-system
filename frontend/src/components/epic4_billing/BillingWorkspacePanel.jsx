@@ -277,7 +277,7 @@ export const BillingWorkspacePanel = () => {
                 onClick={() => setStatusFilter("paid")}
                 style={{ padding: "5px 12px", fontSize: "0.82rem" }}
               >
-                ✓ Settled Paid ({invoices.filter((i) => i.status === "paid").length})
+                Settled Paid ({invoices.filter((i) => i.status === "paid").length})
               </button>
             </div>
           </div>
@@ -297,17 +297,17 @@ export const BillingWorkspacePanel = () => {
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
                         {hasDoctor ? (
                           <span style={{ fontSize: "0.72rem", background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", padding: "1px 6px", borderRadius: "4px", fontWeight: 600 }}>
-                            👨‍⚕️ Consultation
+                            Consultation
                           </span>
                         ) : null}
                         {hasLab ? (
                           <span style={{ fontSize: "0.72rem", background: "#eff6ff", color: "#1e40af", border: "1px solid #bfdbfe", padding: "1px 6px", borderRadius: "4px", fontWeight: 600 }}>
-                            🧪 Lab
+                            Lab
                           </span>
                         ) : null}
                         {hasMed ? (
                           <span style={{ fontSize: "0.72rem", background: "#f0f9ff", color: "#0369a1", border: "1px solid #bae6fd", padding: "1px 6px", borderRadius: "4px", fontWeight: 600 }}>
-                            💊 Medicines
+                            Medicines
                           </span>
                         ) : null}
                       </div>
@@ -343,7 +343,7 @@ export const BillingWorkspacePanel = () => {
                           onClick={() => consolidateBills(item.patientId._id)}
                           title="Merge all pending bills for this patient into one unified visit bill"
                         >
-                          🔗 Merge Bills
+                          Merge Bills
                         </button>
                       ) : null}
                       {isCashier && item.outstandingAmount > 0 ? (
@@ -457,7 +457,7 @@ export const BillingWorkspacePanel = () => {
               {modal.record ? (
                 <div style={{ background: "#f8fafc", padding: "12px 14px", borderRadius: "8px", border: "1px solid #e2e8f0", marginBottom: "16px" }}>
                   <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#1e3a8a", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                    🏥 Patient Visit Charges Breakdown (To be paid at once):
+                    Patient Visit Charges Breakdown (To be paid at once):
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                     {modal.record.items?.map((item, idx) => (

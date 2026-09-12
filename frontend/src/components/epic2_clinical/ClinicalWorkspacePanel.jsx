@@ -10,11 +10,15 @@ import {
   FlaskConical,
   HeartPulse,
   Microscope,
+  Phone,
   Pill,
   Play,
+  Plus,
+  RefreshCw,
   Sparkles,
   Stethoscope,
   Thermometer,
+  Trash2,
   UserCheck,
   Zap
 } from "lucide-react";
@@ -149,6 +153,15 @@ const CLINICAL_PRESETS = [
   }
 ];
 
+const COMMON_MEDICINES = [
+  { name: "Amoxicillin 500mg Capsules", dosage: "500mg", freq: "TDS", days: 5, inst: "After meals" },
+  { name: "Paracetamol 500mg Tablets", dosage: "500mg", freq: "TDS", days: 3, inst: "For fever/pain after food" },
+  { name: "Omeprazole 20mg Capsules", dosage: "20mg", freq: "BD", days: 7, inst: "30 mins before meals" },
+  { name: "Cetirizine 10mg Tablets", dosage: "10mg", freq: "OD (Night)", days: 5, inst: "At bedtime" },
+  { name: "Metformin 500mg Tablets", dosage: "500mg", freq: "BD", days: 30, inst: "With meals" },
+  { name: "Salbutamol 100mcg Inhaler", dosage: "2 puffs", freq: "PRN", days: 14, inst: "As needed for bronchospasm" }
+];
+
 export const ClinicalWorkspacePanel = ({ mode }) => {
   const [appointments, setAppointments] = useState([]);
   const [labs, setLabs] = useState([]);
@@ -160,6 +173,40 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
   const [labCatalog, setLabCatalog] = useState([]);
+  const [prescriptionItems, setPrescriptionItems] = useState([]);
+
+  const addPrescriptionItem = (initial = null) => {
+    setPrescriptionItems((prev) => [
+      ...prev,
+      initial
+        ? {
+            medicineName: initial.name,
+            dosage: initial.dosage,
+            frequency: initial.freq,
+            durationDays: initial.days,
+            instructions: initial.inst
+          }
+        : {
+            medicineName: "",
+            dosage: "500mg",
+            frequency: "TDS",
+            durationDays: 5,
+            instructions: "After meals"
+          }
+    ]);
+  };
+
+  const removePrescriptionItem = (index) => {
+    setPrescriptionItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updatePrescriptionItem = (index, field, value) => {
+    setPrescriptionItems((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
+    );
+  };
+
+  const [isCustomTest, setIsCustomTest] = useState(false);
 
   const schema = modal.type === "vitals" ? vitalsSchema : modal.type === "consultation" ? consultationSchema : modal.type === "lab-request" ? labRequestSchema : labUpdateSchema;
   const {
@@ -167,8 +214,41 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors }
   } = useForm({ resolver: zodResolver(schema), mode: "onChange" });
+
+  const selectedTestName = watch("testName");
+  const selectedPriority = watch("priority");
+
+  const standardCatalogList = useMemo(() => {
+    if (labCatalog && labCatalog.length > 0) return labCatalog;
+    return [
+      { testName: "Full Blood Count (FBC)", category: "Hematology", price: 750, urgentPrice: 1000 },
+      { testName: "Fasting Blood Sugar (FBS)", category: "Biochemistry", price: 450, urgentPrice: 600 },
+      { testName: "Lipid Profile", category: "Biochemistry", price: 1850, urgentPrice: 2300 },
+      { testName: "Serum Creatinine & Electrolytes", category: "Renal Profile", price: 1200, urgentPrice: 1500 },
+      { testName: "Dengue Antigen NS1 & Antibody", category: "Serology", price: 2500, urgentPrice: 3200 },
+      { testName: "ECG 12-Lead", category: "Cardiology", price: 1200, urgentPrice: 1600 },
+      { testName: "Urine Full Report (UFR)", category: "Clinical Pathology", price: 400, urgentPrice: 550 }
+    ];
+  }, [labCatalog]);
+
+  const groupedCatalog = useMemo(() => {
+    return standardCatalogList.reduce((acc, item) => {
+      const cat = item.category || "Routine Investigation";
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(item);
+      return acc;
+    }, {});
+  }, [standardCatalogList]);
+
+  const catalogCategories = useMemo(() => Object.keys(groupedCatalog), [groupedCatalog]);
+
+  const selectedCatalogItem = useMemo(() => {
+    if (!selectedTestName || isCustomTest) return null;
+    return standardCatalogList.find((t) => t.testName.toLowerCase() === selectedTestName.toLowerCase()) || null;
+  }, [selectedTestName, isCustomTest, standardCatalogList]);
 
   const load = async () => {
     try {
@@ -191,12 +271,27 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
 
   useEffect(() => {
     load();
+    const handleFocus = () => load();
+    window.addEventListener("focus", handleFocus);
+    const interval = setInterval(load, 15000);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      clearInterval(interval);
+    };
   }, [mode]);
 
   const openModal = (type, record) => {
     if (type === "lab-update") {
       reset({ status: record.status || "verified", resultSummary: record.resultSummary || "", resultUrl: record.resultUrl || "" });
+    } else if (type === "lab-request") {
+      const defaultTest = standardCatalogList[0]?.testName || "Full Blood Count (FBC)";
+      setIsCustomTest(false);
+      reset({
+        testName: defaultTest,
+        priority: "routine"
+      });
     } else if (type === "consultation") {
+      setPrescriptionItems([]);
       const existing = record.consultation || {};
       reset({
         diagnosis: existing.diagnosis || "",
@@ -225,7 +320,19 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
       openModal("consultation", appointment);
       await load();
     } catch (error) {
-      setToast({ type: "error", message: error.response?.data?.message || "Failed to start consultation" });
+      await load();
+      const status = error.response?.status;
+      if (status === 404) {
+        setToast({
+          type: "error",
+          message: "Appointment record was outdated. The queue has now been refreshed."
+        });
+      } else {
+        setToast({
+          type: "error",
+          message: error.response?.data?.message || "Failed to start consultation"
+        });
+      }
     }
   };
 
@@ -315,13 +422,32 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
           spo2: buildNumber(values.spo2)
         });
       }
-      if (modal.type === "consultation") await clinicalApi.saveConsultation({ appointmentId: record._id, ...values });
+      if (modal.type === "consultation") {
+        await clinicalApi.saveConsultation({ appointmentId: record._id, ...values });
+        const validMedicines = prescriptionItems.filter((m) => m.medicineName && m.medicineName.trim().length >= 2);
+        if (validMedicines.length > 0) {
+          await clinicalApi.createPrescription({
+            appointmentId: record._id,
+            patientId: record.patientId?._id || record.patientId,
+            medicines: validMedicines.map((m) => ({
+              medicineName: m.medicineName.trim(),
+              dosage: m.dosage ? m.dosage.trim() : "Standard",
+              frequency: m.frequency ? m.frequency.trim() : "TDS",
+              durationDays: Number(m.durationDays) || 5,
+              instructions: m.instructions ? m.instructions.trim() : "As directed"
+            })),
+            notes: values.clinicalNotes ? values.clinicalNotes.slice(0, 250) : "Issued during consultation"
+          });
+        }
+      }
       if (modal.type === "lab-request") await clinicalApi.createLabRequest({ appointmentId: record._id, ...values });
       if (modal.type === "lab-update") await clinicalApi.updateLabRequest(record._id, values);
-      setToast({ type: "success", message: "Workflow updated successfully" });
+      const hasPrescription = modal.type === "consultation" && prescriptionItems.some((m) => m.medicineName?.trim());
+      setToast({ type: "success", message: hasPrescription ? "Consultation and digital prescription saved successfully" : "Workflow updated successfully" });
       setModal({ type: null, record: null });
       await load();
     } catch (error) {
+      await load();
       setToast({ type: "error", message: error.response?.data?.message || "Unable to update workflow" });
     } finally {
       setBusy(false);
@@ -336,10 +462,13 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
         const p = item.patientId || {};
         const name = [p.firstName, p.lastName].filter(Boolean).join(" ") || "Patient";
         return (
-          <div>
-            <div style={{ fontWeight: 600, color: "#0f172a" }}>{name}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+            <span style={{ fontWeight: 600, color: "#0f172a", fontSize: "0.88rem" }}>{name}</span>
             {p.phone ? (
-              <div style={{ fontSize: "0.75rem", color: "#64748b" }}>📞 {p.phone}</div>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.75rem", color: "#64748b" }}>
+                <Phone size={11} color="#94a3b8" />
+                {p.phone}
+              </span>
             ) : null}
           </div>
         );
@@ -351,34 +480,92 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
       render: (item) => {
         const isToday = (item.appointmentDate || "").slice(0, 10) === todayStr;
         return (
-          <div>
-            <div style={{ fontWeight: 600, fontSize: "0.82rem", color: isToday ? "#0284c7" : "#334155" }}>
-              {isToday ? "📅 Today" : formatDateTime(item.appointmentDate)}
+          <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+            <div>
+              {isToday ? (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    fontWeight: 600,
+                    fontSize: "0.74rem",
+                    color: "#0369a1",
+                    background: "#e0f2fe",
+                    border: "1px solid #bae6fd",
+                    padding: "1px 7px",
+                    borderRadius: "12px"
+                  }}
+                >
+                  <Calendar size={11} color="#0284c7" />
+                  Today
+                </span>
+              ) : (
+                <span style={{ fontWeight: 600, fontSize: "0.82rem", color: "#334155" }}>
+                  {formatDateTime(item.appointmentDate)}
+                </span>
+              )}
             </div>
-            <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
-              Slot: <strong>{item.slotLabel || "Standard"}</strong>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.75rem", color: "#64748b" }}>
+              <Clock size={11} color="#94a3b8" />
+              <span>Slot: <strong style={{ color: "#475569" }}>{item.slotLabel || "Standard"}</strong></span>
             </div>
           </div>
         );
       }
     },
-    { key: "reason", header: "Reason / Complaint" },
+    {
+      key: "reason",
+      header: "Reason / Complaint",
+      render: (item) => (
+        <div
+          style={{
+            fontSize: "0.82rem",
+            color: "#334155",
+            lineHeight: "1.45",
+            maxWidth: "260px"
+          }}
+          title={item.reason || "-"}
+        >
+          {item.reason || "-"}
+        </div>
+      )
+    },
     {
       key: "vitals",
       header: "Triage Vitals",
       render: (item) => {
         const v = item.vitals;
         if (!v || (!v.temperature && !v.bloodPressure && !v.heartRate && !v.spo2)) {
-          return <span style={{ fontSize: "0.78rem", color: "#94a3b8", fontStyle: "italic" }}>Pending vitals</span>;
+          return (
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                fontSize: "0.74rem",
+                color: "#94a3b8",
+                background: "#f8fafc",
+                border: "1px dashed #cbd5e1",
+                padding: "2px 8px",
+                borderRadius: "4px"
+              }}
+            >
+              Pending vitals
+            </span>
+          );
         }
         const isFever = v.temperature && Number(v.temperature) >= 38.0;
         const isHighBp = v.bloodPressure && parseInt(v.bloodPressure, 10) >= 140;
         return (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", alignItems: "center" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", alignItems: "center", maxWidth: "230px" }}>
             {v.temperature ? (
               <span
                 style={{
-                  fontSize: "0.76rem",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "3px",
+                  fontSize: "0.74rem",
                   fontWeight: 600,
                   padding: "2px 6px",
                   borderRadius: "4px",
@@ -388,13 +575,17 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                 }}
                 title={isFever ? "High Temperature / Fever" : "Body Temperature"}
               >
-                🌡️ {v.temperature}°C
+                <Thermometer size={11} color={isFever ? "#dc2626" : "#64748b"} />
+                {v.temperature}°C
               </span>
             ) : null}
             {v.bloodPressure ? (
               <span
                 style={{
-                  fontSize: "0.76rem",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "3px",
+                  fontSize: "0.74rem",
                   fontWeight: 600,
                   padding: "2px 6px",
                   borderRadius: "4px",
@@ -404,17 +595,46 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                 }}
                 title={isHighBp ? "Elevated Blood Pressure" : "Blood Pressure"}
               >
-                🩸 {v.bloodPressure}
+                <Activity size={11} color={isHighBp ? "#ea580c" : "#64748b"} />
+                {v.bloodPressure}
               </span>
             ) : null}
             {v.heartRate ? (
-              <span style={{ fontSize: "0.76rem", color: "#475569", background: "#f8fafc", padding: "2px 6px", borderRadius: "4px", border: "1px solid #e2e8f0" }}>
-                ❤️ {v.heartRate} bpm
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "3px",
+                  fontSize: "0.74rem",
+                  fontWeight: 500,
+                  color: "#475569",
+                  background: "#f8fafc",
+                  padding: "2px 6px",
+                  borderRadius: "4px",
+                  border: "1px solid #e2e8f0"
+                }}
+                title="Pulse / Heart Rate"
+              >
+                <HeartPulse size={11} color="#64748b" />
+                {v.heartRate} bpm
               </span>
             ) : null}
             {v.spo2 ? (
-              <span style={{ fontSize: "0.76rem", color: "#0369a1", background: "#f0f9ff", padding: "2px 6px", borderRadius: "4px", border: "1px solid #bae6fd" }}>
-                💨 {v.spo2}%
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  fontSize: "0.74rem",
+                  fontWeight: 600,
+                  color: "#0369a1",
+                  background: "#f0f9ff",
+                  padding: "2px 6px",
+                  borderRadius: "4px",
+                  border: "1px solid #bae6fd"
+                }}
+                title="Oxygen Saturation (SpO2)"
+              >
+                SpO2 {v.spo2}%
               </span>
             ) : null}
           </div>
@@ -428,51 +648,146 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
       render: (item) => {
         if (mode === "nurse") {
           return (
-            <div className="inline-actions">
-              <button type="button" onClick={() => openModal("status", item)}>Status</button>
-              <button type="button" onClick={() => openModal("vitals", item)}>Vitals</button>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", whiteSpace: "nowrap" }}>
+              <button
+                type="button"
+                style={{
+                  height: "30px",
+                  padding: "0 10px",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  color: "#334155",
+                  background: "#ffffff",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  whiteSpace: "nowrap"
+                }}
+                onClick={() => openModal("status", item)}
+              >
+                Status
+              </button>
+              <button
+                type="button"
+                style={{
+                  height: "30px",
+                  padding: "0 10px",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  color: "#334155",
+                  background: "#ffffff",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  whiteSpace: "nowrap"
+                }}
+                onClick={() => openModal("vitals", item)}
+              >
+                Vitals
+              </button>
             </div>
           );
         }
         return (
-          <div className="inline-actions" style={{ flexWrap: "wrap", gap: "6px" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", whiteSpace: "nowrap" }}>
             {item.status === "checked_in" ? (
               <button
                 type="button"
-                className="button-primary"
-                style={{ padding: "4px 10px", fontSize: "0.82rem", background: "#16a34a", borderColor: "#16a34a" }}
+                style={{
+                  height: "30px",
+                  padding: "0 11px",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  color: "#ffffff",
+                  background: "#16a34a",
+                  border: "1px solid #15803d",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  whiteSpace: "nowrap",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
+                }}
                 onClick={() => startConsultation(item)}
                 title="Call patient into doctor's room & begin consultation"
               >
-                <Play size={13} style={{ display: "inline", marginRight: "3px" }} />
+                <Play size={12} fill="#ffffff" />
                 Call & Consult
               </button>
             ) : item.status === "in_consultation" ? (
               <button
                 type="button"
-                className="button-primary"
-                style={{ padding: "4px 10px", fontSize: "0.82rem", background: "#0284c7", borderColor: "#0284c7" }}
+                style={{
+                  height: "30px",
+                  padding: "0 11px",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  color: "#ffffff",
+                  background: "#0284c7",
+                  border: "1px solid #0369a1",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  whiteSpace: "nowrap",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
+                }}
                 onClick={() => openModal("consultation", item)}
                 title="Continue active consultation"
               >
-                <Stethoscope size={13} style={{ display: "inline", marginRight: "3px" }} />
+                <Stethoscope size={12} />
                 Continue Consult
               </button>
             ) : item.status === "completed" ? (
               <button
                 type="button"
-                className="table-link-button"
-                style={{ padding: "4px 8px", fontSize: "0.82rem" }}
+                style={{
+                  height: "30px",
+                  padding: "0 10px",
+                  fontSize: "0.8rem",
+                  fontWeight: 500,
+                  color: "#334155",
+                  background: "#ffffff",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  whiteSpace: "nowrap"
+                }}
                 onClick={() => openModal("consultation", item)}
                 title="View finalized consultation notes"
               >
-                <Eye size={13} style={{ display: "inline", marginRight: "3px" }} />
+                <Eye size={12} color="#64748b" />
                 View Notes
               </button>
             ) : (
               <button
                 type="button"
-                style={{ padding: "4px 8px", fontSize: "0.82rem" }}
+                style={{
+                  height: "30px",
+                  padding: "0 10px",
+                  fontSize: "0.8rem",
+                  fontWeight: 500,
+                  color: "#334155",
+                  background: "#ffffff",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  whiteSpace: "nowrap"
+                }}
                 onClick={() => openModal("consultation", item)}
               >
                 Consult
@@ -481,12 +796,25 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
 
             <button
               type="button"
-              className="table-link-button"
-              style={{ padding: "4px 8px", fontSize: "0.82rem" }}
+              style={{
+                height: "30px",
+                padding: "0 10px",
+                fontSize: "0.8rem",
+                fontWeight: 500,
+                color: "#475569",
+                background: "#ffffff",
+                border: "1px solid #cbd5e1",
+                borderRadius: "6px",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px",
+                whiteSpace: "nowrap"
+              }}
               onClick={() => openModal("lab-request", item)}
               title="Request Laboratory Investigation"
             >
-              <FlaskConical size={13} style={{ display: "inline", marginRight: "3px" }} />
+              <FlaskConical size={12} color="#64748b" />
               Lab
             </button>
           </div>
@@ -512,6 +840,19 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
           <h2>{mode === "lab" ? "Laboratory Results" : mode === "nurse" ? "Patient Check-In & Vital Signs" : "Clinical Workflow"}</h2>
           <p>{mode === "lab" ? "Update lab requests without handling raw database IDs." : "Select a patient row and continue the care workflow."}</p>
         </div>
+        <button
+          type="button"
+          className="button-secondary"
+          style={{ height: "32px", padding: "0 12px", display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.82rem" }}
+          onClick={() => {
+            load();
+            setToast({ type: "success", message: "Queue refreshed successfully" });
+          }}
+          title="Refresh appointments queue"
+        >
+          <RefreshCw size={13} />
+          Refresh
+        </button>
       </div>
 
       {/* Search & Filter Toolbar */}
@@ -529,7 +870,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                 style={{ padding: "4px 10px", fontSize: "0.8rem" }}
                 onClick={() => setDateScope("today")}
               >
-                📅 Today Only
+                Today Only
               </button>
               <button
                 type="button"
@@ -569,7 +910,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                 }}
                 onClick={() => { setQueueTab("waiting"); setStatus(""); }}
               >
-                ⏳ Waiting Room ({appointments.filter((a) => a.status === "checked_in").length})
+                Waiting Room ({appointments.filter((a) => a.status === "checked_in").length})
               </button>
               <button
                 type="button"
@@ -583,7 +924,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                 }}
                 onClick={() => { setQueueTab("in_consultation"); setStatus(""); }}
               >
-                🩺 In Consultation ({appointments.filter((a) => a.status === "in_consultation").length})
+                In Consultation ({appointments.filter((a) => a.status === "in_consultation").length})
               </button>
               <button
                 type="button"
@@ -597,7 +938,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                 }}
                 onClick={() => { setQueueTab("completed"); setStatus(""); }}
               >
-                ✓ Completed ({appointments.filter((a) => a.status === "completed").length})
+                Completed ({appointments.filter((a) => a.status === "completed").length})
               </button>
             </div>
             <div style={{ minWidth: "150px" }}>
@@ -713,10 +1054,10 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                     <strong style={{ color: "#0369a1", display: "flex", alignItems: "center", gap: "4px" }}>
                       <Activity size={14} /> Recorded Vitals:
                     </strong>
-                    {modal.record.vitals.temperature ? <span>🌡️ Temp: <strong>{modal.record.vitals.temperature}°C</strong></span> : null}
-                    {modal.record.vitals.bloodPressure ? <span>🩸 BP: <strong>{modal.record.vitals.bloodPressure}</strong></span> : null}
-                    {modal.record.vitals.heartRate ? <span>❤️ Pulse: <strong>{modal.record.vitals.heartRate} bpm</strong></span> : null}
-                    {modal.record.vitals.spo2 ? <span>💨 SpO2: <strong>{modal.record.vitals.spo2}%</strong></span> : null}
+                    {modal.record.vitals.temperature ? <span>Temp: <strong>{modal.record.vitals.temperature}°C</strong></span> : null}
+                    {modal.record.vitals.bloodPressure ? <span>BP: <strong>{modal.record.vitals.bloodPressure}</strong></span> : null}
+                    {modal.record.vitals.heartRate ? <span>Pulse: <strong>{modal.record.vitals.heartRate} bpm</strong></span> : null}
+                    {modal.record.vitals.spo2 ? <span>SpO2: <strong>{modal.record.vitals.spo2}%</strong></span> : null}
                   </div>
                 ) : null}
               </div>
@@ -735,7 +1076,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                       onClick={importTriageNotes}
                       title="Autofill Chief Complaints using patient's reason and triage vitals"
                     >
-                      📋 Import Reason & Vitals
+                      Import Reason & Vitals
                     </button>
                   ) : null}
                 </div>
@@ -846,25 +1187,162 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                 </div>
               </div>
 
-              {/* Section 4: Handwritten Prescription & Finalize Visit */}
-              <div
-                style={{
-                  padding: "14px 16px",
-                  background: "#f0fdf4",
-                  border: "1px solid #bbf7d0",
-                  borderRadius: "10px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "6px"
-                }}
-              >
-                <label className="checkbox-line" style={{ fontWeight: 700, color: "#166534", margin: 0 }}>
-                  <input type="checkbox" defaultChecked={true} {...register("handwrittenPrescriptionIssued")} />
-                  Handwritten physical prescription paper given to patient
-                </label>
-                <span style={{ display: "block", color: "#475569", fontSize: "0.83rem", paddingLeft: "24px" }}>
-                  Doctor writes medicine details on the physical paper slip and hands it to the patient for pharmacy dispensing.
+              {/* Section 4: Prescription & Medications (E2-US08) */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "14px 16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: "0.88rem", color: "#1e3a8a", textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
+                      <Pill size={15} color="#0284c7" /> 4. Prescription & Medications (E2-US08)
+                    </h4>
+                    <span style={{ fontSize: "0.78rem", color: "#64748b" }}>Add medicines for electronic pharmacy dispensing & patient records</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    style={{ height: "30px", padding: "0 10px", fontSize: "0.78rem", display: "inline-flex", alignItems: "center", gap: "5px" }}
+                    onClick={() => addPrescriptionItem()}
+                  >
+                    <Plus size={13} /> Add Medicine
+                  </button>
+                </div>
+
+                {/* Quick Medicine Shortcuts */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.74rem", fontWeight: 600, color: "#64748b" }}>Quick add:</span>
+                  {COMMON_MEDICINES.map((m) => (
+                    <button
+                      key={m.name}
+                      type="button"
+                      onClick={() => addPrescriptionItem(m)}
+                      style={{
+                        fontSize: "0.74rem",
+                        padding: "2px 8px",
+                        borderRadius: "12px",
+                        background: "#ffffff",
+                        border: "1px solid #cbd5e1",
+                        color: "#334155",
+                        cursor: "pointer"
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#0284c7"; e.currentTarget.style.color = "#0284c7"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.color = "#334155"; }}
+                    >
+                      + {m.name.split(" ")[0]} {m.dosage}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Prescribed Items List */}
+                {prescriptionItems.length === 0 ? (
+                  <div style={{ padding: "10px", textAlign: "center", fontSize: "0.8rem", color: "#94a3b8", background: "#ffffff", borderRadius: "6px", border: "1px dashed #cbd5e1" }}>
+                    No electronic medicines added. Click <strong>"+ Add Medicine"</strong> or a shortcut above to prescribe.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {prescriptionItems.map((item, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "2fr 1fr 1.2fr 0.8fr 1.5fr auto",
+                          gap: "6px",
+                          alignItems: "center",
+                          background: "#ffffff",
+                          padding: "8px 10px",
+                          borderRadius: "6px",
+                          border: "1px solid #e2e8f0"
+                        }}
+                      >
+                        <div>
+                          <input
+                            type="text"
+                            placeholder="Medicine Name (e.g. Amoxicillin 500mg)"
+                            value={item.medicineName}
+                            onChange={(e) => updatePrescriptionItem(idx, "medicineName", e.target.value)}
+                            style={{ width: "100%", padding: "5px 8px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px" }}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="text"
+                            placeholder="Dosage (500mg)"
+                            value={item.dosage}
+                            onChange={(e) => updatePrescriptionItem(idx, "dosage", e.target.value)}
+                            style={{ width: "100%", padding: "5px 8px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px" }}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <select
+                            value={item.frequency}
+                            onChange={(e) => updatePrescriptionItem(idx, "frequency", e.target.value)}
+                            style={{ width: "100%", padding: "5px 6px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px" }}
+                          >
+                            <option value="TDS">TDS (Thrice daily)</option>
+                            <option value="BD">BD (Twice daily)</option>
+                            <option value="OD (Morning)">OD (Morning)</option>
+                            <option value="OD (Night)">OD (Night)</option>
+                            <option value="QDS">QDS (4 times daily)</option>
+                            <option value="PRN">PRN (As needed)</option>
+                            <option value="Stat">Stat (Immediately)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <input
+                            type="number"
+                            min="1"
+                            max="365"
+                            placeholder="Days"
+                            value={item.durationDays}
+                            onChange={(e) => updatePrescriptionItem(idx, "durationDays", e.target.value)}
+                            style={{ width: "100%", padding: "5px 8px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px" }}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="text"
+                            placeholder="Instructions (e.g. After meals)"
+                            value={item.instructions}
+                            onChange={(e) => updatePrescriptionItem(idx, "instructions", e.target.value)}
+                            style={{ width: "100%", padding: "5px 8px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px" }}
+                          />
+                        </div>
+                        <div>
+                          <button
+                            type="button"
+                            onClick={() => removePrescriptionItem(idx)}
+                            style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px", color: "#ef4444" }}
+                            title="Remove medicine"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+                  <label className="checkbox-line" style={{ fontWeight: 600, fontSize: "0.82rem", color: "#166534", margin: 0 }}>
+                    <input type="checkbox" defaultChecked={true} {...register("handwrittenPrescriptionIssued")} />
+                    Physical paper prescription slip also handed to patient
+                  </label>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: "8px", flexWrap: "wrap", gap: "8px" }}>
+                <span style={{ fontSize: "0.84rem", color: "#475569" }}>
+                  Need diagnostic pathology or blood investigation for this patient?
                 </span>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.82rem", padding: "6px 12px" }}
+                  onClick={() => openModal("lab-request", modal.record)}
+                >
+                  <FlaskConical size={14} /> Order Lab Investigation
+                </button>
               </div>
 
               <label className="checkbox-line" style={{ fontWeight: 700, marginTop: "2px" }}>
@@ -874,36 +1352,113 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
           ) : null}
           {modal.type === "lab-request" ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              {labCatalog.length > 0 ? (
-                <div>
-                  <label className="form-label" style={{ fontWeight: 600, fontSize: "0.82rem", marginBottom: "6px", display: "block", color: "#1e3a8a" }}>
-                    Select Standard Investigation (Manager Tariffs):
-                  </label>
-                  <select
-                    className="form-select"
-                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        setValue("testName", e.target.value, { shouldValidate: true, shouldDirty: true });
-                      }
-                    }}
-                    defaultValue=""
-                  >
-                    <option value="">-- Choose from standard catalog or type below --</option>
-                    {labCatalog.map((t) => (
-                      <option key={t._id} value={t.testName}>
-                        {t.testName} (Routine: Rs. {t.price.toFixed(2)}{t.urgentPrice ? ` | Urgent: Rs. ${t.urgentPrice.toFixed(2)}` : ""})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div
+                style={{
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "8px",
+                  padding: "10px 14px",
+                  fontSize: "0.85rem",
+                  color: "#334155",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "6px"
+                }}
+              >
+                <span>
+                  Patient: <strong style={{ color: "#0f172a" }}>{patientName(modal.record)}</strong>
+                </span>
+                <span style={{ color: "#64748b", fontSize: "0.8rem" }}>
+                  Slot: {modal.record?.slotLabel || "Standard Visit"}
+                </span>
+              </div>
+
+              <div>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: "0.84rem", marginBottom: "6px", display: "block", color: "#0f172a" }}>
+                  Standard Diagnostic Investigation *
+                </label>
+                <select
+                  className="form-select"
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: "6px",
+                    border: errors.testName ? "1px solid #ef4444" : "1px solid #cbd5e1",
+                    fontSize: "0.88rem",
+                    backgroundColor: "#fff",
+                    color: "#0f172a"
+                  }}
+                  value={isCustomTest ? "__custom__" : (selectedTestName || "")}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "__custom__") {
+                      setIsCustomTest(true);
+                      setValue("testName", "", { shouldValidate: true, shouldDirty: true });
+                    } else {
+                      setIsCustomTest(false);
+                      setValue("testName", val, { shouldValidate: true, shouldDirty: true });
+                    }
+                  }}
+                >
+                  <option value="">-- Select Standard Investigation --</option>
+                  {catalogCategories.map((cat) => (
+                    <optgroup key={cat} label={cat}>
+                      {groupedCatalog[cat].map((t) => (
+                        <option key={t._id || t.testName} value={t.testName}>
+                          {t.testName} (Rs. {t.price.toFixed(2)}{t.urgentPrice ? ` | Urgent: Rs. ${t.urgentPrice.toFixed(2)}` : ""})
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                  <optgroup label="Custom / Other">
+                    <option value="__custom__">+ Other Investigation (Type Custom Name)</option>
+                  </optgroup>
+                </select>
+                {errors.testName && (
+                  <p className="form-error" style={{ color: "#ef4444", fontSize: "0.78rem", marginTop: "4px" }}>
+                    {errors.testName.message}
+                  </p>
+                )}
+              </div>
+
+              {isCustomTest ? (
+                <FormInput
+                  label="Specify Custom Investigation Name *"
+                  placeholder="e.g. Bone Marrow Aspiration, Troponin-I"
+                  error={errors.testName?.message}
+                  {...register("testName")}
+                />
               ) : null}
+
               <div className="form-grid">
-                <FormInput label="Test Name *" placeholder="Fasting Blood Sugar" error={errors.testName?.message} {...register("testName")} />
-                <FormSelect label="Priority" error={errors.priority?.message} {...register("priority")}>
-                  <option value="routine">Routine</option>
-                  <option value="urgent">Urgent</option>
+                <FormSelect label="Investigation Priority *" error={errors.priority?.message} {...register("priority")}>
+                  <option value="routine">Routine (Standard Processing)</option>
+                  <option value="urgent">Urgent / STAT (Immediate Processing)</option>
                 </FormSelect>
+
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: "6px",
+                    backgroundColor: selectedPriority === "urgent" ? "#fff1f2" : "#f0fdf4",
+                    border: selectedPriority === "urgent" ? "1px solid #fecdd3" : "1px solid #bbf7d0",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    gap: "2px"
+                  }}
+                >
+                  <div style={{ fontSize: "0.74rem", color: "#64748b", textTransform: "uppercase", fontWeight: 600 }}>
+                    Tariff Rate ({selectedPriority === "urgent" ? "Urgent / STAT" : "Routine"})
+                  </div>
+                  <div style={{ fontSize: "1.05rem", fontWeight: 700, color: selectedPriority === "urgent" ? "#e11d48" : "#15803d" }}>
+                    {selectedCatalogItem
+                      ? `Rs. ${(selectedPriority === "urgent" && selectedCatalogItem.urgentPrice ? selectedCatalogItem.urgentPrice : selectedCatalogItem.price).toFixed(2)}`
+                      : "Official Center Tariff"}
+                  </div>
+                </div>
               </div>
             </div>
           ) : null}

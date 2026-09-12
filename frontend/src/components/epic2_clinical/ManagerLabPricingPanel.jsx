@@ -143,10 +143,10 @@ export const ManagerLabPricingPanel = () => {
 
       <div className="e1-tabbar">
         <button className={activeTab === "lab" ? "active" : ""} type="button" onClick={() => setActiveTab("lab")}>
-          🧪 Laboratory Test Prices ({labTests.length})
+          Laboratory Test Prices ({labTests.length})
         </button>
         <button className={activeTab === "doctors" ? "active" : ""} type="button" onClick={() => setActiveTab("doctors")}>
-          👨‍⚕️ Doctor Consultation Fees ({doctors.length})
+          Doctor Consultation Fees ({doctors.length})
         </button>
       </div>
 
@@ -241,7 +241,7 @@ export const ManagerLabPricingPanel = () => {
               header: "Status",
               render: (item) => (
                 <span style={{ fontSize: "0.75rem", color: item.status === "active" ? "#16a34a" : "#dc2626", fontWeight: 600 }}>
-                  {item.status === "active" ? "✓ Active Practicing" : "Inactive"}
+                  {item.status === "active" ? "Active Practicing" : "Inactive"}
                 </span>
               )
             },

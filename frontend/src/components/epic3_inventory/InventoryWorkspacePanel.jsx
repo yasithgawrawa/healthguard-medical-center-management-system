@@ -1573,11 +1573,11 @@ export const InventoryWorkspacePanel = () => {
                 <div style={{ fontSize: "0.85rem", marginTop: "6px" }}>
                   {selectedBill.paymentStatus === "paid" ? (
                     <span style={{ color: "var(--accent-emerald)", fontWeight: 700 }}>
-                      ✓ PAID AT CASHIER
+                      PAID AT CASHIER
                     </span>
                   ) : (
                     <span style={{ color: "#b45309", fontWeight: 700, background: "#fef3c7", padding: "4px 10px", borderRadius: "6px", display: "inline-block" }}>
-                      ⏳ PAYMENT PENDING AT CASHIER DESK
+                      PAYMENT PENDING AT CASHIER DESK
                     </span>
                   )}
                 </div>

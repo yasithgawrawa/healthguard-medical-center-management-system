@@ -399,7 +399,7 @@ export function downloadInvoicePDF(invoice) {
     pdf.rect(margin, pdf.td(y + 28), contentW, 28, ...SUCCESS_BG);
     pdf.setColor(...SUCCESS);
     pdf.setFont("HelveticaBold", 10);
-    pdf.text(margin + 12, pdf.td(y + 14), "✓  Payment Received in Full");
+    pdf.text(margin + 12, pdf.td(y + 14), "Payment Received in Full");
     pdf.setFont("Helvetica", 8.5);
     pdf.text(margin + 12, pdf.td(y + 24), "This receipt confirms all charges are settled. Thank you for choosing Health Guard.");
   } else {
@@ -683,8 +683,8 @@ function openPrintWindow(title, bodyHtml) {
   if (!win) { alert("Please allow pop-ups to open the PDF viewer."); return; }
   win.document.write(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${title}</title><style>${PRINT_STYLES}</style></head><body>
     <div class="print-bar no-print">
-      <button class="btn-p" onclick="window.print()">🖨️ Print / Save as PDF</button>
-      <button class="btn-d" onclick="window.close()">✕ Close</button>
+      <button class="btn-p" onclick="window.print()">Print / Save as PDF</button>
+      <button class="btn-d" onclick="window.close()">Close</button>
     </div>
     <div class="page">${bodyHtml}</div></body></html>`);
   win.document.close();
@@ -729,7 +729,7 @@ export function printInvoicePDF(invoice) {
       <div class="totals-row ${outstanding <= 0 ? "out0" : "out"}"><span>Outstanding</span><span>${rsStr(invoice?.outstandingAmount)}</span></div>
     </div></div>
     ${isPaid
-      ? `<div class="note ok"><strong>✓ Payment Received in Full</strong><br>This receipt confirms all charges are settled. Thank you for choosing Health Guard.</div>`
+      ? `<div class="note ok"><strong>Payment Received in Full</strong><br>This receipt confirms all charges are settled. Thank you for choosing Health Guard.</div>`
       : `<div class="note warn"><strong>Payment Due</strong><br>Please settle the outstanding amount at the Health Guard cashier counter.</div>`}
     <div class="footer">Health Guard Medical Center · Official ${isPaid ? "Receipt" : "Invoice"} · Generated: ${new Date().toLocaleString("en-LK")}</div>`;
 

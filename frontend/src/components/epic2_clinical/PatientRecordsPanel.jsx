@@ -145,7 +145,7 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
               ) : null}
               {item.consultation.followUpPlan ? (
                 <div style={{ marginTop: "3px", color: "#0284c7", fontWeight: 600 }}>
-                  📅 Follow-up: {item.consultation.followUpPlan}
+                  Follow-up: {item.consultation.followUpPlan}
                 </div>
               ) : null}
             </div>
