@@ -4,6 +4,7 @@ import { Supplier } from "../models/Supplier.js";
 import { Purchase } from "../models/Purchase.js";
 import { PharmacySale } from "../models/PharmacySale.js";
 import { Prescription } from "../../epic2_clinical/models/Prescription.js";
+import { Appointment } from "../../epic2_clinical/models/Appointment.js";
 import { User } from "../../epic1_user_staff/models/User.js";
 import { AppError } from "../../../shared/utils/AppError.js";
 import { ROLES } from "../../../shared/constants/roles.js";
@@ -265,9 +266,40 @@ export const inventoryService = {
     });
     const saleNumber = `PH-${todayKey}-${String(countToday + 1).padStart(4, "0")}`;
 
+    let effectivePrescriptionId = prescriptionId;
+
+    // If patient is selected and no prescriptionId was provided, auto-digitize the prescription record
+    if (!effectivePrescriptionId && patientId) {
+      try {
+        const latestAppt = await Appointment.findOne({ patientId }).sort({ appointmentDate: -1 });
+        if (latestAppt) {
+          const rxItems = processedItems.map(({ itemRecord, batch }) => {
+            return {
+              medicineName: itemRecord.medicineId?.name || `Medicine (${batch?.batchNumber || "Dispensed"})`,
+              dosage: `${itemRecord.quantity} unit(s)`,
+              frequency: "As directed on handwritten prescription",
+              duration: "Dispensed course",
+              instructions: "Dispensed from doctor's handwritten paper prescription"
+            };
+          });
+
+          const newRx = await Prescription.create({
+            appointmentId: latestAppt._id,
+            patientId,
+            doctorId: latestAppt.doctorId,
+            items: rxItems,
+            status: "dispensed"
+          });
+          effectivePrescriptionId = newRx._id;
+        }
+      } catch (err) {
+        // Fallback: do not interrupt POS sale
+      }
+    }
+
     const sale = await PharmacySale.create({
       saleNumber,
-      prescriptionId: prescriptionId || undefined,
+      prescriptionId: effectivePrescriptionId || undefined,
       patientId: patientId || undefined,
       soldBy: soldById,
       items: processedItems.map((p) => p.itemRecord),
@@ -277,8 +309,8 @@ export const inventoryService = {
     });
 
     // If linked to prescription, mark prescription as dispensed
-    if (prescriptionId) {
-      await Prescription.findByIdAndUpdate(prescriptionId, { status: "dispensed" });
+    if (effectivePrescriptionId) {
+      await Prescription.findByIdAndUpdate(effectivePrescriptionId, { status: "dispensed" });
     }
 
     return sale.populate([

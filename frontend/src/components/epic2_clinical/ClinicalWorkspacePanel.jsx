@@ -36,6 +36,7 @@ const vitalsSchema = z.object({
 const consultationSchema = z.object({
   diagnosis: z.string().trim().min(2, "Diagnosis is required").max(120, "Diagnosis is too long"),
   clinicalNotes: z.string().trim().min(3, "Clinical notes are required").max(1000, "Clinical notes cannot exceed 1000 characters"),
+  handwrittenPrescriptionIssued: z.boolean().optional(),
   finalized: z.boolean().optional()
 });
 
@@ -224,9 +225,20 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
           ) : null}
           {modal.type === "consultation" ? (
             <>
-              <FormInput label="Diagnosis" placeholder="Viral fever" error={errors.diagnosis?.message} {...register("diagnosis")} />
-              <FormInput label="Clinical Notes" placeholder="Fever for two days, hydration advised" error={errors.clinicalNotes?.message} {...register("clinicalNotes")} />
-              <label className="checkbox-line"><input type="checkbox" {...register("finalized")} /> Finalize visit</label>
+              <FormInput label="Diagnosis" placeholder="e.g. Acute Bronchitis" error={errors.diagnosis?.message} {...register("diagnosis")} />
+              <FormInput label="Clinical Notes" placeholder="Clinical observations and treatment plan" error={errors.clinicalNotes?.message} {...register("clinicalNotes")} />
+              <div style={{ marginTop: "12px", padding: "12px 14px", background: "var(--brand-50, #f0fdf4)", border: "1px solid var(--brand-200, #bbf7d0)", borderRadius: "8px" }}>
+                <label className="checkbox-line" style={{ fontWeight: 600, color: "var(--brand-900, #166534)", margin: 0 }}>
+                  <input type="checkbox" defaultChecked={true} {...register("handwrittenPrescriptionIssued")} />
+                  Handwritten physical prescription paper given to patient
+                </label>
+                <span style={{ display: "block", color: "var(--slate-600, #64748b)", fontSize: "0.82rem", marginTop: "4px" }}>
+                  The patient will present this physical slip to the pharmacy counter for medication dispensing.
+                </span>
+              </div>
+              <label className="checkbox-line" style={{ marginTop: "12px", fontWeight: 700 }}>
+                <input type="checkbox" {...register("finalized")} /> Finalize consultation & complete visit
+              </label>
             </>
           ) : null}
           {modal.type === "prescription" ? (

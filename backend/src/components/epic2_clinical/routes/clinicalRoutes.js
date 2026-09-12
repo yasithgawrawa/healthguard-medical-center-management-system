@@ -45,7 +45,7 @@ router.patch("/appointments/:id/cancel", authorizeRoles(ROLES.PATIENT, ROLES.ADM
 router.patch("/appointments/:id/status", authorizeRoles(ROLES.NURSE, ROLES.DOCTOR, ROLES.ADMIN), validateRequest(appointmentStatusSchema), asyncHandler(updateAppointmentStatus));
 router.post("/vitals", authorizeRoles(ROLES.NURSE, ROLES.DOCTOR), validateRequest(vitalsSchema), asyncHandler(recordVitals));
 router.post("/consultations", authorizeRoles(ROLES.DOCTOR), validateRequest(consultationSchema), asyncHandler(saveConsultation));
-router.post("/prescriptions", authorizeRoles(ROLES.DOCTOR), validateRequest(prescriptionSchema), asyncHandler(createPrescription));
+router.post("/prescriptions", authorizeRoles(ROLES.DOCTOR, ROLES.PHARMACIST), validateRequest(prescriptionSchema), asyncHandler(createPrescription));
 router.get("/prescriptions", authorizeRoles(ROLES.DOCTOR, ROLES.PHARMACIST, ROLES.PATIENT), asyncHandler(listPrescriptions));
 router.post("/lab-requests", authorizeRoles(ROLES.DOCTOR), validateRequest(labRequestSchema), asyncHandler(createLabRequest));
 router.get("/lab-requests", authorizeRoles(ROLES.DOCTOR, ROLES.LAB_ASSISTANT, ROLES.PATIENT), asyncHandler(listLabRequests));

@@ -1287,58 +1287,72 @@ export const InventoryWorkspacePanel = () => {
             </div>
 
             {posPatientType === "registered" ? (
-              <div className="form-grid">
-                <FormSelect
-                  label="Select Patient"
-                  value={posPatientId}
-                  onChange={(e) => {
-                    setPosPatientId(e.target.value);
-                    const patientRx = prescriptions.find((r) => (r.patientId?._id || r.patientId) === e.target.value);
-                    if (patientRx) setPosPrescriptionId(patientRx._id);
-                  }}
-                >
-                  <option value="">Choose Patient</option>
-                  {patients.map((p) => (
-                    <option value={p._id} key={p._id}>
-                      {p.firstName} {p.lastName} ({p.phone || p.email})
-                    </option>
-                  ))}
-                </FormSelect>
-
-                <FormSelect
-                  label="Doctor Prescription (Optional E2 Link)"
-                  value={posPrescriptionId}
-                  onChange={(e) => {
-                    setPosPrescriptionId(e.target.value);
-                    const selectedRx = prescriptions.find((r) => r._id === e.target.value);
-                    if (selectedRx && selectedRx.patientId?._id) {
-                      setPosPatientId(selectedRx.patientId._id);
-                    }
-                  }}
-                >
-                  <option value="">No Prescription / Direct Sale</option>
-                  {prescriptions
-                    .filter((r) => !posPatientId || (r.patientId?._id || r.patientId) === posPatientId)
-                    .map((r) => (
-                      <option value={r._id} key={r._id}>
-                        Dr. {r.doctorId?.lastName || "Doctor"} - {r.items?.map((i) => i.medicineName).join(", ")}
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div className="form-grid">
+                  <FormSelect
+                    label="Select Patient"
+                    value={posPatientId}
+                    onChange={(e) => {
+                      setPosPatientId(e.target.value);
+                      const patientRx = prescriptions.find((r) => (r.patientId?._id || r.patientId) === e.target.value);
+                      if (patientRx) setPosPrescriptionId(patientRx._id);
+                    }}
+                  >
+                    <option value="">Choose Patient</option>
+                    {patients.map((p) => (
+                      <option value={p._id} key={p._id}>
+                        {p.firstName} {p.lastName} ({p.phone || p.email})
                       </option>
                     ))}
-                </FormSelect>
-              </div>
-            ) : null}
+                  </FormSelect>
 
-            {/* Prescribed Items helper banner */}
-            {posPrescriptionId ? (
-              <div className="pos-rx-banner">
-                <strong>Linked Doctor Prescription:</strong>
-                <div className="pos-rx-pills">
-                  {prescriptions.find((r) => r._id === posPrescriptionId)?.items?.map((i, idx) => (
-                    <span className="pos-rx-tag" key={idx}>
-                      {i.medicineName} &bull; {i.dosage} &bull; {i.frequency}
-                    </span>
-                  ))}
+                  <FormSelect
+                    label="Doctor Prescription Source"
+                    value={posPrescriptionId}
+                    onChange={(e) => {
+                      setPosPrescriptionId(e.target.value);
+                      const selectedRx = prescriptions.find((r) => r._id === e.target.value);
+                      if (selectedRx && selectedRx.patientId?._id) {
+                        setPosPatientId(selectedRx.patientId._id);
+                      }
+                    }}
+                  >
+                    <option value="">Handwritten Prescription (Paper Slip)</option>
+                    {prescriptions
+                      .filter((r) => !posPatientId || (r.patientId?._id || r.patientId) === posPatientId)
+                      .map((r) => (
+                        <option value={r._id} key={r._id}>
+                          E-Prescription: Dr. {r.doctorId?.lastName || "Doctor"} - {r.items?.map((i) => i.medicineName).join(", ")}
+                        </option>
+                      ))}
+                  </FormSelect>
                 </div>
+
+                {!posPrescriptionId && posPatientId ? (
+                  <div style={{ padding: "10px 14px", background: "var(--brand-50, #f0fdf4)", border: "1px solid var(--brand-200, #bbf7d0)", borderRadius: "6px", display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                    <FileText size={18} color="var(--brand-700)" style={{ marginTop: "2px", flexShrink: 0 }} />
+                    <div>
+                      <strong style={{ fontSize: "0.88rem", color: "var(--brand-900)" }}>Handwritten Doctor Prescription Mode Active</strong>
+                      <p style={{ margin: "2px 0 0 0", fontSize: "0.8rem", color: "var(--brand-800)" }}>
+                        Review the physical paper slip presented by the patient. Select medicines and batches below to dispense from stock. The dispensed items will be automatically logged in the patient's medical history.
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Prescribed Items helper banner if digital link selected */}
+                {posPrescriptionId ? (
+                  <div className="pos-rx-banner">
+                    <strong>Linked Doctor Prescription:</strong>
+                    <div className="pos-rx-pills">
+                      {prescriptions.find((r) => r._id === posPrescriptionId)?.items?.map((i, idx) => (
+                        <span className="pos-rx-tag" key={idx}>
+                          {i.medicineName} &bull; {i.dosage} &bull; {i.frequency}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>
