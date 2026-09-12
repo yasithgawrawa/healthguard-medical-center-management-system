@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Clock, LogIn, LogOut, MapPin, Plane } from "lucide-react";
+import { Clock, Download, LogIn, LogOut, MapPin, Plane, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useLocation, useOutletContext } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { DataTable } from "../shared/DataTable.jsx";
@@ -11,6 +12,7 @@ import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
 import { e1Api } from "../../services/e1Api.js";
 import { billingApi } from "../../services/billingApi.js";
+import { downloadPayslipPDF } from "../../utils/invoicePrintTemplate.js";
 import { formatDate, formatTime, LEAVE_TYPES } from "./e1Constants.js";
 
 const leaveRequestSchema = z
@@ -52,7 +54,18 @@ const getCurrentPosition = () =>
     });
   });
 
-export const StaffSelfServicePanel = () => {
+export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
+  const location = useLocation();
+  const outletContext = useOutletContext();
+
+  const isAttendanceActive =
+    isVisible !== undefined
+      ? isVisible
+      : (outletContext?.activeHash === "#attendance-leave" ||
+         outletContext?.activeHash === "#staff-self-service" ||
+         location.hash === "#attendance-leave" ||
+         location.hash === "#staff-self-service");
+
   const [attendance, setAttendance] = useState([]);
   const [leave, setLeave] = useState([]);
   const [payroll, setPayroll] = useState([]);
@@ -90,8 +103,28 @@ export const StaffSelfServicePanel = () => {
   };
 
   useEffect(() => {
-    load();
-  }, []);
+    if (isAttendanceActive) {
+      load();
+      const timer = setTimeout(() => {
+        const el = document.getElementById("staff-self-service") || document.getElementById("attendance-leave");
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 60);
+      return () => clearTimeout(timer);
+    }
+  }, [isAttendanceActive]);
+
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    } else {
+      if (outletContext?.setActiveHash) {
+        outletContext.setActiveHash("#work");
+      }
+      window.location.hash = "#work";
+    }
+  };
 
   const today = new Date().toISOString().slice(0, 10);
   const todayAttendance = useMemo(
@@ -148,18 +181,38 @@ export const StaffSelfServicePanel = () => {
     }
   };
 
+  if (!isAttendanceActive) {
+    return null;
+  }
+
   return (
     <section className="e1-panel" id="staff-self-service">
+      <div id="attendance-leave" style={{ position: "relative", top: "-10px" }} />
       <Toast toast={toast} onClose={() => setToast(null)} />
       <div className="e1-panel-header">
         <div>
-          <h2>My Workforce</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <h2>My Workforce</h2>
+            <span className="badge badge-success" style={{ fontSize: "0.75rem", padding: "2px 8px" }}>Attendance & Leave</span>
+          </div>
           <p>Track today's attendance, upcoming shifts and your own leave requests. Check-in is accepted only at the Health Guard center.</p>
         </div>
-        <button className="button-secondary" type="button" onClick={() => setLeaveOpen(true)}>
-          <Plane size={17} />
-          <span>Request Leave</span>
-        </button>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <button className="button-secondary" type="button" onClick={() => setLeaveOpen(true)}>
+            <Plane size={17} />
+            <span>Request Leave</span>
+          </button>
+          <button
+            className="button-secondary"
+            type="button"
+            onClick={handleClose}
+            title="Close Attendance & Leave section"
+            style={{ padding: "8px 12px" }}
+          >
+            <X size={17} />
+            <span>Close</span>
+          </button>
+        </div>
       </div>
 
       <div className="staff-self-grid">
@@ -245,7 +298,17 @@ export const StaffSelfServicePanel = () => {
             { key: "baseSalary", header: "Base Salary", render: (item) => `Rs. ${Number(item.baseSalary || 0).toFixed(2)}` },
             { key: "netSalary", header: "Net Salary", render: (item) => `Rs. ${Number(item.netSalary || 0).toFixed(2)}` },
             { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
-            { key: "actions", header: "Actions", render: (item) => <button className="table-link-button" type="button" onClick={() => downloadPayslip(item)} disabled={busy}>Download</button> }
+            { key: "actions", header: "Actions", render: (item) => (
+              <button
+                className="table-link-button"
+                type="button"
+                onClick={() => downloadPayslipPDF(item)}
+                title="Download payslip as PDF"
+              >
+                <Download size={13} style={{ display: "inline", marginRight: "4px" }} />
+                Download PDF
+              </button>
+            ) }
           ]}
           rows={payroll.slice(0, 5)}
           emptyText="No payslips available yet."
@@ -263,8 +326,8 @@ export const StaffSelfServicePanel = () => {
                 </option>
               ))}
             </FormSelect>
-            <FormInput label="Start Date" type="date" error={errors.startDate?.message} {...register("startDate")} />
-            <FormInput label="End Date" type="date" error={errors.endDate?.message} {...register("endDate")} />
+            <FormInput label="Start Date" type="date" min={new Date().toISOString().slice(0, 10)} error={errors.startDate?.message} {...register("startDate")} />
+            <FormInput label="End Date" type="date" min={new Date().toISOString().slice(0, 10)} error={errors.endDate?.message} {...register("endDate")} />
           </div>
           <FormInput label="Reason" placeholder="Family commitment in Matara" error={errors.reason?.message} {...register("reason")} />
           <div className="modal-actions">

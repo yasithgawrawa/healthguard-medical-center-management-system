@@ -125,7 +125,7 @@ const realStaffData = [
     emergencyContact: "+94771234001"
   },
   {
-    firstName: "Dr. Amara",
+    firstName: "Amara",
     lastName: "Perera",
     email: "doctor@healthguard.com",
     phone: "+94771234501",
@@ -137,20 +137,6 @@ const realStaffData = [
     allowances: 20000,
     deductions: 5000,
     emergencyContact: "+94771234002"
-  },
-  {
-    firstName: "Dr. Nimal",
-    lastName: "Fernando",
-    email: "doctor2@healthguard.com",
-    phone: "+94771234502",
-    role: ROLES.DOCTOR,
-    employeeId: "HG-DOC-002",
-    department: "Cardiology & Internal Medicine",
-    employmentDate: new Date("2018-09-20"),
-    baseSalary: 285000,
-    allowances: 25000,
-    deductions: 6000,
-    emergencyContact: "+94771234003"
   },
   {
     firstName: "Ishara",
@@ -555,7 +541,6 @@ console.log(`   ✓ Seeded ${medicineCatalog.length} medicines with tracked batc
 // ============================================================================
 console.log("\n8. Seeding Real Clinical Consultations, Prescriptions & Diagnostics...");
 const doc1User = staffUserMap.get("doctor@healthguard.com");
-const doc2User = staffUserMap.get("doctor2@healthguard.com");
 const nurseUser = staffUserMap.get("nurse@healthguard.com");
 const labUser = staffUserMap.get("lab@healthguard.com");
 const cashierUser = staffUserMap.get("cashier@healthguard.com");
@@ -591,21 +576,21 @@ const appt2 = await Appointment.create({
   status: "booked"
 });
 
-// Appointment 3: Fathima Nazeer (Today 11:00 - In Consultation with Cardiologist Dr. Nimal)
+// Appointment 3: Fathima Nazeer (Today 11:00 - In Consultation with Dr. Amara)
 const appt3 = await Appointment.create({
   patientId: patientUserList[2]._id,
-  doctorId: doc2User._id,
+  doctorId: doc1User._id,
   appointmentDate: offsetDate(0, 11),
   slotLabel: "Morning 11:00",
   reason: "Palpitations upon mild exertion and shortness of breath",
   status: "in_consultation"
 });
 
-// Lab Request for Fathima Nazeer (ECG requested by Dr. Nimal)
+// Lab Request for Fathima Nazeer (ECG requested by Dr. Amara)
 const ecgLab = await LabRequest.create({
   appointmentId: appt3._id,
   patientId: appt3.patientId,
-  doctorId: doc2User._id,
+  doctorId: doc1User._id,
   testName: "ECG 12-Lead",
   priority: "urgent",
   status: "in_progress",
@@ -616,10 +601,10 @@ await Notification.create({
   patientId: ecgLab.patientId,
   type: "lab_request",
   title: "New Diagnostic Test Requested",
-  message: "Dr. Nimal Fernando has requested an urgent ECG 12-Lead test for you.",
+  message: "Dr. Amara Perera has requested an urgent ECG 12-Lead test for you.",
   relatedModel: "LabRequest",
   relatedId: ecgLab._id,
-  createdBy: doc2User._id
+  createdBy: doc1User._id
 });
 
 // Appointment 4: Ruwan Bandara (Yesterday - Completed Visit with Finalized Consultation, Rx & Completed Lab)
@@ -682,7 +667,7 @@ await Notification.create({
 // Appointment 5: Priyantha Wickramasinghe (Tomorrow 09:00 - Booked)
 const appt5 = await Appointment.create({
   patientId: patientUserList[4]._id,
-  doctorId: doc2User._id,
+  doctorId: doc1User._id,
   appointmentDate: offsetDate(1, 9),
   slotLabel: "Morning 09:00",
   reason: "Post-angioplasty annual cardiac follow-up",
@@ -820,7 +805,6 @@ console.log("\nOperational Clinical Accounts for Verification:");
 console.log("  • Admin       : admin@healthguard.com");
 console.log("  • Manager     : manager@healthguard.com");
 console.log("  • Doctor (OPD): doctor@healthguard.com");
-console.log("  • Doctor (Card): doctor2@healthguard.com");
 console.log("  • Nurse       : nurse@healthguard.com");
 console.log("  • Nurse (Ward): nurse2@healthguard.com");
 console.log("  • Pharmacist  : pharmacist@healthguard.com");

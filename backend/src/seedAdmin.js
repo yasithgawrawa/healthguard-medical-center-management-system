@@ -41,7 +41,6 @@ const staffUsers = [
   ["System", "Admin", process.env.SEED_ADMIN_EMAIL || "admin@healthguard.local", "+94112555000", ROLES.ADMIN, "HG-ADM-001", "Administration", "2021-01-04"],
   ["Kavinda", "Jayawardena", "manager@healthguard.local", "+94112555001", ROLES.MANAGER, "HG-MGR-001", "Operations", "2021-02-15"],
   ["Amara", "Perera", "doctor@healthguard.local", "+94771234501", ROLES.DOCTOR, "HG-DOC-001", "OPD", "2020-08-10"],
-  ["Nimal", "Fernando", "doctor2@healthguard.local", "+94771234502", ROLES.DOCTOR, "HG-DOC-002", "Cardiology", "2019-05-20"],
   ["Ishara", "Silva", "nurse@healthguard.local", "+94771234503", ROLES.NURSE, "HG-NUR-001", "Triage", "2022-03-12"],
   ["Sanduni", "Rathnayake", "nurse2@healthguard.local", "+94771234504", ROLES.NURSE, "HG-NUR-002", "Ward", "2023-01-18"],
   ["Dinesh", "Gunasekara", "pharmacist@healthguard.local", "+94771234505", ROLES.PHARMACIST, "HG-PHA-001", "Pharmacy", "2021-09-01"],
@@ -173,7 +172,6 @@ await LeaveRequest.findOneAndUpdate(
 
 const patients = patientUsers.map(([, , email]) => userByEmail.get(email));
 const doctor1 = userByEmail.get("doctor@healthguard.local");
-const doctor2 = userByEmail.get("doctor2@healthguard.local");
 const nurse = userByEmail.get("nurse@healthguard.local");
 const labUser = userByEmail.get("lab@healthguard.local");
 const cashier = userByEmail.get("cashier@healthguard.local");
@@ -182,7 +180,7 @@ const pharmacist = userByEmail.get("pharmacist@healthguard.local");
 const appointmentSeeds = [
   [patients[0], doctor1, 0, 9, "Morning 09:00", "Fever and body aches", "checked_in"],
   [patients[1], doctor1, 0, 10, "Morning 10:00", "Follow-up for gastritis", "booked"],
-  [patients[2], doctor2, 0, 11, "Morning 11:00", "Chest discomfort", "in_consultation"],
+  [patients[2], doctor1, 0, 11, "Morning 11:00", "Chest discomfort", "in_consultation"],
   [patients[3], doctor1, -1, 14, "Afternoon 02:00", "Diabetes review", "completed"]
 ];
 
@@ -233,7 +231,7 @@ const fbsRequest = await LabRequest.findOneAndUpdate(
 
 await Notification.findOneAndUpdate(
   { patientId: ecgRequest.patientId, relatedId: ecgRequest._id, type: "lab_request" },
-  { patientId: ecgRequest.patientId, type: "lab_request", title: "New lab test requested", message: "ECG has been requested by your doctor.", relatedModel: "LabRequest", relatedId: ecgRequest._id, createdBy: doctor2._id },
+  { patientId: ecgRequest.patientId, type: "lab_request", title: "New lab test requested", message: "ECG has been requested by your doctor.", relatedModel: "LabRequest", relatedId: ecgRequest._id, createdBy: doctor1._id },
   { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
 );
 

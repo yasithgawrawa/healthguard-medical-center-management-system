@@ -79,5 +79,13 @@ export const labUpdateSchema = z.object({
     status: z.enum(["verified", "in_progress", "completed", "cancelled"]),
     resultSummary: z.string().trim().max(500).optional(),
     resultUrl: z.string().trim().url("Enter a valid report URL").optional().or(z.literal(""))
+  }).refine((data) => {
+    if (data.status === "completed" && (!data.resultSummary || data.resultSummary.trim().length < 3)) {
+      return false;
+    }
+    return true;
+  }, {
+    path: ["resultSummary"],
+    message: "Result summary is required when marking lab test as completed"
   })
 });

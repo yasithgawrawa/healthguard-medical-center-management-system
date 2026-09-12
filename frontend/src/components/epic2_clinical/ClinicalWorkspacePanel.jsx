@@ -35,7 +35,7 @@ const vitalsSchema = z.object({
 
 const consultationSchema = z.object({
   diagnosis: z.string().trim().min(2, "Diagnosis is required").max(120, "Diagnosis is too long"),
-  clinicalNotes: z.string().trim().min(3, "Clinical notes are required"),
+  clinicalNotes: z.string().trim().min(3, "Clinical notes are required").max(1000, "Clinical notes cannot exceed 1000 characters"),
   finalized: z.boolean().optional()
 });
 
@@ -56,6 +56,14 @@ const labUpdateSchema = z.object({
   status: z.string().min(1, "Status is required"),
   resultSummary: z.string().trim().max(500, "Result summary is too long").optional().or(z.literal("")),
   resultUrl: z.string().trim().url("Enter a valid report URL").optional().or(z.literal(""))
+}).refine((data) => {
+  if (data.status === "completed" && (!data.resultSummary || data.resultSummary.trim().length < 3)) {
+    return false;
+  }
+  return true;
+}, {
+  path: ["resultSummary"],
+  message: "Result summary is required when marking lab test as completed"
 });
 
 const buildNumber = (value) => (value === "" || value === undefined ? undefined : Number(value));

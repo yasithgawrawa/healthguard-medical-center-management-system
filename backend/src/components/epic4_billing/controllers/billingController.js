@@ -77,6 +77,12 @@ export const updatePaymentStatus = async (req, res) => {
 export const createPayroll = async (req, res) => {
   const staff = await Staff.findById(req.body.staffId);
   if (!staff) throw new AppError("Staff profile not found", 404);
+
+  const existingPayroll = await Payroll.findOne({ staffId: req.body.staffId, month: req.body.month });
+  if (existingPayroll) {
+    throw new AppError(`Payroll has already been processed for this staff member in ${req.body.month}`, 409);
+  }
+
   const baseSalary = req.body.baseSalary ?? staff.baseSalary;
   const allowances = req.body.allowances ?? staff.allowances ?? 0;
   const deductions = req.body.deductions ?? staff.deductions ?? 0;

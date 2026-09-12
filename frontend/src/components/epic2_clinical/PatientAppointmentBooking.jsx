@@ -29,7 +29,12 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
   useEffect(() => {
     patientApi
       .getDoctors()
-      .then(setDoctors)
+      .then((data) => {
+        setDoctors(data || []);
+        if (data && data.length === 1) {
+          setForm((prev) => ({ ...prev, doctorId: data[0]._id }));
+        }
+      })
       .catch(() => setError("Unable to load doctors. Ask an admin to seed or create doctor accounts."))
       .finally(() => setLoading(false));
   }, []);
@@ -78,7 +83,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
         reason: form.reason
       });
       setMessage("Appointment booked and saved to MongoDB.");
-      setForm(initialForm);
+      setForm(doctors.length === 1 ? { ...initialForm, doctorId: doctors[0]._id } : initialForm);
       onBooked?.();
     } catch (err) {
       setError(err.response?.data?.message || "Appointment booking failed");
@@ -113,11 +118,15 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
               aria-invalid={Boolean(fieldErrors.doctorId)}
             >
               <option value="">{loading ? "Loading doctors..." : "Select doctor"}</option>
-              {doctors.map((doctor) => (
-                <option value={doctor._id} key={doctor._id}>
-                  Dr. {doctor.firstName} {doctor.lastName}
-                </option>
-              ))}
+              {doctors.map((doctor) => {
+                const fullName = `${doctor.firstName} ${doctor.lastName}`.trim();
+                const displayName = fullName.startsWith("Dr.") ? fullName : `Dr. ${fullName}`;
+                return (
+                  <option value={doctor._id} key={doctor._id}>
+                    {displayName}
+                  </option>
+                );
+              })}
             </select>
             {fieldErrors.doctorId ? <small>{fieldErrors.doctorId}</small> : null}
           </label>
@@ -125,6 +134,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
             <span>Appointment Date</span>
             <input
               type="date"
+              min={new Date().toISOString().slice(0, 10)}
               value={form.appointmentDay}
               onChange={(event) => {
                 setField("appointmentDay", event.target.value);

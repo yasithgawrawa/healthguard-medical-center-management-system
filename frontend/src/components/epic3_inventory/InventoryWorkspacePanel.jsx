@@ -63,7 +63,7 @@ const schemas = {
     name: z.string().trim().min(2, "Medicine name is required").max(120),
     category: z.string().min(1, "Select medicine category").refine((value) => MEDICINE_CATEGORIES.includes(value), "Select a valid medicine category"),
     unit: z.string().trim().min(1, "Unit is required").max(30),
-    price: requiredMoney("Price"),
+    price: requiredMoney("Price").min(0.01, "Price must be greater than 0"),
     reorderLevel: z.coerce.number().int("Reorder level must be a whole number").min(0).max(100000),
     status: z.enum(["active", "inactive"]).default("active")
   }),
@@ -84,6 +84,9 @@ const schemas = {
   }).refine((data) => new Date(data.expiryDate) > new Date(data.manufactureDate), {
     path: ["expiryDate"],
     message: "Expiry date must be after manufacture date"
+  }).refine((data) => new Date(data.expiryDate) > new Date(), {
+    path: ["expiryDate"],
+    message: "Expiry date must be in the future for newly received stock"
   }),
   batchUpdate: z.object({
     medicineId: z.string().min(1, "Select medicine"),

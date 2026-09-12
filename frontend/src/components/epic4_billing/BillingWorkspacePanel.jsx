@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle, CreditCard, DollarSign, Receipt } from "lucide-react";
+import { CheckCircle, CreditCard, DollarSign, Download, Receipt } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -9,6 +9,7 @@ import { e1Api } from "../../services/e1Api.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { ROLES } from "../../utils/roles.js";
 import { requiredMoney, requiredQuantity } from "../../utils/validationSchemas.js";
+import { printInvoicePDF, printPayslipPDF, downloadInvoicePDF, downloadPayslipPDF } from "../../utils/invoicePrintTemplate.js";
 import { DataTable } from "../shared/DataTable.jsx";
 import { Modal } from "../shared/Modal.jsx";
 import { SearchBar } from "../shared/SearchBar.jsx";
@@ -33,7 +34,7 @@ const invoiceSchema = z.object({
   appointmentId: z.string().min(1, "Select appointment"),
   description: z.string().trim().min(2, "Description is required").max(120, "Description is too long"),
   quantity: requiredQuantity(),
-  unitPrice: requiredMoney("Unit price")
+  unitPrice: requiredMoney("Unit price").min(0.01, "Unit price must be greater than 0")
 });
 const paymentSchema = z.object({
   amount: z.coerce.number({ invalid_type_error: "Amount is required" }).min(0.01, "Amount must be greater than 0").max(10000000, "Amount is too high"),
@@ -63,7 +64,20 @@ export const BillingWorkspacePanel = () => {
   const isManager = [ROLES.MANAGER, ROLES.ADMIN].includes(user?.role);
   const isCashier = [ROLES.CASHIER, ROLES.ADMIN].includes(user?.role);
 
-  const schema = modal.type === "payment" ? paymentSchema : modal.type === "payroll" ? payrollSchema : invoiceSchema;
+  const schema = useMemo(() => {
+    if (modal.type === "payment") {
+      const maxBal = modal.record?.outstandingAmount ? Number(modal.record.outstandingAmount) : 10000000;
+      return z.object({
+        amount: z.coerce.number({ invalid_type_error: "Amount is required" })
+          .min(0.01, "Amount must be greater than 0")
+          .max(maxBal, `Amount cannot exceed outstanding balance of Rs. ${maxBal.toFixed(2)}`),
+        method: z.string().min(1, "Payment method is required")
+      });
+    }
+    if (modal.type === "payroll") return payrollSchema;
+    return invoiceSchema;
+  }, [modal.type, modal.record]);
+
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({ resolver: zodResolver(schema), mode: "onChange" });
   const selectedStaffId = watch("staffId");
 
@@ -181,6 +195,14 @@ export const BillingWorkspacePanel = () => {
     }
   };
 
+  const printInvoice = (invoice) => {
+    downloadInvoicePDF(invoice);
+  };
+
+  const printPayslip = (item) => {
+    downloadPayslipPDF(item);
+  };
+
   return (
     <section className="e1-panel" id="billing-payments">
       <Toast toast={toast} onClose={() => setToast(null)} />
@@ -209,7 +231,7 @@ export const BillingWorkspacePanel = () => {
               { key: "paid", header: "Paid", render: (item) => money(item.paidAmount) },
               { key: "outstanding", header: "Outstanding", render: (item) => money(item.outstandingAmount) },
               { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
-              { key: "actions", header: "Actions", render: (item) => <div className="inline-actions">{isCashier ? <button className="table-link-button" type="button" onClick={() => { reset({ amount: item.outstandingAmount || "", method: "cash" }); setModal({ type: "payment", record: item }); }} disabled={item.outstandingAmount <= 0}>Record Payment</button> : null}{item.status === "paid" ? <button className="table-link-button" type="button" onClick={() => downloadReceipt(item)} disabled={busy}>Receipt</button> : null}</div> }
+              { key: "actions", header: "Actions", render: (item) => <div className="inline-actions">{isCashier ? <button className="table-link-button" type="button" onClick={() => { reset({ amount: item.outstandingAmount || "", method: "cash" }); setModal({ type: "payment", record: item }); }} disabled={item.outstandingAmount <= 0}>Record Payment</button> : null}<button className="table-link-button" type="button" onClick={() => printInvoice(item)} title="Download as PDF"><Download size={13} style={{ display: "inline", marginRight: "4px" }} />Download PDF</button></div> }
             ]}
           />
         </>
@@ -246,7 +268,7 @@ export const BillingWorkspacePanel = () => {
             { key: "attendanceDays", header: "Attendance Days" },
             { key: "netSalary", header: "Net Salary", render: (item) => money(item.netSalary) },
             { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
-            { key: "actions", header: "Actions", render: (item) => isManager ? <div className="inline-actions"><button type="button" onClick={() => changePayrollStatus(item, "reviewed")} disabled={busy || item.status !== "draft"}>Review</button><button type="button" onClick={() => changePayrollStatus(item, "approved")} disabled={busy || item.status !== "reviewed"}>Approve</button><button type="button" onClick={() => changePayrollStatus(item, "paid")} disabled={busy || item.status !== "approved"}>Mark Paid</button><button type="button" onClick={() => downloadPayslip(item)} disabled={busy}>Payslip</button></div> : null }
+            { key: "actions", header: "Actions", render: (item) => isManager ? <div className="inline-actions"><button type="button" onClick={() => changePayrollStatus(item, "reviewed")} disabled={busy || item.status !== "draft"}>Review</button><button type="button" onClick={() => changePayrollStatus(item, "approved")} disabled={busy || item.status !== "reviewed"}>Approve</button><button type="button" onClick={() => changePayrollStatus(item, "paid")} disabled={busy || item.status !== "approved"}>Mark Paid</button><button className="table-link-button" type="button" onClick={() => printPayslip(item)} title="Download Payslip as PDF"><Download size={13} style={{ display: "inline", marginRight: "4px" }} />Download PDF</button></div> : null }
           ]}
           emptyText="No payroll records yet."
         />

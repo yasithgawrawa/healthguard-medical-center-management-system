@@ -7,7 +7,7 @@ const medicineBodySchema = z.object({
   name: z.string().trim().min(2, "Medicine name is required").max(120),
   category: z.string().min(1, "Select medicine category").refine((value) => MEDICINE_CATEGORIES.includes(value), "Select a valid medicine category"),
   unit: z.string().trim().min(1, "Unit is required").max(30),
-  price: moneySchema("Price"),
+  price: z.coerce.number({ invalid_type_error: "Price is required" }).min(0.01, "Price must be greater than 0").max(10000000),
   reorderLevel: z.coerce.number().int("Reorder level must be a whole number").min(0).max(100000),
   status: z.enum(["active", "inactive"]).optional()
 });

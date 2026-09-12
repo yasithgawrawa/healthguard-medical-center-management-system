@@ -8,7 +8,8 @@ import {
   UserRoundCheck,
   Users
 } from "lucide-react";
-import { Outlet } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Outlet, useLocation } from "react-router-dom";
 import { Navbar } from "../components/shared/Navbar.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { ROLES } from "../utils/roles.js";
@@ -47,8 +48,7 @@ const roleNavItems = (role) => {
     return [
       { href: "#overview", label: "Overview", icon: Activity },
       { href: "#work", label: "Work Queue", icon: ClipboardList },
-      { href: "#staff-self-service", label: "Schedule & Shifts", icon: Calendar },
-      { href: "#staff-self-service", label: "Attendance & Leave", icon: UserRoundCheck }
+      { href: "#attendance-leave", label: "Attendance & Leave", icon: UserRoundCheck }
     ];
   }
 
@@ -61,7 +61,42 @@ const roleNavItems = (role) => {
 
 export const DashboardLayout = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const navItems = roleNavItems(user?.role);
+
+  const getInitialHash = () => {
+    if (location.hash) return location.hash;
+    return navItems[0]?.href ?? "#overview";
+  };
+
+  const [activeHash, setActiveHash] = useState(getInitialHash);
+
+  useEffect(() => {
+    if (location.hash) {
+      setActiveHash(location.hash);
+    }
+  }, [location.hash]);
+
+  const isItemActive = (href) => {
+    if (activeHash === href) return true;
+    if (href === "#attendance-leave" && (activeHash === "#attendance-leave" || activeHash === "#staff-self-service")) {
+      return true;
+    }
+    if (href === "#staff-self-service" && (activeHash === "#attendance-leave" || activeHash === "#staff-self-service")) {
+      return true;
+    }
+    if (
+      href === "#work" &&
+      ["#clinical-workflow", "#patient-check-in-vitals", "#laboratory-results", "#pharmacy-inventory", "#billing-payments"].includes(activeHash)
+    ) {
+      return true;
+    }
+    return false;
+  };
+
+  const handleNavClick = (href) => {
+    setActiveHash(href);
+  };
 
   return (
     <>
@@ -78,8 +113,13 @@ export const DashboardLayout = () => {
           </div>
 
           <div className="sidebar-nav">
-            {navItems.map(({ href, label, icon: Icon }, index) => (
-              <a href={href} className={index === 0 ? "active" : ""} key={`${href}-${label}`}>
+            {navItems.map(({ href, label, icon: Icon }) => (
+              <a
+                href={href}
+                className={isItemActive(href) ? "active" : ""}
+                key={`${href}-${label}`}
+                onClick={() => handleNavClick(href)}
+              >
                 <Icon size={18} />
                 <span>{label}</span>
               </a>
@@ -88,7 +128,7 @@ export const DashboardLayout = () => {
         </aside>
 
         <section className="dashboard-content">
-          <Outlet />
+          <Outlet context={{ activeHash, setActiveHash }} />
         </section>
       </main>
     </>

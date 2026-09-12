@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { Bell, CalendarCheck, CreditCard, FileText, Pill, RefreshCw } from "lucide-react";
+import { Bell, CalendarCheck, CreditCard, Download, FileText, Pill, RefreshCw } from "lucide-react";
 import { patientApi } from "../../services/patientApi.js";
+import { downloadInvoicePDF } from "../../utils/invoicePrintTemplate.js";
 
 const formatDate = (value) => {
   if (!value) return "Not set";
@@ -86,6 +87,10 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
     } finally {
       setBusyId("");
     }
+  };
+
+  const printInvoice = (invoice) => {
+    downloadInvoicePDF(invoice);
   };
 
   const markNotificationRead = async (id) => {
@@ -178,11 +183,17 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
           <strong>Rs. {Number(item.outstandingAmount || 0).toFixed(2)} outstanding</strong>
           <span>{item.status}</span>
           <small>Total: Rs. {Number(item.subtotal || 0).toFixed(2)}</small>
-          {item.status === "paid" ? (
-            <button className="table-link-button" type="button" onClick={() => downloadReceipt(item)} disabled={busyId === item._id}>
-              {busyId === item._id ? "Downloading..." : "Download receipt"}
+          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "4px" }}>
+            <button
+              className="table-link-button"
+              type="button"
+              onClick={() => printInvoice(item)}
+              title="Download as PDF"
+            >
+              <Download size={12} style={{ display: "inline", marginRight: "3px" }} />
+              {item.status === "paid" ? "Download Receipt" : "Download Invoice"}
             </button>
-          ) : null}
+          </div>
         </>
       )
     }

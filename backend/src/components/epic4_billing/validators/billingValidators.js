@@ -9,7 +9,7 @@ export const invoiceSchema = z.object({
     items: z.array(z.object({
       description: z.string().trim().min(2, "Description is required").max(120),
       quantity: quantitySchema(),
-      unitPrice: moneySchema("Unit price")
+      unitPrice: z.coerce.number({ invalid_type_error: "Unit price is required" }).min(0.01, "Unit price must be greater than 0").max(10000000)
     })).min(1)
   })
 });
