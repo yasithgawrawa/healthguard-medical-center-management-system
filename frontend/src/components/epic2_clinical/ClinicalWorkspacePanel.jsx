@@ -710,30 +710,6 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                 Consult
               </button>
             )}
-
-            <button
-              type="button"
-              style={{
-                height: "30px",
-                padding: "0 10px",
-                fontSize: "0.8rem",
-                fontWeight: 500,
-                color: "#475569",
-                background: "#ffffff",
-                border: "1px solid #cbd5e1",
-                borderRadius: "6px",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "5px",
-                whiteSpace: "nowrap"
-              }}
-              onClick={() => openModal("lab-request", item)}
-              title="Request Laboratory Investigation"
-            >
-              <FlaskConical size={12} color="#64748b" />
-              Lab
-            </button>
           </div>
         );
       }
