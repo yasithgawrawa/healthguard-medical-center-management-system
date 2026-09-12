@@ -185,6 +185,37 @@ export const downloadPayslip = async (req, res) => {
   return res.send(lines.join("\n"));
 };
 
+export const consolidatePatientInvoices = async (req, res) => {
+  const { patientId } = req.body;
+  if (!patientId) throw new AppError("Patient ID is required", 400);
+
+  const unpaidInvoices = await Invoice.find({
+    patientId,
+    status: { $in: ["issued", "partially_paid", "draft"] }
+  }).sort({ createdAt: 1 });
+
+  if (unpaidInvoices.length <= 1) {
+    return successResponse(res, "Single bill already unified", unpaidInvoices[0] || null);
+  }
+
+  const primaryInvoice = unpaidInvoices[0];
+  const otherInvoices = unpaidInvoices.slice(1);
+
+  for (const other of otherInvoices) {
+    primaryInvoice.items.push(...other.items);
+    primaryInvoice.paidAmount += other.paidAmount || 0;
+    other.status = "cancelled";
+    await other.save();
+
+    await PharmacySale.updateMany({ invoiceId: other._id }, { invoiceId: primaryInvoice._id });
+  }
+
+  recalculateInvoice(primaryInvoice);
+  await primaryInvoice.save();
+
+  return successResponse(res, `Consolidated into one unified visit bill for patient`, primaryInvoice);
+};
+
 export const revenueSummary = async (req, res) => {
   const invoices = await Invoice.find();
   const payments = await Payment.find({ status: { $ne: "voided" } });

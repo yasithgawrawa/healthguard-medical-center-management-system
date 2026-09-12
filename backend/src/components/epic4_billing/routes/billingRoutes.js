@@ -5,6 +5,7 @@ import { authenticate, authorizeRoles } from "../../../shared/middleware/auth.js
 import { validateRequest } from "../../../shared/middleware/validateRequest.js";
 import { idParamSchema } from "../../../shared/validators/commonSchemas.js";
 import {
+  consolidatePatientInvoices,
   createInvoice,
   createPayroll,
   downloadInvoiceReceipt,
@@ -23,6 +24,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get("/summary", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN), asyncHandler(revenueSummary));
+router.post("/invoices/consolidate", authorizeRoles(ROLES.CASHIER, ROLES.ADMIN), asyncHandler(consolidatePatientInvoices));
 router.post("/invoices", authorizeRoles(ROLES.CASHIER, ROLES.ADMIN), validateRequest(invoiceSchema), asyncHandler(createInvoice));
 router.get("/invoices", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.PATIENT, ROLES.ADMIN), asyncHandler(listInvoices));
 router.get("/invoices/:id/receipt", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.PATIENT, ROLES.ADMIN), validateRequest(idParamSchema), asyncHandler(downloadInvoiceReceipt));

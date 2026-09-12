@@ -310,17 +310,40 @@ export const inventoryService = {
         }));
 
         const isPaid = paymentStatus === "paid";
-        const newInvoice = await Invoice.create({
-          patientId,
-          appointmentId: latestAppt?._id || undefined,
-          items: invoiceItems,
-          subtotal: grandTotal,
-          paidAmount: isPaid ? grandTotal : 0,
-          outstandingAmount: isPaid ? 0 : grandTotal,
-          status: isPaid ? "paid" : "issued",
-          createdBy: soldById
-        });
-        createdInvoiceId = newInvoice._id;
+
+        // Check if there is an active open visit invoice for this patient / appointment
+        let existingInvoice = null;
+        if (latestAppt?._id) {
+          existingInvoice = await Invoice.findOne({ appointmentId: latestAppt._id, status: { $in: ["issued", "partially_paid", "draft"] } });
+        }
+        if (!existingInvoice) {
+          existingInvoice = await Invoice.findOne({ patientId, status: { $in: ["issued", "partially_paid", "draft"] } }).sort({ createdAt: -1 });
+        }
+
+        if (existingInvoice && !isPaid) {
+          // Consolidate medicines into the patient's existing visit bill so they can pay all at once
+          existingInvoice.items.push(...invoiceItems);
+          existingInvoice.subtotal = existingInvoice.items.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
+          existingInvoice.outstandingAmount = Math.max(0, existingInvoice.subtotal - (existingInvoice.paidAmount || 0));
+          if (!existingInvoice.appointmentId && latestAppt?._id) {
+            existingInvoice.appointmentId = latestAppt._id;
+          }
+          await existingInvoice.save();
+          createdInvoiceId = existingInvoice._id;
+        } else {
+          // Otherwise create a new invoice
+          const newInvoice = await Invoice.create({
+            patientId,
+            appointmentId: latestAppt?._id || undefined,
+            items: invoiceItems,
+            subtotal: grandTotal,
+            paidAmount: isPaid ? grandTotal : 0,
+            outstandingAmount: isPaid ? 0 : grandTotal,
+            status: isPaid ? "paid" : "issued",
+            createdBy: soldById
+          });
+          createdInvoiceId = newInvoice._id;
+        }
       } catch (invoiceErr) {
         // Fallback: don't abort dispensing if invoice generation encounters a transient error
       }

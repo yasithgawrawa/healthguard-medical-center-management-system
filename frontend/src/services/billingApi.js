@@ -14,5 +14,6 @@ export const billingApi = {
   createPayroll: async (payload) => unwrap(await apiClient.post("/e4/billing/payroll", payload)),
   updatePayrollStatus: async (id, status) => unwrap(await apiClient.patch(`/e4/billing/payroll/${id}/status`, { status })),
   downloadReceipt: async (id) => download(`/e4/billing/invoices/${id}/receipt`),
-  downloadPayslip: async (id) => download(`/e4/billing/payroll/${id}/payslip`)
+  downloadPayslip: async (id) => download(`/e4/billing/payroll/${id}/payslip`),
+  consolidateInvoices: async (patientId) => unwrap(await apiClient.post("/e4/billing/invoices/consolidate", { patientId }))
 };

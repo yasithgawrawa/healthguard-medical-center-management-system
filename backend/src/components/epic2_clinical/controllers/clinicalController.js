@@ -8,6 +8,7 @@ import { ROLES } from "../../../shared/constants/roles.js";
 import { successResponse } from "../../../shared/utils/apiResponse.js";
 import { AppError } from "../../../shared/utils/AppError.js";
 import { User } from "../../epic1_user_staff/models/User.js";
+import { Invoice } from "../../epic4_billing/models/Invoice.js";
 
 export const createAppointment = async (req, res) => {
   const payload = {
@@ -25,6 +26,30 @@ export const createAppointment = async (req, res) => {
   }
 
   const appointment = await Appointment.create(payload);
+
+  // Automatically initialize patient visit invoice with doctor consultation fee
+  try {
+    const docName = `Dr. ${doctor.firstName} ${doctor.lastName}`;
+    const consultationFee = 1500;
+    await Invoice.create({
+      patientId: appointment.patientId,
+      appointmentId: appointment._id,
+      items: [{
+        description: `Doctor Consultation & Channelling (${docName} - ${appointment.slotLabel || "Standard"})`,
+        quantity: 1,
+        unitPrice: consultationFee,
+        lineTotal: consultationFee
+      }],
+      subtotal: consultationFee,
+      paidAmount: 0,
+      outstandingAmount: consultationFee,
+      status: "issued",
+      createdBy: req.user._id
+    });
+  } catch (invErr) {
+    // Non-blocking fallback
+  }
+
   return successResponse(res, "Appointment booked successfully", appointment, 201);
 };
 
@@ -191,6 +216,41 @@ export const createLabRequest = async (req, res) => {
     relatedId: labRequest._id,
     createdBy: req.user._id
   });
+
+  // Append lab investigation fee to the patient's unified visit invoice
+  try {
+    const testFee = req.body.priority === "urgent" ? 1200 : 750;
+    let visitInvoice = await Invoice.findOne({ appointmentId: appointment._id, status: { $ne: "cancelled" } });
+    if (!visitInvoice) {
+      visitInvoice = await Invoice.findOne({ patientId: appointment.patientId, status: { $in: ["issued", "partially_paid", "draft"] } }).sort({ createdAt: -1 });
+    }
+    const labItem = {
+      description: `Lab Investigation: ${labRequest.testName} (${labRequest.priority || "routine"})`,
+      quantity: 1,
+      unitPrice: testFee,
+      lineTotal: testFee
+    };
+    if (visitInvoice && visitInvoice.status !== "paid") {
+      visitInvoice.items.push(labItem);
+      visitInvoice.subtotal = visitInvoice.items.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
+      visitInvoice.outstandingAmount = Math.max(0, visitInvoice.subtotal - (visitInvoice.paidAmount || 0));
+      await visitInvoice.save();
+    } else {
+      await Invoice.create({
+        patientId: appointment.patientId,
+        appointmentId: appointment._id,
+        items: [labItem],
+        subtotal: testFee,
+        paidAmount: 0,
+        outstandingAmount: testFee,
+        status: "issued",
+        createdBy: req.user._id
+      });
+    }
+  } catch (invErr) {
+    // Non-blocking fallback
+  }
+
   return successResponse(res, "Lab request created successfully", labRequest, 201);
 };
 

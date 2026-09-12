@@ -209,6 +209,28 @@ export const BillingWorkspacePanel = () => {
     downloadPayslipPDF(item);
   };
 
+  const patientUnpaidCounts = useMemo(() => {
+    const counts = new Map();
+    invoices.filter((i) => i.status !== "paid" && i.patientId?._id).forEach((inv) => {
+      const pid = inv.patientId._id.toString();
+      counts.set(pid, (counts.get(pid) || 0) + 1);
+    });
+    return counts;
+  }, [invoices]);
+
+  const consolidateBills = async (patientId) => {
+    setBusy(true);
+    try {
+      const res = await billingApi.consolidateInvoices(patientId);
+      setToast({ type: "success", message: res?.message || "Patient visit charges consolidated into one unified bill" });
+      await load();
+    } catch (error) {
+      setToast({ type: "error", message: error.response?.data?.message || "Unable to consolidate bills" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <section className="e1-panel" id="billing-payments">
       <Toast toast={toast} onClose={() => setToast(null)} />
@@ -265,19 +287,38 @@ export const BillingWorkspacePanel = () => {
               { key: "patient", header: "Patient", render: (item) => name(item.patientId) },
               {
                 key: "details",
-                header: "Service / Order Details",
+                header: "Visit Services & Charges",
                 render: (item) => {
-                  const isPharmacy = item.items?.some((i) => i.description?.toLowerCase().includes("medicine"));
+                  const hasDoctor = item.items?.some((i) => i.description?.toLowerCase().includes("consultation") || i.description?.toLowerCase().includes("channelling"));
+                  const hasLab = item.items?.some((i) => i.description?.toLowerCase().includes("lab") || i.description?.toLowerCase().includes("investigation"));
+                  const hasMed = item.items?.some((i) => i.description?.toLowerCase().includes("medicine") || i.description?.toLowerCase().includes("dispensed"));
                   return (
-                    <div>
-                      <span style={{ fontSize: "0.84rem", fontWeight: 600, color: isPharmacy ? "#0284c7" : "var(--brand-900)" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                        {hasDoctor ? (
+                          <span style={{ fontSize: "0.72rem", background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", padding: "1px 6px", borderRadius: "4px", fontWeight: 600 }}>
+                            👨‍⚕️ Consultation
+                          </span>
+                        ) : null}
+                        {hasLab ? (
+                          <span style={{ fontSize: "0.72rem", background: "#eff6ff", color: "#1e40af", border: "1px solid #bfdbfe", padding: "1px 6px", borderRadius: "4px", fontWeight: 600 }}>
+                            🧪 Lab
+                          </span>
+                        ) : null}
+                        {hasMed ? (
+                          <span style={{ fontSize: "0.72rem", background: "#f0f9ff", color: "#0369a1", border: "1px solid #bae6fd", padding: "1px 6px", borderRadius: "4px", fontWeight: 600 }}>
+                            💊 Medicines
+                          </span>
+                        ) : null}
+                      </div>
+                      <div style={{ fontSize: "0.82rem", color: "#334155" }}>
                         {item.items?.[0]?.description || "Medical Service"}
-                      </span>
-                      {item.items?.length > 1 ? (
-                        <span style={{ fontSize: "0.75rem", color: "var(--muted)", marginLeft: "4px" }}>
-                          (+{item.items.length - 1} more items)
-                        </span>
-                      ) : null}
+                        {item.items?.length > 1 ? (
+                          <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 600, marginLeft: "4px" }}>
+                            (+{item.items.length - 1} more items)
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                   );
                 }
@@ -289,33 +330,49 @@ export const BillingWorkspacePanel = () => {
               {
                 key: "actions",
                 header: "Actions",
-                render: (item) => (
-                  <div className="inline-actions">
-                    {isCashier && item.outstandingAmount > 0 ? (
+                render: (item) => {
+                  const pid = item.patientId?._id ? item.patientId._id.toString() : "";
+                  const canMerge = isCashier && pid && (patientUnpaidCounts.get(pid) || 0) > 1 && item.status !== "paid";
+                  return (
+                    <div className="inline-actions" style={{ flexWrap: "wrap", gap: "6px" }}>
+                      {canMerge ? (
+                        <button
+                          className="button-secondary"
+                          style={{ padding: "3px 8px", fontSize: "0.76rem" }}
+                          type="button"
+                          onClick={() => consolidateBills(item.patientId._id)}
+                          title="Merge all pending bills for this patient into one unified visit bill"
+                        >
+                          🔗 Merge Bills
+                        </button>
+                      ) : null}
+                      {isCashier && item.outstandingAmount > 0 ? (
+                        <button
+                          className="button-primary"
+                          style={{ padding: "4px 10px", fontSize: "0.82rem" }}
+                          type="button"
+                          onClick={() => {
+                            reset({ amount: item.outstandingAmount || "", method: "cash" });
+                            setModal({ type: "payment", record: item });
+                          }}
+                          title="Collect total visit charges at once"
+                        >
+                          <CreditCard size={13} style={{ display: "inline", marginRight: "3px" }} />
+                          Collect
+                        </button>
+                      ) : null}
                       <button
-                        className="button-primary"
-                        style={{ padding: "4px 10px", fontSize: "0.82rem" }}
+                        className="table-link-button"
                         type="button"
-                        onClick={() => {
-                          reset({ amount: item.outstandingAmount || "", method: "cash" });
-                          setModal({ type: "payment", record: item });
-                        }}
+                        onClick={() => printInvoice(item)}
+                        title={item.status === "paid" ? "Download Official Payment Receipt" : "Download Invoice PDF"}
                       >
-                        <CreditCard size={13} style={{ display: "inline", marginRight: "3px" }} />
-                        Collect
+                        <Download size={13} style={{ display: "inline", marginRight: "3px" }} />
+                        {item.status === "paid" ? "Receipt" : "Invoice"}
                       </button>
-                    ) : null}
-                    <button
-                      className="table-link-button"
-                      type="button"
-                      onClick={() => printInvoice(item)}
-                      title={item.status === "paid" ? "Download Official Payment Receipt" : "Download Invoice PDF"}
-                    >
-                      <Download size={13} style={{ display: "inline", marginRight: "3px" }} />
-                      {item.status === "paid" ? "Receipt" : "Invoice"}
-                    </button>
-                  </div>
-                )
+                    </div>
+                  );
+                }
               }
             ]}
           />
@@ -395,7 +452,37 @@ export const BillingWorkspacePanel = () => {
               <FormInput label="Unit Price (Rs.)" placeholder="1500.00" type="number" min="0" step="0.01" error={errors.unitPrice?.message} {...register("unitPrice")} />
             </div>
           ) : null}
-          {modal.type === "payment" ? <div className="form-grid"><FormInput label="Amount" placeholder="1500.00" type="number" min="0.01" step="0.01" error={errors.amount?.message} {...register("amount")} /><FormSelect label="Method" error={errors.method?.message} {...register("method")}><option value="cash">Cash</option><option value="card">Card</option><option value="bank_transfer">Bank Transfer</option></FormSelect></div> : null}
+          {modal.type === "payment" ? (
+            <>
+              {modal.record ? (
+                <div style={{ background: "#f8fafc", padding: "12px 14px", borderRadius: "8px", border: "1px solid #e2e8f0", marginBottom: "16px" }}>
+                  <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#1e3a8a", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                    🏥 Patient Visit Charges Breakdown (To be paid at once):
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    {modal.record.items?.map((item, idx) => (
+                      <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", color: "#334155" }}>
+                        <span>• {item.description} (x{item.quantity})</span>
+                        <strong>{money(item.lineTotal)}</strong>
+                      </div>
+                    ))}
+                    <div style={{ borderTop: "1px dashed #cbd5e1", marginTop: "4px", paddingTop: "8px", display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: "0.92rem", color: "#0f172a" }}>
+                      <span>Consolidated Total Due:</span>
+                      <span style={{ color: "#16a34a" }}>{money(modal.record.outstandingAmount)}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              <div className="form-grid">
+                <FormInput label="Amount" placeholder="1500.00" type="number" min="0.01" step="0.01" error={errors.amount?.message} {...register("amount")} />
+                <FormSelect label="Method" error={errors.method?.message} {...register("method")}>
+                  <option value="cash">Cash</option>
+                  <option value="card">Card</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                </FormSelect>
+              </div>
+            </>
+          ) : null}
           {modal.type === "payroll" ? (
             <>
               <div className="form-grid">
