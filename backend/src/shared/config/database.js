@@ -14,6 +14,7 @@ export const connectDatabase = async () => {
 
   try {
     cachedConnection = await mongoose.connect(env.MONGODB_URI, {
+      dbName: "healthguard",
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 25000,
       socketTimeoutMS: 45000,
