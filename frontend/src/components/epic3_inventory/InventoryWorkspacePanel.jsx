@@ -38,6 +38,7 @@ import {
   stripNonPhone
 } from "../../utils/validationSchemas.js";
 import { DataTable } from "../shared/DataTable.jsx";
+import { FilterSelect } from "../shared/FilterSelect.jsx";
 import { Modal } from "../shared/Modal.jsx";
 import { SearchBar } from "../shared/SearchBar.jsx";
 import { StatusBadge } from "../shared/StatusBadge.jsx";
@@ -541,26 +542,22 @@ export const InventoryWorkspacePanel = () => {
             <div style={{ flex: 1, minWidth: "220px" }}>
               <SearchBar value={search} onChange={setSearch} placeholder="Search medicines by name, unit, category..." />
             </div>
-            <select
+            <FilterSelect
+              label="Category"
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--line)" }}
-            >
-              <option value="">All Categories</option>
-              {MEDICINE_CATEGORIES.map((cat) => (
-                <option value={cat} key={cat}>{cat}</option>
-              ))}
-            </select>
-            <select
+              onChange={setCategoryFilter}
+              options={MEDICINE_CATEGORIES}
+            />
+            <FilterSelect
+              label="Stock Level"
               value={stockStatusFilter}
-              onChange={(e) => setStockStatusFilter(e.target.value)}
-              style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--line)" }}
-            >
-              <option value="">All Stock Levels</option>
-              <option value="in_stock">In Stock</option>
-              <option value="low_stock">Low Stock</option>
-              <option value="out_of_stock">Out of Stock</option>
-            </select>
+              onChange={setStockStatusFilter}
+              options={[
+                { value: "in_stock", label: "In Stock" },
+                { value: "low_stock", label: "Low Stock" },
+                { value: "out_of_stock", label: "Out of Stock" }
+              ]}
+            />
           </div>
 
           <DataTable
@@ -1003,9 +1000,11 @@ export const InventoryWorkspacePanel = () => {
       <Modal
         open={modal.type === "medicine"}
         title={modal.record ? "Update Medicine Record" : "Add New Medicine"}
+        subtitle={modal.record ? "Modify pharmaceutical specifications, pricing, and stock thresholds." : "Register a new medicine item in the dispensary catalog."}
         onClose={() => setModal({ type: null, record: null })}
       >
         <form onSubmit={handleSubmit(submitStandard)}>
+          <div className="form-section-title" style={{ marginTop: 0 }}>Medicine Specifications</div>
           <div className="form-grid">
             <FormInput label="Medicine Name" placeholder="e.g. Paracetamol 500mg" error={errors.name?.message} {...register("name")} />
             <FormSelect label="Category" error={errors.category?.message} {...register("category")}>
@@ -1015,13 +1014,18 @@ export const InventoryWorkspacePanel = () => {
               ))}
             </FormSelect>
             <FormInput label="Unit of Measurement" placeholder="tablet, capsule, bottle, syrup" error={errors.unit?.message} {...register("unit")} />
-            <FormInput label="Selling Price (Rs.)" placeholder="15.00" type="number" min="0" step="0.01" error={errors.price?.message} {...register("price")} />
-            <FormInput label="Reorder Threshold" placeholder="100" type="number" min="0" step="1" error={errors.reorderLevel?.message} {...register("reorderLevel")} />
             <FormSelect label="Status" error={errors.status?.message} {...register("status")}>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </FormSelect>
           </div>
+
+          <div className="form-section-title">Pricing & Inventory Controls</div>
+          <div className="form-grid">
+            <FormInput label="Selling Price (Rs.)" placeholder="15.00" type="number" min="0" step="0.01" error={errors.price?.message} {...register("price")} />
+            <FormInput label="Reorder Threshold" placeholder="100" type="number" min="0" step="1" error={errors.reorderLevel?.message} {...register("reorderLevel")} />
+          </div>
+
           <div className="modal-actions">
             <button className="button-secondary" type="button" onClick={() => setModal({ type: null, record: null })} disabled={busy}>Cancel</button>
             <button className="button-primary" type="submit" disabled={busy}>
@@ -1037,9 +1041,11 @@ export const InventoryWorkspacePanel = () => {
       <Modal
         open={modal.type === "batch"}
         title={modal.record ? "Adjust Stock / Update Batch" : "Receive New Medicine Batch"}
+        subtitle={modal.record ? "Update batch quantity, batch identifier, or expiration date." : "Record inbound medicine batch with tracking code and shelf life."}
         onClose={() => setModal({ type: null, record: null })}
       >
         <form onSubmit={handleSubmit(submitStandard)}>
+          <div className="form-section-title" style={{ marginTop: 0 }}>Batch Identification</div>
           <div className="form-grid">
             <FormSelect label="Medicine" error={errors.medicineId?.message} {...register("medicineId")}>
               <option value="">Select Medicine</option>
@@ -1048,11 +1054,16 @@ export const InventoryWorkspacePanel = () => {
               ))}
             </FormSelect>
             <FormInput label="Batch Number" placeholder="PARA-LK-001" sanitize={stripNonBatch} error={errors.batchNumber?.message} {...register("batchNumber")} />
+          </div>
+
+          <div className="form-section-title">Stock & Procurement</div>
+          <div className="form-grid">
             <FormInput label="Quantity in Stock" placeholder="100" type="number" min="0" step="1" error={errors.quantity?.message} {...register("quantity")} />
             <FormInput label="Purchase Price (Rs.)" placeholder="10.50" type="number" min="0" step="0.01" error={errors.purchasePrice?.message} {...register("purchasePrice")} />
             <FormInput label="Manufacture Date" type="date" error={errors.manufactureDate?.message} {...register("manufactureDate")} />
             <FormInput label="Expiry Date" type="date" error={errors.expiryDate?.message} {...register("expiryDate")} />
           </div>
+
           <div className="modal-actions">
             <button className="button-secondary" type="button" onClick={() => setModal({ type: null, record: null })} disabled={busy}>Cancel</button>
             <button className="button-primary" type="submit" disabled={busy}>
@@ -1068,19 +1079,24 @@ export const InventoryWorkspacePanel = () => {
       <Modal
         open={modal.type === "supplier"}
         title={modal.record ? "Update Supplier Information" : "Add Medicine Supplier"}
+        subtitle={modal.record ? "Update supplier contact information and active vendor status." : "Register an authorized pharmaceutical distributor for procurement."}
         onClose={() => setModal({ type: null, record: null })}
       >
         <form onSubmit={handleSubmit(submitStandard)}>
+          <div className="form-section-title" style={{ marginTop: 0 }}>Supplier Profile</div>
           <div className="form-grid">
             <FormInput label="Supplier / Company Name" placeholder="State Pharmaceuticals Corp" sanitize={stripDigits} error={errors.name?.message} {...register("name")} />
             <FormInput label="Phone Number" placeholder="+94 11 232 8262" inputMode="tel" sanitize={stripNonPhone} error={errors.phone?.message} {...register("phone")} />
             <FormInput label="Email Address (Optional)" placeholder="supplies@spc.lk" type="email" error={errors.email?.message} {...register("email")} />
-            <FormInput label="Office / Warehouse Address" placeholder="No. 75, Sir Baron Jayathilaka Mawatha, Colombo 01" error={errors.address?.message} {...register("address")} />
             <FormSelect label="Status" error={errors.status?.message} {...register("status")}>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </FormSelect>
           </div>
+          <div style={{ marginTop: "14px" }}>
+            <FormInput label="Office / Warehouse Address" placeholder="No. 75, Sir Baron Jayathilaka Mawatha, Colombo 01" error={errors.address?.message} {...register("address")} />
+          </div>
+
           <div className="modal-actions">
             <button className="button-secondary" type="button" onClick={() => setModal({ type: null, record: null })} disabled={busy}>Cancel</button>
             <button className="button-primary" type="submit" disabled={busy}>
@@ -1096,124 +1112,121 @@ export const InventoryWorkspacePanel = () => {
       <Modal
         open={modal.type === "purchase"}
         title="Record Medicine Purchase from Supplier"
+        subtitle="Log newly received stock deliveries from verified pharmaceutical suppliers."
         onClose={() => setModal({ type: null, record: null })}
       >
         <form onSubmit={handlePurchaseSubmit}>
+          <div className="form-section-title" style={{ marginTop: 0 }}>Vendor & Drug Selection</div>
           <div className="form-grid">
-            <div className="form-group">
-              <label>Select Supplier</label>
-              <select value={purchaseSupplierId} onChange={(e) => setPurchaseSupplierId(e.target.value)} required>
-                <option value="">Select Supplier</option>
-                {suppliers.filter((s) => s.status === "active").map((s) => (
-                  <option value={s._id} key={s._id}>{s.name} ({s.phone})</option>
-                ))}
-              </select>
-            </div>
+            <FormSelect
+              label="Supplier"
+              value={purchaseSupplierId}
+              onChange={(e) => setPurchaseSupplierId(e.target.value)}
+              required
+            >
+              <option value="">Select Supplier</option>
+              {suppliers.filter((s) => s.status === "active").map((s) => (
+                <option value={s._id} key={s._id}>{s.name} ({s.phone})</option>
+              ))}
+            </FormSelect>
 
-            <div className="form-group">
-              <label>Select Medicine</label>
-              <select
-                value={purchaseMedId}
-                onChange={(e) => {
-                  setPurchaseMedId(e.target.value);
-                  const m = medicines.find((x) => x._id === e.target.value);
-                  if (m) setPurchasePrice(Math.round(m.price * 0.7));
-                }}
-                required
-              >
-                <option value="">Select Medicine</option>
-                {medicines.filter((m) => m.status === "active").map((m) => (
-                  <option value={m._id} key={m._id}>{m.name} ({m.category})</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={purchaseIsNewBatch}
-                  onChange={(e) => setPurchaseIsNewBatch(e.target.checked)}
-                />
-                <strong>This is a NEW delivery batch (create new batch record)</strong>
-              </label>
-            </div>
-
-            {purchaseIsNewBatch ? (
-              <>
-                <div className="form-group">
-                  <label>New Batch Number</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. BATCH-2026-001"
-                    value={purchaseBatchNumber}
-                    onChange={(e) => setPurchaseBatchNumber(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Manufacture Date</label>
-                  <input
-                    type="date"
-                    value={purchaseMfgDate}
-                    onChange={(e) => setPurchaseMfgDate(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Expiry Date</label>
-                  <input
-                    type="date"
-                    value={purchaseExpDate}
-                    onChange={(e) => setPurchaseExpDate(e.target.value)}
-                    required
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="form-group">
-                <label>Select Existing Batch to Top Up</label>
-                <select value={purchaseBatchId} onChange={(e) => setPurchaseBatchId(e.target.value)} required>
-                  <option value="">Select Batch</option>
-                  {batches
-                    .filter((b) => (b.medicineId?._id || b.medicineId) === purchaseMedId)
-                    .map((b) => (
-                      <option value={b._id} key={b._id}>
-                        {b.batchNumber} (Current Stock: {b.quantity})
-                      </option>
-                    ))}
-                </select>
-              </div>
-            )}
-
-            <div className="form-group">
-              <label>Purchase Quantity</label>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={purchaseQty}
-                onChange={(e) => setPurchaseQty(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Unit Purchase Price (Rs.)</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={purchasePrice}
-                onChange={(e) => setPurchasePrice(e.target.value)}
-                required
-              />
-            </div>
+            <FormSelect
+              label="Medicine"
+              value={purchaseMedId}
+              onChange={(e) => {
+                setPurchaseMedId(e.target.value);
+                const m = medicines.find((x) => x._id === e.target.value);
+                if (m) setPurchasePrice(Math.round(m.price * 0.7));
+              }}
+              required
+            >
+              <option value="">Select Medicine</option>
+              {medicines.filter((m) => m.status === "active").map((m) => (
+                <option value={m._id} key={m._id}>{m.name} ({m.category})</option>
+              ))}
+            </FormSelect>
           </div>
 
-          <div style={{ marginTop: "16px", padding: "12px", background: "var(--bg-page)", borderRadius: "8px", display: "flex", justifyContent: "space-between" }}>
-            <span>Estimated Total Purchase Cost:</span>
-            <strong>{money(Number(purchaseQty || 0) * Number(purchasePrice || 0))}</strong>
+          <div style={{ margin: "16px 0 10px" }}>
+            <label className="checkbox-line">
+              <input
+                type="checkbox"
+                checked={purchaseIsNewBatch}
+                onChange={(e) => setPurchaseIsNewBatch(e.target.checked)}
+              />
+              <span>This is a NEW delivery batch (create new batch record)</span>
+            </label>
+          </div>
+
+          <div className="form-section-title">Batch & Stock Details</div>
+          <div className="form-grid">
+            {purchaseIsNewBatch ? (
+              <>
+                <FormInput
+                  label="New Batch Number"
+                  placeholder="e.g. BATCH-2026-001"
+                  value={purchaseBatchNumber}
+                  onChange={(e) => setPurchaseBatchNumber(e.target.value)}
+                  sanitize={stripNonBatch}
+                  required
+                />
+                <FormInput
+                  label="Manufacture Date"
+                  type="date"
+                  value={purchaseMfgDate}
+                  onChange={(e) => setPurchaseMfgDate(e.target.value)}
+                  required
+                />
+                <FormInput
+                  label="Expiry Date"
+                  type="date"
+                  value={purchaseExpDate}
+                  onChange={(e) => setPurchaseExpDate(e.target.value)}
+                  required
+                />
+              </>
+            ) : (
+              <FormSelect
+                label="Existing Batch to Top Up"
+                value={purchaseBatchId}
+                onChange={(e) => setPurchaseBatchId(e.target.value)}
+                required
+              >
+                <option value="">Select Batch</option>
+                {batches
+                  .filter((b) => (b.medicineId?._id || b.medicineId) === purchaseMedId)
+                  .map((b) => (
+                    <option value={b._id} key={b._id}>
+                      {b.batchNumber} (Current Stock: {b.quantity})
+                    </option>
+                  ))}
+              </FormSelect>
+            )}
+
+            <FormInput
+              label="Purchase Quantity"
+              type="number"
+              min="1"
+              step="1"
+              value={purchaseQty}
+              onChange={(e) => setPurchaseQty(e.target.value)}
+              required
+            />
+
+            <FormInput
+              label="Unit Purchase Cost (Rs.)"
+              type="number"
+              min="0"
+              step="0.01"
+              value={purchasePrice}
+              onChange={(e) => setPurchasePrice(e.target.value)}
+              required
+            />
+          </div>
+
+          <div style={{ marginTop: "18px", padding: "14px 18px", background: "var(--brand-50)", border: "1.5px solid var(--brand-200)", borderRadius: "var(--radius-md)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontWeight: 700, color: "var(--brand-900)", fontSize: "0.92rem" }}>Estimated Total Purchase Cost:</span>
+            <strong style={{ fontSize: "1.25rem", color: "var(--brand-800)" }}>{money(Number(purchaseQty || 0) * Number(purchasePrice || 0))}</strong>
           </div>
 
           <div className="modal-actions">
@@ -1231,13 +1244,14 @@ export const InventoryWorkspacePanel = () => {
       <Modal
         open={modal.type === "pos"}
         title="Pharmacy Point of Sale & Dispensing Counter"
+        subtitle="Dispense medicines to walk-in or registered patients and link doctor prescriptions."
         onClose={() => setModal({ type: null, record: null })}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
           {/* Patient & Prescription Link Section */}
-          <div style={{ background: "var(--brand-50)", padding: "14px", borderRadius: "10px", border: "1px solid var(--brand-200)" }}>
-            <div style={{ display: "flex", gap: "16px", marginBottom: "12px" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontWeight: 600 }}>
+          <div className="pos-card pos-card-highlight">
+            <div className="pos-type-selector">
+              <label className={`pos-type-pill ${posPatientType === "walk_in" ? "active" : ""}`}>
                 <input
                   type="radio"
                   name="posPatientType"
@@ -1249,9 +1263,10 @@ export const InventoryWorkspacePanel = () => {
                     setPosPrescriptionId("");
                   }}
                 />
-                Walk-in Patient
+                <UserCheck size={16} />
+                <span>Walk-in Patient</span>
               </label>
-              <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontWeight: 600 }}>
+              <label className={`pos-type-pill ${posPatientType === "registered" ? "active" : ""}`}>
                 <input
                   type="radio"
                   name="posPatientType"
@@ -1259,153 +1274,166 @@ export const InventoryWorkspacePanel = () => {
                   checked={posPatientType === "registered"}
                   onChange={() => setPosPatientType("registered")}
                 />
-                Registered Patient
+                <Users size={16} />
+                <span>Registered Patient</span>
               </label>
             </div>
 
             {posPatientType === "registered" ? (
               <div className="form-grid">
-                <div className="form-group">
-                  <label>Select Patient</label>
-                  <select
-                    value={posPatientId}
-                    onChange={(e) => {
-                      setPosPatientId(e.target.value);
-                      // check if patient has active prescription
-                      const patientRx = prescriptions.find((r) => (r.patientId?._id || r.patientId) === e.target.value);
-                      if (patientRx) setPosPrescriptionId(patientRx._id);
-                    }}
-                  >
-                    <option value="">Choose Patient</option>
-                    {patients.map((p) => (
-                      <option value={p._id} key={p._id}>
-                        {p.firstName} {p.lastName} ({p.phone || p.email})
+                <FormSelect
+                  label="Select Patient"
+                  value={posPatientId}
+                  onChange={(e) => {
+                    setPosPatientId(e.target.value);
+                    const patientRx = prescriptions.find((r) => (r.patientId?._id || r.patientId) === e.target.value);
+                    if (patientRx) setPosPrescriptionId(patientRx._id);
+                  }}
+                >
+                  <option value="">Choose Patient</option>
+                  {patients.map((p) => (
+                    <option value={p._id} key={p._id}>
+                      {p.firstName} {p.lastName} ({p.phone || p.email})
+                    </option>
+                  ))}
+                </FormSelect>
+
+                <FormSelect
+                  label="Doctor Prescription (Optional E2 Link)"
+                  value={posPrescriptionId}
+                  onChange={(e) => {
+                    setPosPrescriptionId(e.target.value);
+                    const selectedRx = prescriptions.find((r) => r._id === e.target.value);
+                    if (selectedRx && selectedRx.patientId?._id) {
+                      setPosPatientId(selectedRx.patientId._id);
+                    }
+                  }}
+                >
+                  <option value="">No Prescription / Direct Sale</option>
+                  {prescriptions
+                    .filter((r) => !posPatientId || (r.patientId?._id || r.patientId) === posPatientId)
+                    .map((r) => (
+                      <option value={r._id} key={r._id}>
+                        Dr. {r.doctorId?.lastName || "Doctor"} - {r.items?.map((i) => i.medicineName).join(", ")}
                       </option>
                     ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Doctor Prescription (Optional E2 Link)</label>
-                  <select
-                    value={posPrescriptionId}
-                    onChange={(e) => {
-                      setPosPrescriptionId(e.target.value);
-                      const selectedRx = prescriptions.find((r) => r._id === e.target.value);
-                      if (selectedRx && selectedRx.patientId?._id) {
-                        setPosPatientId(selectedRx.patientId._id);
-                      }
-                    }}
-                  >
-                    <option value="">No Prescription / Direct Sale</option>
-                    {prescriptions
-                      .filter((r) => !posPatientId || (r.patientId?._id || r.patientId) === posPatientId)
-                      .map((r) => (
-                        <option value={r._id} key={r._id}>
-                          Dr. {r.doctorId?.lastName || "Doctor"} - {r.items?.map((i) => i.medicineName).join(", ")}
-                        </option>
-                      ))}
-                  </select>
-                </div>
+                </FormSelect>
               </div>
             ) : null}
 
             {/* Prescribed Items helper banner */}
             {posPrescriptionId ? (
-              <div style={{ marginTop: "8px", fontSize: "13px", color: "var(--brand-800)", background: "#fff", padding: "8px 12px", borderRadius: "6px" }}>
-                <strong>Prescribed Drugs:</strong>{" "}
-                {prescriptions.find((r) => r._id === posPrescriptionId)?.items?.map((i) => `${i.medicineName} (${i.dosage} - ${i.frequency})`).join("; ")}
+              <div className="pos-rx-banner">
+                <strong>Linked Doctor Prescription:</strong>
+                <div className="pos-rx-pills">
+                  {prescriptions.find((r) => r._id === posPrescriptionId)?.items?.map((i, idx) => (
+                    <span className="pos-rx-tag" key={idx}>
+                      {i.medicineName} &bull; {i.dosage} &bull; {i.frequency}
+                    </span>
+                  ))}
+                </div>
               </div>
             ) : null}
           </div>
 
-          {/* Add Medicine to Cart Row */}
-          <div style={{ border: "1px solid var(--line)", padding: "14px", borderRadius: "10px", background: "#fff" }}>
-            <h4 style={{ margin: "0 0 10px 0" }}>Add Items to Sale</h4>
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 2fr 1fr auto", gap: "10px", alignItems: "end" }}>
-              <div className="form-group" style={{ margin: 0 }}>
-                <label>Medicine</label>
-                <select
-                  value={posMedId}
-                  onChange={(e) => {
-                    setPosMedId(e.target.value);
-                    const avail = batches.filter((b) => (b.medicineId?._id || b.medicineId) === e.target.value && b.quantity > 0 && b.expiryStatus !== "expired");
-                    setPosBatchId(avail[0]?._id || "");
-                  }}
-                >
-                  <option value="">Select Medicine</option>
-                  {medicines.filter((m) => m.status === "active").map((m) => (
-                    <option value={m._id} key={m._id}>
-                      {m.name} - {money(m.price)}
+          {/* Add Medicine to Cart Section */}
+          <div className="pos-card">
+            <div className="form-section-title" style={{ marginTop: 0 }}>Add Medicine To Cart</div>
+            <div className="pos-add-grid">
+              <FormSelect
+                label="Medicine"
+                value={posMedId}
+                onChange={(e) => {
+                  setPosMedId(e.target.value);
+                  const avail = batches.filter((b) => (b.medicineId?._id || b.medicineId) === e.target.value && b.quantity > 0 && b.expiryStatus !== "expired");
+                  setPosBatchId(avail[0]?._id || "");
+                }}
+              >
+                <option value="">Select Medicine</option>
+                {medicines.filter((m) => m.status === "active").map((m) => (
+                  <option value={m._id} key={m._id}>
+                    {m.name} ({m.category}) - {money(m.price)}
+                  </option>
+                ))}
+              </FormSelect>
+
+              <FormSelect
+                label="Available Batch"
+                value={posBatchId}
+                onChange={(e) => setPosBatchId(e.target.value)}
+              >
+                <option value="">Select Batch</option>
+                {batches
+                  .filter((b) => (b.medicineId?._id || b.medicineId) === posMedId && b.quantity > 0 && b.expiryStatus !== "expired")
+                  .map((b) => (
+                    <option value={b._id} key={b._id}>
+                      {b.batchNumber} (Stock: {b.quantity} {b.medicineId?.unit || "units"}, Exp: {dateOnly(b.expiryDate)})
                     </option>
                   ))}
-                </select>
-              </div>
+              </FormSelect>
 
-              <div className="form-group" style={{ margin: 0 }}>
-                <label>Available Batch</label>
-                <select value={posBatchId} onChange={(e) => setPosBatchId(e.target.value)}>
-                  <option value="">Select Batch</option>
-                  {batches
-                    .filter((b) => (b.medicineId?._id || b.medicineId) === posMedId && b.quantity > 0 && b.expiryStatus !== "expired")
-                    .map((b) => (
-                      <option value={b._id} key={b._id}>
-                        {b.batchNumber} (Stock: {b.quantity}, Exp: {dateOnly(b.expiryDate)})
-                      </option>
-                    ))}
-                </select>
-              </div>
+              <FormInput
+                label="Qty"
+                type="number"
+                min="1"
+                step="1"
+                value={posQty}
+                onChange={(e) => setPosQty(e.target.value)}
+              />
 
-              <div className="form-group" style={{ margin: 0 }}>
-                <label>Qty</label>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={posQty}
-                  onChange={(e) => setPosQty(e.target.value)}
-                />
-              </div>
-
-              <button type="button" onClick={handleAddToCart} className="button-primary" style={{ height: "38px" }}>
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                className="button-primary"
+                style={{ height: "46px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+              >
                 <Plus size={16} /> Add
               </button>
             </div>
           </div>
 
           {/* Cart Table */}
-          <div style={{ background: "#fff", borderRadius: "10px", border: "1px solid var(--line)", overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+          <div className="pos-cart-wrap">
+            <table className="data-table" style={{ width: "100%", margin: 0 }}>
               <thead>
-                <tr style={{ background: "var(--bg-page)", textAlign: "left", borderBottom: "1px solid var(--line)" }}>
-                  <th style={{ padding: "8px 12px" }}>Item Description</th>
-                  <th style={{ padding: "8px 12px" }}>Batch</th>
-                  <th style={{ padding: "8px 12px" }}>Qty</th>
-                  <th style={{ padding: "8px 12px" }}>Unit Price</th>
-                  <th style={{ padding: "8px 12px" }}>Line Total</th>
-                  <th style={{ padding: "8px 12px" }}></th>
+                <tr>
+                  <th>Medicine Item</th>
+                  <th>Batch Number</th>
+                  <th style={{ textAlign: "center" }}>Qty Dispensed</th>
+                  <th style={{ textAlign: "right" }}>Unit Price</th>
+                  <th style={{ textAlign: "right" }}>Line Total</th>
+                  <th style={{ width: "40px" }}></th>
                 </tr>
               </thead>
               <tbody>
                 {posCart.length === 0 ? (
                   <tr>
-                    <td colSpan="6" style={{ textAlign: "center", padding: "18px", color: "var(--muted)", fontStyle: "italic" }}>
+                    <td colSpan="6" style={{ textAlign: "center", padding: "28px", color: "var(--muted)", fontStyle: "italic" }}>
                       No items added to cart yet. Select a medicine and batch above.
                     </td>
                   </tr>
                 ) : (
                   posCart.map((item, idx) => (
-                    <tr key={idx} style={{ borderBottom: "1px solid var(--line)" }}>
-                      <td style={{ padding: "8px 12px", fontWeight: 600 }}>{item.medicineName}</td>
-                      <td style={{ padding: "8px 12px" }}>{item.batchNumber}</td>
-                      <td style={{ padding: "8px 12px" }}>{item.quantity} {item.unit}s</td>
-                      <td style={{ padding: "8px 12px" }}>{money(item.unitPrice)}</td>
-                      <td style={{ padding: "8px 12px", fontWeight: 600 }}>{money(item.lineTotal)}</td>
-                      <td style={{ padding: "8px 12px", textAlign: "right" }}>
+                    <tr key={idx}>
+                      <td>
+                        <div style={{ fontWeight: 700, color: "var(--brand-900)" }}>{item.medicineName}</div>
+                        <div style={{ fontSize: "11px", color: "var(--muted)" }}>Unit: {item.unit}</div>
+                      </td>
+                      <td>
+                        <span className="pos-rx-tag">{item.batchNumber}</span>
+                      </td>
+                      <td style={{ textAlign: "center", fontWeight: 600 }}>
+                        {item.quantity} {item.unit}s
+                      </td>
+                      <td style={{ textAlign: "right" }}>{money(item.unitPrice)}</td>
+                      <td style={{ textAlign: "right", fontWeight: 700, color: "var(--brand-900)" }}>{money(item.lineTotal)}</td>
+                      <td style={{ textAlign: "right" }}>
                         <button
                           type="button"
                           onClick={() => handleRemoveFromCart(idx)}
-                          style={{ background: "none", border: "none", color: "var(--danger)", cursor: "pointer" }}
+                          className="table-link-button"
+                          style={{ color: "var(--danger)" }}
+                          title="Remove item"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -1417,13 +1445,16 @@ export const InventoryWorkspacePanel = () => {
             </table>
 
             {/* Cart Total Summary */}
-            <div style={{ padding: "14px 18px", background: "var(--bg-page)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <span>Items in Cart: <strong>{posCart.length}</strong></span>
+            <div className="pos-total-banner">
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "0.9rem", color: "var(--muted)", fontWeight: 600 }}>Items in Cart:</span>
+                <span style={{ background: "var(--brand-100)", color: "var(--brand-800)", padding: "2px 10px", borderRadius: "12px", fontWeight: 700, fontSize: "0.85rem" }}>
+                  {posCart.length}
+                </span>
               </div>
-              <div style={{ fontSize: "16px" }}>
-                <span>Grand Total: </span>
-                <strong style={{ color: "var(--accent-emerald)", fontSize: "20px" }}>{money(posGrandTotal)}</strong>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
+                <span style={{ fontSize: "0.95rem", color: "var(--ink-700)", fontWeight: 700 }}>Grand Total:</span>
+                <span className="pos-total-badge">{money(posGrandTotal)}</span>
               </div>
             </div>
           </div>
@@ -1435,7 +1466,7 @@ export const InventoryWorkspacePanel = () => {
               type="button"
               onClick={handleCheckoutSale}
               disabled={busy || posCart.length === 0}
-              style={{ padding: "10px 24px", fontSize: "15px" }}
+              style={{ minHeight: "46px", padding: "0 24px", fontSize: "0.95rem" }}
             >
               <ShoppingCart size={18} /> {busy ? "Processing Sale..." : "Complete Sale & Print Bill"}
             </button>
@@ -1449,66 +1480,66 @@ export const InventoryWorkspacePanel = () => {
       <Modal
         open={Boolean(selectedBill)}
         title="Pharmacy Bill & Receipt"
+        subtitle="Official dispensary sale record and verified payment receipt."
         onClose={() => setSelectedBill(null)}
       >
         {selectedBill ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
             {/* Printable Receipt Box */}
-            <div
-              id="printable-pharmacy-bill"
-              style={{
-                background: "#fff",
-                border: "1px dashed var(--line)",
-                padding: "24px",
-                borderRadius: "8px",
-                fontFamily: "monospace",
-                color: "#111"
-              }}
-            >
-              <div style={{ textAlign: "center", marginBottom: "16px" }}>
-                <h3 style={{ margin: "0 0 4px 0", fontSize: "18px", letterSpacing: "1px" }}>HEALTH GUARD MEDICAL CENTER</h3>
-                <p style={{ margin: "0 0 2px 0", fontSize: "12px" }}>Pharmacy & Dispensary Services</p>
-                <p style={{ margin: "0 0 2px 0", fontSize: "11px", color: "var(--muted)" }}>No. 128, Galle Road, Colombo 03 | Tel: +94 11 2555000</p>
-                <div style={{ borderBottom: "1px dashed #666", margin: "10px 0" }} />
+            <div id="printable-pharmacy-bill" className="bill-preview-card">
+              <div className="bill-preview-header">
+                <h3 style={{ margin: "0 0 4px 0", fontSize: "1.25rem", color: "var(--brand-900)", fontWeight: 800, letterSpacing: "-0.01em" }}>
+                  HEALTH GUARD MEDICAL CENTER
+                </h3>
+                <p style={{ margin: "0 0 4px 0", fontSize: "0.88rem", fontWeight: 600, color: "var(--brand-700)" }}>
+                  Pharmacy & Dispensary Services
+                </p>
+                <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--muted)" }}>
+                  No. 128, Galle Road, Colombo 03 &bull; Hotline: +94 11 2555000
+                </p>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", fontSize: "12px", gap: "6px", marginBottom: "12px" }}>
-                <div><strong>Bill No:</strong> {selectedBill.saleNumber}</div>
-                <div><strong>Date:</strong> {new Date(selectedBill.billIssuedAt || selectedBill.createdAt).toLocaleString("en-LK")}</div>
+              <div className="bill-preview-meta">
+                <div><strong>Bill Reference:</strong> {selectedBill.saleNumber}</div>
+                <div><strong>Issued Date:</strong> {new Date(selectedBill.billIssuedAt || selectedBill.createdAt).toLocaleString("en-LK")}</div>
                 <div><strong>Patient:</strong> {[selectedBill.patientId?.firstName, selectedBill.patientId?.lastName].filter(Boolean).join(" ") || "Walk-in Patient"}</div>
-                <div><strong>Pharmacist:</strong> {[selectedBill.soldBy?.firstName, selectedBill.soldBy?.lastName].filter(Boolean).join(" ") || "Dispenser"}</div>
+                <div><strong>Dispensed By:</strong> {[selectedBill.soldBy?.firstName, selectedBill.soldBy?.lastName].filter(Boolean).join(" ") || "Pharmacist"}</div>
               </div>
 
-              <table style={{ width: "100%", fontSize: "12px", borderCollapse: "collapse", marginBottom: "12px" }}>
+              <table className="data-table" style={{ width: "100%", fontSize: "0.88rem", marginBottom: "16px" }}>
                 <thead>
-                  <tr style={{ borderBottom: "1px solid #111", textAlign: "left" }}>
-                    <th style={{ padding: "4px 0" }}>Item</th>
-                    <th style={{ padding: "4px 0" }}>Batch</th>
-                    <th style={{ padding: "4px 0", textAlign: "center" }}>Qty</th>
-                    <th style={{ padding: "4px 0", textAlign: "right" }}>Price</th>
-                    <th style={{ padding: "4px 0", textAlign: "right" }}>Total</th>
+                  <tr>
+                    <th>Medicine Item</th>
+                    <th>Batch</th>
+                    <th style={{ textAlign: "center" }}>Qty</th>
+                    <th style={{ textAlign: "right" }}>Unit Price</th>
+                    <th style={{ textAlign: "right" }}>Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {selectedBill.items?.map((item, idx) => (
-                    <tr key={idx} style={{ borderBottom: "1px dotted #ccc" }}>
-                      <td style={{ padding: "4px 0" }}>{item.medicineId?.name || "Medicine"}</td>
-                      <td style={{ padding: "4px 0" }}>{item.batchId?.batchNumber || "-"}</td>
-                      <td style={{ padding: "4px 0", textAlign: "center" }}>{item.quantity}</td>
-                      <td style={{ padding: "4px 0", textAlign: "right" }}>{money(item.unitPrice)}</td>
-                      <td style={{ padding: "4px 0", textAlign: "right" }}>{money(item.lineTotal)}</td>
+                    <tr key={idx}>
+                      <td style={{ fontWeight: 600 }}>{item.medicineId?.name || "Medicine"}</td>
+                      <td><span className="pos-rx-tag">{item.batchId?.batchNumber || "-"}</span></td>
+                      <td style={{ textAlign: "center", fontWeight: 600 }}>{item.quantity}</td>
+                      <td style={{ textAlign: "right" }}>{money(item.unitPrice)}</td>
+                      <td style={{ textAlign: "right", fontWeight: 700 }}>{money(item.lineTotal)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
 
-              <div style={{ textAlign: "right", borderTop: "1px solid #111", paddingTop: "8px", fontSize: "14px" }}>
-                <strong>TOTAL PAID: {money(selectedBill.total)}</strong>
-                <div style={{ fontSize: "11px", color: "#555", marginTop: "2px" }}>Status: Verified Paid (Cash / Card)</div>
+              <div style={{ textAlign: "right", borderTop: "1.5px solid var(--line)", paddingTop: "12px" }}>
+                <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--brand-900)" }}>
+                  TOTAL PAID: <span style={{ color: "var(--accent-emerald)" }}>{money(selectedBill.total)}</span>
+                </div>
+                <div style={{ fontSize: "0.8rem", color: "var(--muted)", marginTop: "4px" }}>
+                  Payment Method: Cash / Card &bull; Status: Verified & Completed
+                </div>
               </div>
 
-              <div style={{ textAlign: "center", marginTop: "16px", borderTop: "1px dashed #666", paddingTop: "10px", fontSize: "11px" }}>
-                Thank you for choosing Health Guard. Wish you good health!
+              <div style={{ textAlign: "center", marginTop: "20px", borderTop: "1px dashed var(--line)", paddingTop: "12px", fontSize: "0.82rem", color: "var(--muted)" }}>
+                Thank you for choosing Health Guard Medical Center. We wish you good health!
               </div>
             </div>
 
@@ -1521,7 +1552,7 @@ export const InventoryWorkspacePanel = () => {
               >
                 <Download size={16} /> Download Text
               </button>
-              <div style={{ display: "flex", gap: "8px" }}>
+              <div style={{ display: "flex", gap: "10px" }}>
                 <button
                   className="button-secondary"
                   type="button"
