@@ -26,6 +26,8 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useAuth } from "../../context/AuthContext.jsx";
+import { ROLES } from "../../utils/roles.js";
 import { inventoryApi } from "../../services/inventoryApi.js";
 import {
   batchNumberPattern,
@@ -102,6 +104,10 @@ const schemas = {
 };
 
 export const InventoryWorkspacePanel = () => {
+  const { user } = useAuth();
+  const isPharmacist = [ROLES.PHARMACIST, ROLES.ADMIN].includes(user?.role);
+  const isManager = user?.role === ROLES.MANAGER;
+
   const [medicines, setMedicines] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [batches, setBatches] = useState([]);
@@ -473,25 +479,37 @@ export const InventoryWorkspacePanel = () => {
       <div className="e1-panel-header">
         <div>
           <h2>Pharmacy & Inventory Workspace</h2>
-          <p>Complete medicine catalog, batch tracking, supplier management, procurement, dispensing POS, alerts and sales reports.</p>
+          <p>
+            {isPharmacist
+              ? "Complete medicine catalog, batch tracking, supplier management, procurement, dispensing POS, alerts and sales reports."
+              : "Supervisory overview of medicine catalog, batch tracking, supplier directory, procurement history, stock alerts, and sales analytics."}
+          </p>
         </div>
-        <div className="inline-actions" style={{ flexWrap: "wrap", gap: "8px" }}>
-          <button type="button" onClick={() => openStandardModal("medicine")} className="button-secondary">
-            <Pill size={16} /> Add Medicine
-          </button>
-          <button type="button" onClick={() => openStandardModal("batch")} className="button-secondary">
-            <Boxes size={16} /> Receive Batch
-          </button>
-          <button type="button" onClick={() => openStandardModal("supplier")} className="button-secondary">
-            <Truck size={16} /> Add Supplier
-          </button>
-          <button type="button" onClick={() => openPurchaseModal()} className="button-secondary">
-            <ArrowDownCircle size={16} /> Record Purchase
-          </button>
-          <button type="button" onClick={() => openPosModal()} className="button-primary" style={{ fontWeight: 600 }}>
-            <ShoppingCart size={16} /> Dispense / POS
-          </button>
-        </div>
+        {isPharmacist ? (
+          <div className="inline-actions" style={{ flexWrap: "wrap", gap: "8px" }}>
+            <button type="button" onClick={() => openStandardModal("medicine")} className="button-secondary">
+              <Pill size={16} /> Add Medicine
+            </button>
+            <button type="button" onClick={() => openStandardModal("batch")} className="button-secondary">
+              <Boxes size={16} /> Receive Batch
+            </button>
+            <button type="button" onClick={() => openStandardModal("supplier")} className="button-secondary">
+              <Truck size={16} /> Add Supplier
+            </button>
+            <button type="button" onClick={() => openPurchaseModal()} className="button-secondary">
+              <ArrowDownCircle size={16} /> Record Purchase
+            </button>
+            <button type="button" onClick={() => openPosModal()} className="button-primary" style={{ fontWeight: 600 }}>
+              <ShoppingCart size={16} /> Dispense / POS
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontSize: "0.8rem", color: "#475569", background: "#f8fafc", padding: "6px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontWeight: 600 }}>
+              Supervisory View (Medicine editing & dispensing managed by Pharmacist)
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Workspace Tabs */}
@@ -590,22 +608,26 @@ export const InventoryWorkspacePanel = () => {
                 }
               },
               { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
-              {
-                key: "actions",
-                header: "Actions",
-                render: (item) => (
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <button className="table-link-button" type="button" onClick={() => openStandardModal("medicine", item)}>
-                      <Edit2 size={14} /> Edit
-                    </button>
-                    {item.status === "active" ? (
-                      <button className="table-link-button" type="button" onClick={() => handleDeactivateMedicine(item)} style={{ color: "var(--danger)" }}>
-                        Deactivate
-                      </button>
-                    ) : null}
-                  </div>
-                )
-              }
+              ...(isPharmacist
+                ? [
+                    {
+                      key: "actions",
+                      header: "Actions",
+                      render: (item) => (
+                        <div style={{ display: "flex", gap: "8px" }}>
+                          <button className="table-link-button" type="button" onClick={() => openStandardModal("medicine", item)}>
+                            <Edit2 size={14} /> Edit
+                          </button>
+                          {item.status === "active" ? (
+                            <button className="table-link-button" type="button" onClick={() => handleDeactivateMedicine(item)} style={{ color: "var(--danger)" }}>
+                              Deactivate
+                            </button>
+                          ) : null}
+                        </div>
+                      )
+                    }
+                  ]
+                : [])
             ]}
           />
         </>
@@ -648,15 +670,19 @@ export const InventoryWorkspacePanel = () => {
                   return <span style={{ color: "var(--success)", fontWeight: 600, background: "var(--success-bg)", padding: "2px 8px", borderRadius: "12px", fontSize: "12px" }}>Valid</span>;
                 }
               },
-              {
-                key: "actions",
-                header: "Actions",
-                render: (item) => (
-                  <button className="table-link-button" type="button" onClick={() => openStandardModal("batch", item)}>
-                    <Edit2 size={14} /> Adjust Stock / Edit
-                  </button>
-                )
-              }
+              ...(isPharmacist
+                ? [
+                    {
+                      key: "actions",
+                      header: "Actions",
+                      render: (item) => (
+                        <button className="table-link-button" type="button" onClick={() => openStandardModal("batch", item)}>
+                          <Edit2 size={14} /> Adjust Stock / Edit
+                        </button>
+                      )
+                    }
+                  ]
+                : [])
             ]}
           />
         </>
@@ -669,9 +695,11 @@ export const InventoryWorkspacePanel = () => {
             <div style={{ flex: 1, maxWidth: "360px" }}>
               <SearchBar value={search} onChange={setSearch} placeholder="Search suppliers by name, phone, address..." />
             </div>
-            <button type="button" onClick={() => openStandardModal("supplier")} className="button-primary">
-              <Plus size={16} /> Add Supplier
-            </button>
+            {isPharmacist ? (
+              <button type="button" onClick={() => openStandardModal("supplier")} className="button-primary">
+                <Plus size={16} /> Add Supplier
+              </button>
+            ) : null}
           </div>
           <DataTable
             rows={supplierRows}
@@ -681,22 +709,26 @@ export const InventoryWorkspacePanel = () => {
               { key: "email", header: "Email", render: (item) => item.email || "-" },
               { key: "address", header: "Address" },
               { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
-              {
-                key: "actions",
-                header: "Actions",
-                render: (item) => (
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <button className="table-link-button" type="button" onClick={() => openStandardModal("supplier", item)}>
-                      <Edit2 size={14} /> Edit
-                    </button>
-                    {item.status === "active" ? (
-                      <button className="table-link-button" type="button" onClick={() => handleDeactivateSupplier(item)} style={{ color: "var(--danger)" }}>
-                        Deactivate
-                      </button>
-                    ) : null}
-                  </div>
-                )
-              }
+              ...(isPharmacist
+                ? [
+                    {
+                      key: "actions",
+                      header: "Actions",
+                      render: (item) => (
+                        <div style={{ display: "flex", gap: "8px" }}>
+                          <button className="table-link-button" type="button" onClick={() => openStandardModal("supplier", item)}>
+                            <Edit2 size={14} /> Edit
+                          </button>
+                          {item.status === "active" ? (
+                            <button className="table-link-button" type="button" onClick={() => handleDeactivateSupplier(item)} style={{ color: "var(--danger)" }}>
+                              Deactivate
+                            </button>
+                          ) : null}
+                        </div>
+                      )
+                    }
+                  ]
+                : [])
             ]}
           />
         </>
@@ -709,9 +741,11 @@ export const InventoryWorkspacePanel = () => {
             <div style={{ flex: 1, maxWidth: "360px" }}>
               <SearchBar value={search} onChange={setSearch} placeholder="Search purchase records by supplier or drug..." />
             </div>
-            <button type="button" onClick={() => openPurchaseModal()} className="button-primary">
-              <ArrowDownCircle size={16} /> Record New Purchase
-            </button>
+            {isPharmacist ? (
+              <button type="button" onClick={() => openPurchaseModal()} className="button-primary">
+                <ArrowDownCircle size={16} /> Record New Purchase
+              </button>
+            ) : null}
           </div>
           <DataTable
             rows={purchaseRows}
@@ -805,12 +839,17 @@ export const InventoryWorkspacePanel = () => {
                   },
                   {
                     key: "action",
-                    header: "Action",
-                    render: (item) => (
-                      <button className="button-primary" type="button" onClick={() => openPurchaseModal(item)} style={{ padding: "4px 10px", fontSize: "12px" }}>
-                        <ArrowDownCircle size={14} /> Reorder Stock
-                      </button>
-                    )
+                    header: isPharmacist ? "Action" : "Procurement Status",
+                    render: (item) =>
+                      isPharmacist ? (
+                        <button className="button-primary" type="button" onClick={() => openPurchaseModal(item)} style={{ padding: "4px 10px", fontSize: "12px" }}>
+                          <ArrowDownCircle size={14} /> Reorder Stock
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: "11px", fontWeight: 600, color: "#92400e", background: "#fef3c7", padding: "3px 8px", borderRadius: "6px" }}>
+                          Reorder Required (Pharmacist)
+                        </span>
+                      )
                   }
                 ]}
               />
@@ -860,12 +899,15 @@ export const InventoryWorkspacePanel = () => {
                   },
                   {
                     key: "actions",
-                    header: "Action",
-                    render: (item) => (
-                      <button className="table-link-button" type="button" onClick={() => openStandardModal("batch", item)}>
-                        <Edit2 size={14} /> Adjust / Quarantine
-                      </button>
-                    )
+                    header: isPharmacist ? "Action" : "Status",
+                    render: (item) =>
+                      isPharmacist ? (
+                        <button className="table-link-button" type="button" onClick={() => openStandardModal("batch", item)}>
+                          <Edit2 size={14} /> Adjust / Quarantine
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: "11px", color: "var(--muted)" }}>Monitoring</span>
+                      )
                   }
                 ]}
               />
@@ -881,9 +923,11 @@ export const InventoryWorkspacePanel = () => {
             <div style={{ flex: 1, maxWidth: "360px" }}>
               <SearchBar value={search} onChange={setSearch} placeholder="Search sales by bill number or patient..." />
             </div>
-            <button type="button" onClick={() => openPosModal()} className="button-primary">
-              <ArrowDownCircle size={16} /> Dispense Medicines
-            </button>
+            {isPharmacist ? (
+              <button type="button" onClick={() => openPosModal()} className="button-primary">
+                <ArrowDownCircle size={16} /> Dispense Medicines
+              </button>
+            ) : null}
           </div>
           <DataTable
             rows={salesRows}
