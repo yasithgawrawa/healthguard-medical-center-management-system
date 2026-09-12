@@ -10,6 +10,7 @@
     "seed:admin": "node src/seedAdmin.js",
     "seed:demo": "node src/seedAdmin.js",
     "seed:real": "node src/seedProductionRealData.js",
+    "clean:db": "node src/cleanProductionDatabase.js",
     "verify:flows": "node src/verifyAllRealFlows.js"
   },
   "dependencies": {
