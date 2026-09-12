@@ -38,7 +38,7 @@ export const DoctorDashboard = () => {
       <div className="dashboard-header-banner">
         <div>
           <h1>Doctor Workspace</h1>
-          <p>Review appointments, record consultations, create prescriptions and request laboratory tests.</p>
+          <p>Review appointments, record consultations, issue handwritten prescriptions and request laboratory tests.</p>
         </div>
         <div className="dashboard-live-indicator">
           <div className="live-dot" />
@@ -64,7 +64,7 @@ export const DoctorDashboard = () => {
         <DashboardCard
           title="Completed Consultations"
           value={`${metrics.completedCount} Finalized`}
-          detail="Visits with diagnosis & prescription"
+          detail="Visits with diagnosis & handwritten Rx"
           icon={Stethoscope}
           change="Care Delivered"
         />

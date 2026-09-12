@@ -40,14 +40,6 @@ const consultationSchema = z.object({
   finalized: z.boolean().optional()
 });
 
-const prescriptionSchema = z.object({
-  medicineName: z.string().trim().min(2, "Medicine is required").max(120, "Medicine name is too long"),
-  dosage: z.string().trim().min(1, "Dosage is required").max(40, "Dosage is too long"),
-  frequency: z.string().trim().min(1, "Frequency is required").max(60, "Frequency is too long"),
-  duration: z.string().trim().min(1, "Duration is required").max(40, "Duration is too long"),
-  instructions: z.string().trim().max(250, "Instructions are too long").optional().or(z.literal(""))
-});
-
 const labRequestSchema = z.object({
   testName: z.string().trim().min(2, "Test name is required").max(120, "Test name is too long"),
   priority: z.string().min(1, "Priority is required")
@@ -78,7 +70,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
 
-  const schema = modal.type === "vitals" ? vitalsSchema : modal.type === "consultation" ? consultationSchema : modal.type === "prescription" ? prescriptionSchema : modal.type === "lab-request" ? labRequestSchema : labUpdateSchema;
+  const schema = modal.type === "vitals" ? vitalsSchema : modal.type === "consultation" ? consultationSchema : modal.type === "lab-request" ? labRequestSchema : labUpdateSchema;
   const {
     register,
     handleSubmit,
@@ -136,9 +128,6 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
         });
       }
       if (modal.type === "consultation") await clinicalApi.saveConsultation({ appointmentId: record._id, ...values });
-      if (modal.type === "prescription") {
-        await clinicalApi.createPrescription({ appointmentId: record._id, items: [values] });
-      }
       if (modal.type === "lab-request") await clinicalApi.createLabRequest({ appointmentId: record._id, ...values });
       if (modal.type === "lab-update") await clinicalApi.updateLabRequest(record._id, values);
       setToast({ type: "success", message: "Workflow updated successfully" });
@@ -169,7 +158,6 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
         ) : (
           <div className="inline-actions">
             <button type="button" onClick={() => openModal("consultation", item)}>Consult</button>
-            <button type="button" onClick={() => openModal("prescription", item)}>Rx</button>
             <button type="button" onClick={() => openModal("lab-request", item)}>Lab</button>
           </div>
         )
@@ -240,17 +228,6 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                 <input type="checkbox" {...register("finalized")} /> Finalize consultation & complete visit
               </label>
             </>
-          ) : null}
-          {modal.type === "prescription" ? (
-            <div className="form-grid">
-              <FormInput label="Medicine" placeholder="Paracetamol 500mg" error={errors.medicineName?.message} {...register("medicineName")} />
-              <FormInput label="Dosage" placeholder="500mg" error={errors.dosage?.message} {...register("dosage")} />
-              <FormInput label="Frequency" placeholder="Twice daily" error={errors.frequency?.message} {...register("frequency")} />
-              <FormInput label="Duration" placeholder="3 days" error={errors.duration?.message} {...register("duration")} />
-              <div className="form-field-full">
-                <FormInput label="Instructions" placeholder="After meals" error={errors.instructions?.message} {...register("instructions")} />
-              </div>
-            </div>
           ) : null}
           {modal.type === "lab-request" ? (
             <div className="form-grid">
