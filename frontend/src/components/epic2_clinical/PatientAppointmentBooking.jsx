@@ -121,9 +121,10 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
               {doctors.map((doctor) => {
                 const fullName = `${doctor.firstName} ${doctor.lastName}`.trim();
                 const displayName = fullName.startsWith("Dr.") ? fullName : `Dr. ${fullName}`;
+                const feeText = doctor.consultationFee ? ` (Fee: Rs. ${Number(doctor.consultationFee).toLocaleString()})` : "";
                 return (
                   <option value={doctor._id} key={doctor._id}>
-                    {displayName}
+                    {displayName}{feeText}
                   </option>
                 );
               })}
@@ -187,9 +188,14 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
             {fieldErrors.reason ? <small>{fieldErrors.reason}</small> : null}
           </label>
           {selectedDoctor ? (
-            <p className="section-description" style={{ margin: "0 0 12px" }}>
-              Booking with Dr. {selectedDoctor.firstName} {selectedDoctor.lastName}
-            </p>
+            <div style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: "8px", padding: "10px 14px", margin: "0 0 14px" }}>
+              <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "#0369a1" }}>
+                Dr. {selectedDoctor.firstName} {selectedDoctor.lastName}
+              </div>
+              <div style={{ fontSize: "0.8rem", color: "#0284c7", marginTop: "2px" }}>
+                Consultation Fee: <strong>Rs. {Number(selectedDoctor.consultationFee || 2500).toLocaleString("en-LK", { minimumFractionDigits: 2 })}</strong>
+              </div>
+            </div>
           ) : null}
           <button className="submit-button" type="submit" disabled={submitting || loading}>
             {submitting ? <RefreshCw className="spin-animation" size={16} /> : <Send size={16} />}
