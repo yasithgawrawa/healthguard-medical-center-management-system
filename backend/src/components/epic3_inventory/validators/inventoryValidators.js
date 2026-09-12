@@ -8,7 +8,8 @@ const medicineBodySchema = z.object({
   category: z.string().min(1, "Select medicine category").refine((value) => MEDICINE_CATEGORIES.includes(value), "Select a valid medicine category"),
   unit: z.string().trim().min(1, "Unit is required").max(30),
   price: moneySchema("Price"),
-  reorderLevel: z.coerce.number().int("Reorder level must be a whole number").min(0).max(100000)
+  reorderLevel: z.coerce.number().int("Reorder level must be a whole number").min(0).max(100000),
+  status: z.enum(["active", "inactive"]).optional()
 });
 
 const batchBodySchema = z.object({
@@ -31,13 +32,21 @@ export const updateMedicineSchema = z.object({
   body: medicineBodySchema.partial()
 });
 
+const supplierBodySchema = z.object({
+  name: textNoNumbersSchema("Supplier name", 120),
+  email: z.string().trim().email().optional().or(z.literal("")),
+  phone: phoneSchema,
+  address: z.string().trim().min(5, "Address is required").max(250),
+  status: z.enum(["active", "inactive"]).optional()
+});
+
 export const supplierSchema = z.object({
-  body: z.object({
-    name: textNoNumbersSchema("Supplier name", 120),
-    email: z.string().trim().email().optional().or(z.literal("")),
-    phone: phoneSchema,
-    address: z.string().trim().min(5, "Address is required").max(250)
-  })
+  body: supplierBodySchema
+});
+
+export const updateSupplierSchema = z.object({
+  params: idParamSchema.shape.params,
+  body: supplierBodySchema.partial()
 });
 
 export const batchSchema = z.object({
@@ -64,9 +73,20 @@ export const purchaseSchema = z.object({
   body: z.object({
     supplierId: objectIdSchema,
     medicineId: objectIdSchema,
-    batchId: objectIdSchema,
+    batchId: objectIdSchema.optional(),
+    batchNumber: z.string().trim().regex(batchNumberPattern, "Invalid batch number format").optional(),
+    manufactureDate: z.coerce.date().optional(),
+    expiryDate: z.coerce.date().optional(),
     quantity: quantitySchema(),
     purchasePrice: moneySchema("Purchase price")
+  }).refine((data) => {
+    if (!data.batchId) {
+      return Boolean(data.batchNumber && data.manufactureDate && data.expiryDate && data.expiryDate > data.manufactureDate);
+    }
+    return true;
+  }, {
+    message: "Select an existing batch or provide valid new batch details with expiry after manufacture date",
+    path: ["batchId"]
   })
 });
 
@@ -78,7 +98,7 @@ export const saleSchema = z.object({
       medicineId: objectIdSchema,
       batchId: objectIdSchema,
       quantity: quantitySchema()
-    })).min(1)
+    })).min(1, "At least one item is required in the sale")
   })
 });
 

@@ -41,26 +41,26 @@ This document tracks completion of all user stories across E1-E4 after the imple
 
 | Story | Status | Completed implementation |
 | --- | --- | --- |
-| E3-US01 Pharmacist adds medicines | Complete | Add medicine modal and protected create medicine API. |
-| E3-US02 Pharmacist records batches | Complete | Receive batch modal with manufacture/expiry and quantity data. |
-| E3-US03 Pharmacist views medicines and quantities | Complete | Catalog and batch tabs show medicine and stock quantities. |
-| E3-US04 Pharmacist searches medicines | Complete | Catalog search by medicine, category, unit and status. |
-| E3-US05 Pharmacist views individual batches | Complete | Batches tab lists batch number, quantity, purchase price and expiry. |
-| E3-US06 Pharmacist updates medicine information | Complete | Edit medicine action and validated update API. |
-| E3-US07 Pharmacist updates stock quantities | Complete | Edit stock action and purchase workflow update batch quantities. |
-| E3-US08 Pharmacist updates batch information | Complete | Edit stock/batch modal and validated update API. |
-| E3-US09 Pharmacist updates medicine prices | Complete | Medicine edit includes price update. |
-| E3-US10 Pharmacist records supplier information | Complete | Supplier modal and protected supplier API. |
-| E3-US11 Pharmacist records purchases | Complete | Record purchase workflow increases trusted backend stock. |
-| E3-US12 Manager receives low-stock alerts | Complete | Inventory alerts tab available to manager. |
-| E3-US13 Manager receives expiry alerts | Complete | Inventory alerts tab shows expiring batches. |
-| E3-US14 Pharmacist/Manager views low-stock medicines | Complete | Low-stock count and alert data through shared inventory panel. |
-| E3-US15 Pharmacist/Manager views expiry information | Complete | Expiry alert data and batch expiry table. |
-| E3-US16 Pharmacist sells medicines | Complete | Record sale workflow with stock and expiry validation. |
-| E3-US17 Pharmacist generates bill for medicine sale | Complete | Pharmacy sale creates a bill number and protected backend-generated downloadable bill. |
-| E3-US18 System reduces stock after sale | Complete | Backend sale controller deducts batch quantity after validated sale. |
-| E3-US19 Pharmacist views previous sales | Complete | Sales tab lists previous pharmacy sales. |
-| E3-US20 Pharmacist/Manager views sales reports | Complete | Pharmacy sales report tab shows total sales, revenue and top medicine. |
+| E3-US01 Pharmacist adds medicines | Complete | Add medicine modal with validated name, category, unit, price, reorder level, and duplicate name prevention. |
+| E3-US02 Pharmacist records batches | Complete | Receive batch modal with batch number format, manufacture/expiry date ordering, and price/quantity validation. |
+| E3-US03 Pharmacist views medicines and quantities | Complete | Catalog view with backend aggregated live stock quantities, batch counts, reorder levels, unit price, and stock status badges. |
+| E3-US04 Pharmacist searches medicines | Complete | Multi-attribute search across medicine name, category, unit, and quick filters for category and stock level. |
+| E3-US05 Pharmacist views individual batches | Complete | Batches tab listing batch number, medicine, stock quantity, cost, manufacture and expiry dates, and expiry status badges. |
+| E3-US06 Pharmacist updates medicine information | Complete | Edit medicine modal with field validation and active/inactive status toggle. |
+| E3-US07 Pharmacist updates stock quantities | Complete | Edit stock action and purchase workflow update batch quantities with backend constraint checks. |
+| E3-US08 Pharmacist updates batch information | Complete | Edit batch modal supporting batch number, dates, purchase price, and quantity adjustments. |
+| E3-US09 Pharmacist updates medicine prices | Complete | Medicine edit allows price updates immediately reflected in catalog and new sales transactions. |
+| E3-US10 Pharmacist records supplier information | Complete | Dedicated Suppliers tab, search, add/edit supplier modal, and status management. |
+| E3-US11 Pharmacist records purchases | Complete | Dedicated Purchases tab, purchase history table, and procurement workflow supporting existing batch top-up or new batch registration. |
+| E3-US12 Manager receives low-stock alerts | Complete | Real-time low-stock alerts tab and summary metrics highlighting shortage counts. |
+| E3-US13 Manager receives expiry alerts | Complete | Expiry alerts tab highlighting batches expiring in 60 days and expired batches. |
+| E3-US14 Pharmacist/Manager views low-stock medicines | Complete | Actionable Low-Stock Alert Table with current stock, deficit, threshold, shortage severity, and one-click reorder action. |
+| E3-US15 Pharmacist/Manager views expiry information | Complete | Actionable Expiry Alert Table with days remaining, value at risk, expiry status tags, and quarantine/adjust action. |
+| E3-US16 Pharmacist sells medicines | Complete | Multi-item Pharmacy POS counter supporting registered patient select / walk-in toggle, doctor prescription linkage, live stock checks, and atomic dispensing. |
+| E3-US17 Pharmacist generates bill for medicine sale | Complete | Interactive Pharmacy Bill preview modal with center branding, itemized invoice breakdown, browser printing, and text bill download. |
+| E3-US18 System reduces stock after sale | Complete | Backend sale transaction verifies non-expired stock and atomically deducts batch quantities. |
+| E3-US19 Pharmacist views previous sales | Complete | Sales history tab with search, bill numbers, patient info, item counts, total amounts, and view/print bill actions. |
+| E3-US20 Pharmacist/Manager views sales reports | Complete | Sales Analytics dashboard with timeframe filtering (All Time, Today, This Week, This Month), revenue, volume, avg basket, and top-selling medicines table. |
 
 ## E4 - Billing & Payment Management
 
