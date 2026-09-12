@@ -256,7 +256,23 @@ export const BillingWorkspacePanel = () => {
         <form onSubmit={handleSubmit(submit)}>
           {modal.type === "invoice" ? <div className="form-grid"><FormSelect label="Completed Appointment" error={errors.appointmentId?.message} {...register("appointmentId")}><option value="">Select completed appointment</option>{appointments.filter((item) => item.status === "completed").map((item) => <option value={item._id} key={item._id}>{name(item.patientId)} - {new Date(item.appointmentDate).toLocaleDateString()}</option>)}</FormSelect><FormInput label="Description" placeholder="Consultation" error={errors.description?.message} {...register("description")} /><FormInput label="Quantity" placeholder="1" type="number" min="1" step="1" error={errors.quantity?.message} {...register("quantity")} /><FormInput label="Unit Price" placeholder="1500.00" type="number" min="0" step="0.01" error={errors.unitPrice?.message} {...register("unitPrice")} /></div> : null}
           {modal.type === "payment" ? <div className="form-grid"><FormInput label="Amount" placeholder="1500.00" type="number" min="0.01" step="0.01" error={errors.amount?.message} {...register("amount")} /><FormSelect label="Method" error={errors.method?.message} {...register("method")}><option value="cash">Cash</option><option value="card">Card</option><option value="bank_transfer">Bank Transfer</option></FormSelect></div> : null}
-          {modal.type === "payroll" ? <div className="form-grid"><FormSelect label="Staff" error={errors.staffId?.message} {...register("staffId")}><option value="">Select staff</option>{staff.map((item) => <option value={item._id} key={item._id}>{staffName(item)} - {item.employeeId}</option>)}</FormSelect><FormInput label="Month" type="month" error={errors.month?.message} {...register("month")} /><FormInput label="Base Salary" placeholder="95000.00" type="number" min="0" step="0.01" error={errors.baseSalary?.message} {...register("baseSalary")} /><FormInput label="Allowances" placeholder="5000.00" type="number" min="0" step="0.01" error={errors.allowances?.message} {...register("allowances")} /><FormInput label="Deductions" placeholder="1500.00" type="number" min="0" step="0.01" error={errors.deductions?.message} {...register("deductions")} /></div> : null}
+          {modal.type === "payroll" ? (
+            <>
+              <div className="form-grid">
+                <FormSelect label="Staff Member" error={errors.staffId?.message} {...register("staffId")}>
+                  <option value="">Select staff</option>
+                  {staff.map((item) => <option value={item._id} key={item._id}>{staffName(item)} - {item.employeeId}</option>)}
+                </FormSelect>
+                <FormInput label="Payroll Month" type="month" error={errors.month?.message} {...register("month")} />
+              </div>
+              <div className="form-section-title">Compensation Components</div>
+              <div className="form-grid-3">
+                <FormInput label="Base Salary (Rs.)" placeholder="95000.00" type="number" min="0" step="0.01" error={errors.baseSalary?.message} {...register("baseSalary")} />
+                <FormInput label="Allowances (Rs.)" placeholder="5000.00" type="number" min="0" step="0.01" error={errors.allowances?.message} {...register("allowances")} />
+                <FormInput label="Deductions (Rs.)" placeholder="1500.00" type="number" min="0" step="0.01" error={errors.deductions?.message} {...register("deductions")} />
+              </div>
+            </>
+          ) : null}
           <div className="modal-actions"><button className="button-secondary" type="button" onClick={() => setModal({ type: null, record: null })} disabled={busy}>Cancel</button><button className="button-primary" type="submit" disabled={busy}><CreditCard size={16} /> {busy ? "Saving..." : "Save"}</button></div>
         </form>
       </Modal>

@@ -107,7 +107,7 @@ export const StaffFormModal = ({ open, mode = "create", staff, onClose, onSubmit
         </div>
 
         <div className="form-section-title">Salary Information</div>
-        <div className="form-grid">
+        <div className="form-grid-3">
           <FormInput label="Base Salary" placeholder="95000.00" type="number" min="0" step="0.01" error={errors.baseSalary?.message} {...register("baseSalary")} />
           <FormInput label="Allowances" placeholder="5000.00" type="number" min="0" step="0.01" error={errors.allowances?.message} {...register("allowances")} />
           <FormInput label="Deductions" placeholder="1500.00" type="number" min="0" step="0.01" error={errors.deductions?.message} {...register("deductions")} />

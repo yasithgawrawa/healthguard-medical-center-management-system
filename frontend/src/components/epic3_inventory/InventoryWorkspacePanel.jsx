@@ -1092,9 +1092,9 @@ export const InventoryWorkspacePanel = () => {
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </FormSelect>
-          </div>
-          <div style={{ marginTop: "14px" }}>
-            <FormInput label="Office / Warehouse Address" placeholder="No. 75, Sir Baron Jayathilaka Mawatha, Colombo 01" error={errors.address?.message} {...register("address")} />
+            <div className="form-field-full">
+              <FormInput label="Office / Warehouse Address" placeholder="No. 75, Sir Baron Jayathilaka Mawatha, Colombo 01" error={errors.address?.message} {...register("address")} />
+            </div>
           </div>
 
           <div className="modal-actions">
@@ -1162,14 +1162,16 @@ export const InventoryWorkspacePanel = () => {
           <div className="form-grid">
             {purchaseIsNewBatch ? (
               <>
-                <FormInput
-                  label="New Batch Number"
-                  placeholder="e.g. BATCH-2026-001"
-                  value={purchaseBatchNumber}
-                  onChange={(e) => setPurchaseBatchNumber(e.target.value)}
-                  sanitize={stripNonBatch}
-                  required
-                />
+                <div className="form-field-full">
+                  <FormInput
+                    label="New Batch Number"
+                    placeholder="e.g. BATCH-2026-001"
+                    value={purchaseBatchNumber}
+                    onChange={(e) => setPurchaseBatchNumber(e.target.value)}
+                    sanitize={stripNonBatch}
+                    required
+                  />
+                </div>
                 <FormInput
                   label="Manufacture Date"
                   type="date"
@@ -1186,21 +1188,23 @@ export const InventoryWorkspacePanel = () => {
                 />
               </>
             ) : (
-              <FormSelect
-                label="Existing Batch to Top Up"
-                value={purchaseBatchId}
-                onChange={(e) => setPurchaseBatchId(e.target.value)}
-                required
-              >
-                <option value="">Select Batch</option>
-                {batches
-                  .filter((b) => (b.medicineId?._id || b.medicineId) === purchaseMedId)
-                  .map((b) => (
-                    <option value={b._id} key={b._id}>
-                      {b.batchNumber} (Current Stock: {b.quantity})
-                    </option>
-                  ))}
-              </FormSelect>
+              <div className="form-field-full">
+                <FormSelect
+                  label="Existing Batch to Top Up"
+                  value={purchaseBatchId}
+                  onChange={(e) => setPurchaseBatchId(e.target.value)}
+                  required
+                >
+                  <option value="">Select Batch</option>
+                  {batches
+                    .filter((b) => (b.medicineId?._id || b.medicineId) === purchaseMedId)
+                    .map((b) => (
+                      <option value={b._id} key={b._id}>
+                        {b.batchNumber} (Current Stock: {b.quantity})
+                      </option>
+                    ))}
+                </FormSelect>
+              </div>
             )}
 
             <FormInput
@@ -1381,14 +1385,17 @@ export const InventoryWorkspacePanel = () => {
                 onChange={(e) => setPosQty(e.target.value)}
               />
 
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                className="button-primary"
-                style={{ height: "46px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
-              >
-                <Plus size={16} /> Add
-              </button>
+              <div className="form-field pos-action-field">
+                <span className="field-action-spacer" aria-hidden="true">&nbsp;</span>
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  className="button-primary pos-add-btn"
+                  title="Add medicine to cart"
+                >
+                  <Plus size={16} /> Add
+                </button>
+              </div>
             </div>
           </div>
 

@@ -227,7 +227,9 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
               <FormInput label="Dosage" placeholder="500mg" error={errors.dosage?.message} {...register("dosage")} />
               <FormInput label="Frequency" placeholder="Twice daily" error={errors.frequency?.message} {...register("frequency")} />
               <FormInput label="Duration" placeholder="3 days" error={errors.duration?.message} {...register("duration")} />
-              <FormInput label="Instructions" placeholder="After meals" error={errors.instructions?.message} {...register("instructions")} />
+              <div className="form-field-full">
+                <FormInput label="Instructions" placeholder="After meals" error={errors.instructions?.message} {...register("instructions")} />
+              </div>
             </div>
           ) : null}
           {modal.type === "lab-request" ? (
