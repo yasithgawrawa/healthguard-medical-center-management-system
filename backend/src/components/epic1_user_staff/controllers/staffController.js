@@ -4,12 +4,42 @@ import { Staff } from "../models/Staff.js";
 import { successResponse } from "../../../shared/utils/apiResponse.js";
 import { AppError } from "../../../shared/utils/AppError.js";
 
+const ROLE_CODE_MAP = {
+  admin: "ADM",
+  manager: "MGR",
+  doctor: "DOC",
+  nurse: "NUR",
+  pharmacist: "PHA",
+  cashier: "CAS",
+  lab_assistant: "LAB"
+};
+
 export const createStaff = async (req, res) => {
   const existingUser = await User.findOne({ email: req.body.email }).select("_id");
   if (existingUser) throw new AppError("Email already exists", 409, { email: "Email already exists" });
 
-  const existingStaff = await Staff.findOne({ employeeId: req.body.employeeId.toUpperCase() }).select("_id");
-  if (existingStaff) throw new AppError("Employee ID already exists", 409, { employeeId: "Employee ID already exists" });
+  let employeeId = req.body.employeeId?.trim()?.toUpperCase();
+  if (!employeeId) {
+    const code = ROLE_CODE_MAP[req.body.role] || "EMP";
+    const existing = await Staff.find({ employeeId: new RegExp(`^HG-${code}-`, "i") }).select("employeeId");
+    let maxNum = 0;
+    const regex = new RegExp(`^HG-${code}-([0-9]+)$`, "i");
+    for (const s of existing) {
+      const match = (s.employeeId || "").match(regex);
+      if (match) {
+        const parsed = parseInt(match[1], 10);
+        if (parsed > maxNum) maxNum = parsed;
+      }
+    }
+    employeeId = `HG-${code}-${String(maxNum + 1).padStart(3, "0")}`;
+    while (await Staff.exists({ employeeId })) {
+      maxNum += 1;
+      employeeId = `HG-${code}-${String(maxNum).padStart(3, "0")}`;
+    }
+  } else {
+    const existingStaff = await Staff.findOne({ employeeId }).select("_id");
+    if (existingStaff) throw new AppError("Employee ID already exists", 409, { employeeId: "Employee ID already exists" });
+  }
 
   const passwordHash = await bcrypt.hash(req.body.password, 12);
   const user = await User.create({
@@ -24,8 +54,8 @@ export const createStaff = async (req, res) => {
 
   const staff = await Staff.create({
     userId: user._id,
-    employeeId: req.body.employeeId,
-    department: req.body.department,
+    employeeId,
+    department: req.body.department || "General",
     role: req.body.role,
     employmentDate: req.body.employmentDate,
     emergencyContact: req.body.emergencyContact,
@@ -49,7 +79,7 @@ export const updateStaff = async (req, res) => {
   const staff = await Staff.findById(req.params.id);
   if (!staff) throw new AppError("Staff not found", 404);
 
-  const staffUpdates = ["department", "role", "status", "emergencyContact", "baseSalary", "allowances", "deductions"].reduce((acc, key) => {
+  const staffUpdates = ["department", "role", "status", "employmentDate", "emergencyContact", "baseSalary", "allowances", "deductions"].reduce((acc, key) => {
     if (req.body[key] !== undefined) acc[key] = req.body[key];
     return acc;
   }, {});

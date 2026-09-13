@@ -5,9 +5,20 @@ const staffSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true },
     employeeId: { type: String, required: true, unique: true, trim: true, uppercase: true },
-    department: { type: String, required: true, trim: true },
+    department: { type: String, trim: true, default: "General" },
     role: { type: String, enum: ROLE_VALUES, required: true, index: true },
-    employmentDate: { type: Date, required: true },
+    employmentDate: {
+      type: Date,
+      required: true,
+      validate: {
+        validator: (val) => {
+          const endOfToday = new Date();
+          endOfToday.setHours(23, 59, 59, 999);
+          return val <= endOfToday;
+        },
+        message: "Employment date must be in the past"
+      }
+    },
     status: { type: String, enum: ["active", "inactive"], default: "active", index: true },
     emergencyContact: { type: String, trim: true },
     baseSalary: { type: Number, default: 0, min: 0 },

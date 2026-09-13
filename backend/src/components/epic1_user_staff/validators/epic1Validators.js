@@ -13,10 +13,14 @@ export const createStaffSchema = z.object({
     email: z.string().trim().email().toLowerCase(),
     phone: phoneSchema,
     address: z.string().trim().optional().default(""),
-    employeeId: employeeIdSchema,
-    department: textNoNumbersSchema("Department", 80),
+    employeeId: employeeIdSchema.optional(),
+    department: textNoNumbersSchema("Department", 80).optional().default("General"),
     role: z.enum(staffRoleValues),
-    employmentDate: z.coerce.date(),
+    employmentDate: z.coerce.date().refine((date) => {
+      const endOfToday = new Date();
+      endOfToday.setHours(23, 59, 59, 999);
+      return date <= endOfToday;
+    }, "Employment date must be in the past"),
     emergencyContact: z.string().trim().optional().default(""),
     baseSalary: moneySchema("Base salary").optional().default(0),
     allowances: moneySchema("Allowances").optional().default(0),
@@ -34,6 +38,11 @@ export const updateStaffSchema = z.object({
     address: z.string().trim().optional(),
     department: textNoNumbersSchema("Department", 80).optional(),
     role: z.enum(staffRoleValues).optional(),
+    employmentDate: z.coerce.date().refine((date) => {
+      const endOfToday = new Date();
+      endOfToday.setHours(23, 59, 59, 999);
+      return date <= endOfToday;
+    }, "Employment date must be in the past").optional(),
     status: z.enum(["active", "inactive"]).optional(),
     emergencyContact: z.string().trim().optional(),
     baseSalary: moneySchema("Base salary").optional(),

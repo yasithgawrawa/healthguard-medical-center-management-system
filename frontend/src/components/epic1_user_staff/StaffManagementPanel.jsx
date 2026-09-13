@@ -166,6 +166,7 @@ export const StaffManagementPanel = () => {
         open={modal.type === "create" || modal.type === "edit"}
         mode={modal.type === "edit" ? "edit" : "create"}
         staff={modal.staff}
+        existingStaff={staff}
         busy={busy}
         onClose={() => setModal({ type: null, staff: null })}
         onSubmit={submitStaff}

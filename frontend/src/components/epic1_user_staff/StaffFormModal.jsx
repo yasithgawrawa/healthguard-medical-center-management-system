@@ -8,15 +8,49 @@ import { Modal } from "../shared/Modal.jsx";
 import { requiredEmployeeId, requiredMoney, requiredName, requiredPhone, requiredTextNoNumbers, stripDigits, stripNonId, stripNonPhone } from "../../utils/validationSchemas.js";
 import { STAFF_ROLES } from "./e1Constants.js";
 
+export const ROLE_PREFIX_MAP = {
+  admin: "ADM",
+  manager: "MGR",
+  doctor: "DOC",
+  nurse: "NUR",
+  pharmacist: "PHA",
+  cashier: "CAS",
+  lab_assistant: "LAB"
+};
+
+export const generateNextEmployeeId = (role, staffList = []) => {
+  if (!role) return "";
+  const prefix = ROLE_PREFIX_MAP[role] || "EMP";
+  const regex = new RegExp(`^HG-${prefix}-([0-9]+)$`, "i");
+  let maxNum = 0;
+  for (const s of staffList) {
+    const eid = s?.employeeId || "";
+    const match = eid.match(regex);
+    if (match) {
+      const parsed = parseInt(match[1], 10);
+      if (parsed > maxNum) maxNum = parsed;
+    }
+  }
+  return `HG-${prefix}-${String(maxNum + 1).padStart(3, "0")}`;
+};
+
 const baseSchema = z.object({
   firstName: requiredName("First name"),
   lastName: requiredName("Last name"),
   email: z.string().trim().email("Enter a valid email"),
   phone: requiredPhone,
-  employeeId: requiredEmployeeId,
-  department: requiredTextNoNumbers("Department", 80),
+  employeeId: z.string().optional(),
+  department: z.string().optional().default("General"),
   role: z.string().min(1, "Role is required"),
-  employmentDate: z.string().min(1, "Employment date is required"),
+  employmentDate: z
+    .string({ required_error: "Employment date is required", invalid_type_error: "Employment date is required" })
+    .min(1, "Employment date is required")
+    .refine((val) => {
+      const selected = new Date(val);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      return !isNaN(selected.getTime()) && selected <= today;
+    }, "Employment date must be in the past"),
   baseSalary: requiredMoney("Base salary").min(0.01, "Base salary must be greater than 0"),
   allowances: requiredMoney("Allowances"),
   deductions: requiredMoney("Deductions"),
@@ -39,7 +73,7 @@ const toFormValues = (staff) => ({
   email: staff?.userId?.email || "",
   phone: staff?.userId?.phone || "",
   employeeId: staff?.employeeId || "",
-  department: staff?.department || "",
+  department: staff?.department || "General",
   role: staff?.role || "",
   employmentDate: staff?.employmentDate ? new Date(staff.employmentDate).toISOString().slice(0, 10) : "",
   baseSalary: staff?.baseSalary ?? 0,
@@ -48,12 +82,14 @@ const toFormValues = (staff) => ({
   password: ""
 });
 
-export const StaffFormModal = ({ open, mode = "create", staff, onClose, onSubmit, busy }) => {
+export const StaffFormModal = ({ open, mode = "create", staff, existingStaff = [], onClose, onSubmit, busy }) => {
   const isEdit = mode === "edit";
   const {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors }
   } = useForm({
     resolver: zodResolver(isEdit ? editSchema : createSchema),
@@ -61,12 +97,27 @@ export const StaffFormModal = ({ open, mode = "create", staff, onClose, onSubmit
     defaultValues: toFormValues(staff)
   });
 
+  const selectedRole = watch("role");
+
   useEffect(() => {
     reset(toFormValues(staff));
   }, [staff, reset, open]);
 
+  useEffect(() => {
+    if (!isEdit && open && selectedRole) {
+      const nextId = generateNextEmployeeId(selectedRole, existingStaff);
+      setValue("employeeId", nextId, { shouldValidate: true });
+    }
+  }, [selectedRole, isEdit, open, existingStaff, setValue]);
+
   const submit = (values) => {
     const payload = { ...values };
+    if (!payload.employeeId && !isEdit) {
+      payload.employeeId = generateNextEmployeeId(values.role, existingStaff);
+    }
+    if (!payload.department) {
+      payload.department = "General";
+    }
     if (isEdit) {
       delete payload.email;
       delete payload.employeeId;
@@ -93,9 +144,18 @@ export const StaffFormModal = ({ open, mode = "create", staff, onClose, onSubmit
 
         <div className="form-section-title">Employment Information</div>
         <div className="form-grid">
-          <FormInput label="Employee ID" placeholder="HG-DOC-001" disabled={isEdit} sanitize={stripNonId} error={errors.employeeId?.message} {...register("employeeId")} />
-          <FormInput label="Department" placeholder="OPD" sanitize={stripDigits} error={errors.department?.message} {...register("department")} />
-          <FormSelect label="Role" error={errors.role?.message} {...register("role")}>
+          <FormSelect
+            label="Role"
+            error={errors.role?.message}
+            {...register("role", {
+              onChange: (e) => {
+                if (!isEdit && e.target.value) {
+                  const nextId = generateNextEmployeeId(e.target.value, existingStaff);
+                  setValue("employeeId", nextId, { shouldValidate: true });
+                }
+              }
+            })}
+          >
             <option value="">Select role</option>
             {STAFF_ROLES.map((role) => (
               <option value={role.value} key={role.value}>
@@ -103,7 +163,21 @@ export const StaffFormModal = ({ open, mode = "create", staff, onClose, onSubmit
               </option>
             ))}
           </FormSelect>
-          <FormInput label="Employment Date" type="date" error={errors.employmentDate?.message} {...register("employmentDate")} />
+          <FormInput
+            label="Employee ID (Automated)"
+            placeholder="Select role to generate ID"
+            readOnly
+            style={{ backgroundColor: "#f8fafc", cursor: "not-allowed", fontWeight: 600, color: "#1e40af" }}
+            error={errors.employeeId?.message}
+            {...register("employeeId")}
+          />
+          <FormInput
+            label="Employment Date"
+            type="date"
+            max={new Date().toISOString().slice(0, 10)}
+            error={errors.employmentDate?.message}
+            {...register("employmentDate")}
+          />
         </div>
 
         <div className="form-section-title">Salary Information</div>
