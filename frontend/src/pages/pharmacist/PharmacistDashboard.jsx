@@ -1,4 +1,4 @@
-import { AlertCircle, AlertTriangle, Boxes, PackageCheck, Pill, ShoppingCart, Truck } from "lucide-react";
+import { AlertCircle, AlertTriangle, ArrowDownCircle, PackageCheck, Pill, ShoppingCart, Truck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { StaffSelfServicePanel } from "../../components/epic1_user_staff/StaffSelfServicePanel.jsx";
 import { InventoryWorkspacePanel } from "../../components/epic3_inventory/InventoryWorkspacePanel.jsx";
@@ -84,7 +84,7 @@ export const PharmacistDashboard = () => {
       <DashboardQuickActions
         actions={[
           { label: "Add Medicine", detail: "Create catalog item", icon: Pill, href: "#pharmacy-inventory" },
-          { label: "Receive Batch", detail: "Add stock by batch", icon: Boxes, href: "#pharmacy-inventory" },
+          { label: "Record Purchase", detail: "Log supplier delivery", icon: ArrowDownCircle, href: "#pharmacy-inventory" },
           { label: "Record Sale", detail: "Dispense to patient", icon: PackageCheck, href: "#pharmacy-inventory" },
           { label: "Add Supplier", detail: "Manage vendor details", icon: Truck, href: "#pharmacy-inventory" }
         ]}

@@ -61,6 +61,37 @@ const saveBlob = (blob, filename) => {
   URL.revokeObjectURL(url);
 };
 
+const getMedicinePrefix = (medName) => {
+  if (!medName) return "MED";
+  const upper = medName.toUpperCase();
+  if (upper.startsWith("PARACETAMOL")) return "PCM";
+  if (upper.startsWith("AMOXICILLIN")) return "AMC";
+  if (upper.startsWith("METFORMIN")) return "MET";
+  if (upper.startsWith("LOSARTAN")) return "LOS";
+  if (upper.startsWith("OMEPRAZOLE")) return "OME";
+  if (upper.startsWith("ATORVASTATIN")) return "ATO";
+  if (upper.startsWith("SALBUTAMOL")) return "SAL";
+  if (upper.startsWith("CETIRIZINE")) return "CET";
+  const clean = upper.replace(/[^A-Z]/g, "");
+  return (clean.slice(0, 3) || "MED").padEnd(3, "X");
+};
+
+const generateBatchNumber = (med, existingBatches = [], excludeBatch = "") => {
+  const prefix = getMedicinePrefix(med?.name);
+  const yy = new Date().getFullYear().toString().slice(-2);
+  const existingNums = new Set((existingBatches || []).map((b) => (b.batchNumber || "").toUpperCase().trim()));
+  if (excludeBatch) existingNums.add(excludeBatch.toUpperCase().trim());
+
+  for (let i = 1; i <= 99; i++) {
+    const candidate = `${prefix}-LK-${yy}${String(i).padStart(2, "0")}`;
+    if (!existingNums.has(candidate)) {
+      return candidate;
+    }
+  }
+  return `${prefix}-LK-${yy}${String(Date.now()).slice(-4)}`;
+};
+
+
 const schemas = {
   medicine: z.object({
     name: z.string().trim().min(2, "Medicine name is required").max(120),
@@ -220,14 +251,14 @@ export const InventoryWorkspacePanel = () => {
     setPurchaseMedId(medId);
     setPurchaseIsNewBatch(true);
     setPurchaseBatchId("");
-    setPurchaseBatchNumber("");
-    setPurchaseMfgDate(new Date().toISOString().slice(0, 10));
+    const selectedMed = medicines.find((m) => m._id === medId) || prefillMed;
+    setPurchaseBatchNumber(generateBatchNumber(selectedMed, batches));
+    setPurchaseMfgDate(todayStr());
     const nextYear = new Date();
     nextYear.setFullYear(nextYear.getFullYear() + 2);
     setPurchaseExpDate(nextYear.toISOString().slice(0, 10));
     setPurchaseQty(100);
-    const med = medicines.find((m) => m._id === medId);
-    setPurchasePrice(med ? Math.round(med.price * 0.7) : "");
+    setPurchasePrice(selectedMed ? Math.round(selectedMed.price * 0.7) : "");
     setModal({ type: "purchase", record: prefillMed });
   };
 
@@ -502,9 +533,6 @@ export const InventoryWorkspacePanel = () => {
           <div className="inline-actions" style={{ flexWrap: "wrap", gap: "8px" }}>
             <button type="button" onClick={() => openStandardModal("medicine")} className="button-secondary">
               <Pill size={16} /> Add Medicine
-            </button>
-            <button type="button" onClick={() => openStandardModal("batch")} className="button-secondary">
-              <Boxes size={16} /> Receive Batch
             </button>
             <button type="button" onClick={() => openStandardModal("supplier")} className="button-secondary">
               <Truck size={16} /> Add Supplier
@@ -1113,14 +1141,14 @@ export const InventoryWorkspacePanel = () => {
       {/* ========================================================================= */}
       <Modal
         open={modal.type === "batch"}
-        title={modal.record ? "Adjust Stock / Update Batch" : "Receive New Medicine Batch"}
-        subtitle={modal.record ? "Update batch quantity, batch identifier, or expiration date." : "Record inbound medicine batch with tracking code and shelf life."}
+        title={modal.record ? "Adjust Stock / Update Batch" : "Batch Details"}
+        subtitle={modal.record ? "Update batch quantity, batch identifier, or expiration date." : "Batch information."}
         onClose={() => setModal({ type: null, record: null })}
       >
         <form onSubmit={handleSubmit(submitStandard)}>
           <div className="form-section-title" style={{ marginTop: 0 }}>Batch Identification</div>
           <div className="form-grid">
-            <FormSelect label="Medicine" error={errors.medicineId?.message} {...register("medicineId")}>
+            <FormSelect label="Medicine" disabled={Boolean(modal.record)} error={errors.medicineId?.message} {...register("medicineId")}>
               <option value="">Select Medicine</option>
               {medicines.map((m) => (
                 <option value={m._id} key={m._id}>{m.name} ({m.category})</option>
@@ -1207,9 +1235,15 @@ export const InventoryWorkspacePanel = () => {
               label="Medicine"
               value={purchaseMedId}
               onChange={(e) => {
-                setPurchaseMedId(e.target.value);
-                const m = medicines.find((x) => x._id === e.target.value);
-                if (m) setPurchasePrice(Math.round(m.price * 0.7));
+                const nextMedId = e.target.value;
+                setPurchaseMedId(nextMedId);
+                const m = medicines.find((x) => x._id === nextMedId);
+                if (m) {
+                  setPurchasePrice(Math.round(m.price * 0.7));
+                  if (purchaseIsNewBatch) {
+                    setPurchaseBatchNumber(generateBatchNumber(m, batches));
+                  }
+                }
               }}
               required
             >
@@ -1225,7 +1259,14 @@ export const InventoryWorkspacePanel = () => {
               <input
                 type="checkbox"
                 checked={purchaseIsNewBatch}
-                onChange={(e) => setPurchaseIsNewBatch(e.target.checked)}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setPurchaseIsNewBatch(checked);
+                  if (checked && !purchaseBatchNumber) {
+                    const m = medicines.find((x) => x._id === purchaseMedId);
+                    setPurchaseBatchNumber(generateBatchNumber(m, batches));
+                  }
+                }}
               />
               <span>This is a NEW delivery batch (create new batch record)</span>
             </label>
@@ -1237,8 +1278,26 @@ export const InventoryWorkspacePanel = () => {
               <>
                 <div className="form-field-full">
                   <FormInput
-                    label="New Batch Number"
-                    placeholder="e.g. BATCH-2026-001"
+                    label={
+                      <span style={{ display: "inline-flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                        <span>New Batch Number (Auto-Generated)</span>
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          style={{ fontSize: "11px", color: "var(--brand-700)", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "4px", cursor: "pointer" }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const m = medicines.find((x) => x._id === purchaseMedId);
+                            setPurchaseBatchNumber(generateBatchNumber(m, batches, purchaseBatchNumber));
+                          }}
+                          title="Generate next available batch code"
+                        >
+                          <RefreshCw size={11} /> Regenerate
+                        </span>
+                      </span>
+                    }
+                    placeholder="e.g. PCM-LK-2601"
                     value={purchaseBatchNumber}
                     onChange={(e) => setPurchaseBatchNumber(e.target.value)}
                     sanitize={stripNonBatch}

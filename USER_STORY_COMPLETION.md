@@ -42,7 +42,7 @@ This document tracks completion of all user stories across E1-E4 after the imple
 | Story | Status | Completed implementation |
 | --- | --- | --- |
 | E3-US01 Pharmacist adds medicines | Complete | Add medicine modal with validated name, category, unit, price, reorder level, and duplicate name prevention. |
-| E3-US02 Pharmacist records batches | Complete | Receive batch modal with batch number format, manufacture/expiry date ordering, and price/quantity validation. |
+| E3-US02 Pharmacist records batches | Complete | Unified purchase receipt workflow with auto-generated batch numbering, supplier audit trail, manufacture/expiry date ordering, and price/quantity validation. |
 | E3-US03 Pharmacist views medicines and quantities | Complete | Catalog view with backend aggregated live stock quantities, batch counts, reorder levels, unit price, and stock status badges. |
 | E3-US04 Pharmacist searches medicines | Complete | Multi-attribute search across medicine name, category, unit, and quick filters for category and stock level. |
 | E3-US05 Pharmacist views individual batches | Complete | Batches tab listing batch number, medicine, stock quantity, cost, manufacture and expiry dates, and expiry status badges. |
