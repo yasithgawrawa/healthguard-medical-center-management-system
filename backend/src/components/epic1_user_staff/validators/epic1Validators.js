@@ -4,7 +4,13 @@ import { employeeIdSchema, moneySchema, nameSchema, phoneSchema, textNoNumbersSc
 import { idParamSchema, objectIdSchema } from "../../../shared/validators/commonSchemas.js";
 
 const staffRoleValues = ROLE_VALUES.filter((role) => role !== ROLES.PATIENT);
-const passwordSchema = z.string().min(8).regex(/[a-z]/).regex(/[A-Z]/).regex(/[0-9]/).regex(/[^A-Za-z0-9]/);
+const passwordSchema = z
+  .string({ required_error: "Password is required" })
+  .min(8, "Password must be at least 8 characters")
+  .regex(/[a-z]/, "Password must include at least one lowercase letter")
+  .regex(/[A-Z]/, "Password must include at least one uppercase letter")
+  .regex(/[0-9]/, "Password must include at least one number")
+  .regex(/[^A-Za-z0-9]/, "Password must include at least one special character (e.g. @, #, $, !)");
 
 export const createStaffSchema = z.object({
   body: z.object({

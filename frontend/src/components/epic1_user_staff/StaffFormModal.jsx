@@ -58,7 +58,13 @@ const baseSchema = z.object({
 });
 
 const createSchema = baseSchema.extend({
-  password: z.string().min(8, "Temporary password must be at least 8 characters")
+  password: z
+    .string({ required_error: "Temporary password is required" })
+    .min(8, "Temporary password must be at least 8 characters")
+    .regex(/[a-z]/, "Must include at least one lowercase letter")
+    .regex(/[A-Z]/, "Must include at least one uppercase letter")
+    .regex(/[0-9]/, "Must include at least one number")
+    .regex(/[^A-Za-z0-9]/, "Must include at least one special character (e.g. @, #, $, !)")
 });
 
 const editSchema = baseSchema.omit({ email: true, employeeId: true }).extend({
@@ -82,7 +88,7 @@ const toFormValues = (staff) => ({
   password: ""
 });
 
-export const StaffFormModal = ({ open, mode = "create", staff, existingStaff = [], onClose, onSubmit, busy }) => {
+export const StaffFormModal = ({ open, mode = "create", staff, existingStaff = [], serverErrors, onClose, onSubmit, busy }) => {
   const isEdit = mode === "edit";
   const {
     register,
@@ -90,6 +96,7 @@ export const StaffFormModal = ({ open, mode = "create", staff, existingStaff = [
     reset,
     watch,
     setValue,
+    setError,
     formState: { errors }
   } = useForm({
     resolver: zodResolver(isEdit ? editSchema : createSchema),
@@ -102,6 +109,15 @@ export const StaffFormModal = ({ open, mode = "create", staff, existingStaff = [
   useEffect(() => {
     reset(toFormValues(staff));
   }, [staff, reset, open]);
+
+  useEffect(() => {
+    if (serverErrors && typeof serverErrors === "object") {
+      Object.entries(serverErrors).forEach(([field, msg]) => {
+        const cleanField = field.replace(/^body\./, "");
+        setError(cleanField, { type: "server", message: msg });
+      });
+    }
+  }, [serverErrors, setError]);
 
   useEffect(() => {
     if (!isEdit && open && selectedRole) {
@@ -191,6 +207,9 @@ export const StaffFormModal = ({ open, mode = "create", staff, existingStaff = [
           <>
             <div className="form-section-title">Account</div>
             <FormInput label="Temporary Password" type="password" placeholder="Admin@12345" error={errors.password?.message} {...register("password")} />
+            <div style={{ fontSize: "0.78rem", color: "#64748b", marginTop: "-6px", marginBottom: "8px" }}>
+              Must be at least 8 characters and include uppercase, lowercase, number & special character (e.g. <code>Admin@12345</code>).
+            </div>
           </>
         ) : null}
 

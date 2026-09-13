@@ -68,8 +68,11 @@ export const StaffManagementPanel = () => {
   const activeCount = staff.filter((item) => item.status === "active").length;
   const roleCount = new Set(staff.map((item) => item.role)).size;
 
+  const [serverErrors, setServerErrors] = useState(null);
+
   const submitStaff = async (payload) => {
     setBusy(true);
+    setServerErrors(null);
     try {
       if (modal.type === "edit") {
         await e1Api.updateStaff(modal.staff._id, payload);
@@ -81,7 +84,18 @@ export const StaffManagementPanel = () => {
       setModal({ type: null, staff: null });
       await loadStaff();
     } catch (error) {
-      setToast({ type: "error", message: error.response?.data?.message || "Unable to save staff" });
+      const resData = error.response?.data;
+      let errorMsg = resData?.message || "Unable to save staff";
+      if (resData?.errors && typeof resData.errors === "object") {
+        setServerErrors(resData.errors);
+        const detailed = Object.entries(resData.errors)
+          .map(([key, err]) => `${key.replace(/^body\./, "")}: ${err}`)
+          .join(" • ");
+        if (detailed) {
+          errorMsg = `Validation failed: ${detailed}`;
+        }
+      }
+      setToast({ type: "error", message: errorMsg });
     } finally {
       setBusy(false);
     }
@@ -167,8 +181,12 @@ export const StaffManagementPanel = () => {
         mode={modal.type === "edit" ? "edit" : "create"}
         staff={modal.staff}
         existingStaff={staff}
+        serverErrors={serverErrors}
         busy={busy}
-        onClose={() => setModal({ type: null, staff: null })}
+        onClose={() => {
+          setServerErrors(null);
+          setModal({ type: null, staff: null });
+        }}
         onSubmit={submitStaff}
       />
 
