@@ -12,13 +12,25 @@ const medicineBodySchema = z.object({
   status: z.enum(["active", "inactive"]).optional()
 });
 
+const isPastOrToday = (date) => {
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+  return date <= end;
+};
+
+const isFutureDate = (date) => {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  return date > start;
+};
+
 const batchBodySchema = z.object({
   medicineId: objectIdSchema,
   batchNumber: z.string().trim().min(2, "Batch number is required").max(40).regex(batchNumberPattern, "Batch number can only contain letters, numbers and hyphens"),
   quantity: quantitySchema(),
   purchasePrice: moneySchema("Purchase price"),
-  manufactureDate: z.coerce.date(),
-  expiryDate: z.coerce.date()
+  manufactureDate: z.coerce.date().refine(isPastOrToday, "Manufacture date cannot be in the future"),
+  expiryDate: z.coerce.date().refine(isFutureDate, "Expiry date must be in the future for newly received stock")
 });
 
 const batchDateOrder = (data) => data.expiryDate > data.manufactureDate;
@@ -75,8 +87,8 @@ export const purchaseSchema = z.object({
     medicineId: objectIdSchema,
     batchId: objectIdSchema.optional(),
     batchNumber: z.string().trim().regex(batchNumberPattern, "Invalid batch number format").optional(),
-    manufactureDate: z.coerce.date().optional(),
-    expiryDate: z.coerce.date().optional(),
+    manufactureDate: z.coerce.date().refine(isPastOrToday, "Manufacture date cannot be in the future").optional(),
+    expiryDate: z.coerce.date().refine(isFutureDate, "Expiry date must be in the future for newly received stock").optional(),
     quantity: quantitySchema(),
     purchasePrice: moneySchema("Purchase price")
   }).refine((data) => {

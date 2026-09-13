@@ -81,21 +81,33 @@ const schemas = {
     batchNumber: z.string().trim().min(2, "Batch number is required").max(40).regex(batchNumberPattern, "Batch number can only contain letters, numbers and hyphens"),
     quantity: requiredQuantity(),
     purchasePrice: requiredMoney("Purchase price"),
-    manufactureDate: z.string().min(1, "Manufacture date is required"),
-    expiryDate: z.string().min(1, "Expiry date is required")
+    manufactureDate: z.string().min(1, "Manufacture date is required").refine((val) => {
+      const d = new Date(val);
+      const end = new Date();
+      end.setHours(23, 59, 59, 999);
+      return !isNaN(d.getTime()) && d <= end;
+    }, "Manufacture date cannot be in the future"),
+    expiryDate: z.string().min(1, "Expiry date is required").refine((val) => {
+      const d = new Date(val);
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      return !isNaN(d.getTime()) && d > start;
+    }, "Expiry date must be in the future for newly received stock")
   }).refine((data) => new Date(data.expiryDate) > new Date(data.manufactureDate), {
     path: ["expiryDate"],
     message: "Expiry date must be after manufacture date"
-  }).refine((data) => new Date(data.expiryDate) > new Date(), {
-    path: ["expiryDate"],
-    message: "Expiry date must be in the future for newly received stock"
   }),
   batchUpdate: z.object({
     medicineId: z.string().min(1, "Select medicine"),
     batchNumber: z.string().trim().min(2, "Batch number is required").max(40).regex(batchNumberPattern, "Batch number can only contain letters, numbers and hyphens"),
     quantity: z.coerce.number().int("Quantity must be a whole number").min(0).max(100000),
     purchasePrice: requiredMoney("Purchase price"),
-    manufactureDate: z.string().min(1, "Manufacture date is required"),
+    manufactureDate: z.string().min(1, "Manufacture date is required").refine((val) => {
+      const d = new Date(val);
+      const end = new Date();
+      end.setHours(23, 59, 59, 999);
+      return !isNaN(d.getTime()) && d <= end;
+    }, "Manufacture date cannot be in the future"),
     expiryDate: z.string().min(1, "Expiry date is required")
   }).refine((data) => new Date(data.expiryDate) > new Date(data.manufactureDate), {
     path: ["expiryDate"],
@@ -300,7 +312,20 @@ export const InventoryWorkspacePanel = () => {
     if (purchaseIsNewBatch) {
       if (!purchaseBatchNumber.trim()) return setToast({ type: "error", message: "Batch number is required for new batch" });
       if (!purchaseMfgDate || !purchaseExpDate) return setToast({ type: "error", message: "Dates are required for new batch" });
-      if (new Date(purchaseExpDate) <= new Date(purchaseMfgDate)) {
+      const mfg = new Date(purchaseMfgDate);
+      const exp = new Date(purchaseExpDate);
+      const endOfToday = new Date();
+      endOfToday.setHours(23, 59, 59, 999);
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+
+      if (mfg > endOfToday) {
+        return setToast({ type: "error", message: "Manufacture date cannot be in the future" });
+      }
+      if (exp <= startOfToday) {
+        return setToast({ type: "error", message: "Expiry date must be in the future for newly received stock" });
+      }
+      if (exp <= mfg) {
         return setToast({ type: "error", message: "Expiry date must be after manufacture date" });
       }
       payload.batchNumber = purchaseBatchNumber.trim().toUpperCase();
@@ -1120,8 +1145,8 @@ export const InventoryWorkspacePanel = () => {
           <div className="form-grid">
             <FormInput label="Quantity in Stock" placeholder="100" type="number" min="0" step="1" error={errors.quantity?.message} {...register("quantity")} />
             <FormInput label="Purchase Price (Rs.)" placeholder="10.50" type="number" min="0" step="0.01" error={errors.purchasePrice?.message} {...register("purchasePrice")} />
-            <FormInput label="Manufacture Date" type="date" error={errors.manufactureDate?.message} {...register("manufactureDate")} />
-            <FormInput label="Expiry Date" type="date" error={errors.expiryDate?.message} {...register("expiryDate")} />
+            <FormInput label="Manufacture Date" type="date" max={new Date().toLocaleDateString("en-CA")} error={errors.manufactureDate?.message} {...register("manufactureDate")} />
+            <FormInput label="Expiry Date" type="date" min={new Date().toLocaleDateString("en-CA")} error={errors.expiryDate?.message} {...register("expiryDate")} />
           </div>
 
           <div className="modal-actions">
@@ -1235,6 +1260,7 @@ export const InventoryWorkspacePanel = () => {
                 <FormInput
                   label="Manufacture Date"
                   type="date"
+                  max={new Date().toLocaleDateString("en-CA")}
                   value={purchaseMfgDate}
                   onChange={(e) => setPurchaseMfgDate(e.target.value)}
                   required
@@ -1242,6 +1268,7 @@ export const InventoryWorkspacePanel = () => {
                 <FormInput
                   label="Expiry Date"
                   type="date"
+                  min={purchaseMfgDate || new Date().toLocaleDateString("en-CA")}
                   value={purchaseExpDate}
                   onChange={(e) => setPurchaseExpDate(e.target.value)}
                   required

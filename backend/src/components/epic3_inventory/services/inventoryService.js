@@ -180,13 +180,28 @@ export const inventoryService = {
       if (existing) {
         throw new AppError("Batch number already exists. Please select it or use a unique batch number.", 409);
       }
+      const mfg = new Date(data.manufactureDate);
+      const exp = new Date(data.expiryDate);
+      const endOfToday = new Date();
+      endOfToday.setHours(23, 59, 59, 999);
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      if (mfg > endOfToday) {
+        throw new AppError("Manufacture date cannot be in the future", 400);
+      }
+      if (exp <= startOfToday) {
+        throw new AppError("Expiry date must be in the future for newly received stock", 400);
+      }
+      if (exp <= mfg) {
+        throw new AppError("Expiry date must be after manufacture date", 400);
+      }
       batch = await MedicineBatch.create({
         medicineId: medicine._id,
         batchNumber: cleanBatchNo,
         quantity: data.quantity,
         purchasePrice: data.purchasePrice,
-        manufactureDate: new Date(data.manufactureDate),
-        expiryDate: new Date(data.expiryDate)
+        manufactureDate: mfg,
+        expiryDate: exp
       });
     } else {
       throw new AppError("Either select an existing batch or provide new batch details", 400);
