@@ -66,6 +66,15 @@ Sprint 0 roles:
 
 > Sprint 0 proposed PostgreSQL/MySQL as an implementation option. The team later selected MERN, so the actual implementation uses **MongoDB + Mongoose**. Final project documentation should be updated to match the implemented stack.
 
+## Evaluation Corrections
+
+The following issues were identified during the evaluation and should be corrected before the next review:
+
+- When a patient creates an appointment with a selected time, the appointment view should display the selected appointment time slot correctly.
+- All customer/patient-related views should display the customer/patient ID in addition to the name.
+- Gunasekara's E4 payroll and salary features should be fully implemented in the cashier workflow.
+- Walk-in medicine payments should collect the customer's name and phone number.
+
 ## System Roles
 
 - `patient`
