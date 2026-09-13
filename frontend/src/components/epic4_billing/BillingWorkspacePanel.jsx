@@ -210,28 +210,6 @@ export const BillingWorkspacePanel = () => {
     printPayslipPDF(item);
   };
 
-  const patientUnpaidCounts = useMemo(() => {
-    const counts = new Map();
-    invoices.filter((i) => i.status !== "paid" && i.patientId?._id).forEach((inv) => {
-      const pid = inv.patientId._id.toString();
-      counts.set(pid, (counts.get(pid) || 0) + 1);
-    });
-    return counts;
-  }, [invoices]);
-
-  const consolidateBills = async (patientId) => {
-    setBusy(true);
-    try {
-      const res = await billingApi.consolidateInvoices(patientId);
-      setToast({ type: "success", message: res?.message || "Patient visit charges consolidated into one unified bill" });
-      await load();
-    } catch (error) {
-      setToast({ type: "error", message: error.response?.data?.message || "Unable to consolidate bills" });
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <section className="e1-panel" id="billing-payments">
       <Toast toast={toast} onClose={() => setToast(null)} />
@@ -332,21 +310,8 @@ export const BillingWorkspacePanel = () => {
                 key: "actions",
                 header: "Actions",
                 render: (item) => {
-                  const pid = item.patientId?._id ? item.patientId._id.toString() : "";
-                  const canMerge = isCashier && pid && (patientUnpaidCounts.get(pid) || 0) > 1 && item.status !== "paid";
                   return (
                     <div className="inline-actions" style={{ flexWrap: "wrap", gap: "6px" }}>
-                      {canMerge ? (
-                        <button
-                          className="button-secondary"
-                          style={{ padding: "3px 8px", fontSize: "0.76rem" }}
-                          type="button"
-                          onClick={() => consolidateBills(item.patientId._id)}
-                          title="Merge all pending bills for this patient into one unified visit bill"
-                        >
-                          Merge Bills
-                        </button>
-                      ) : null}
                       {isCashier && item.outstandingAmount > 0 ? (
                         <button
                           className="button-primary"

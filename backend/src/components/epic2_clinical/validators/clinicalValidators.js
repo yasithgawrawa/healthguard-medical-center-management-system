@@ -87,8 +87,8 @@ export const labUpdateSchema = z.object({
     resultSummary: z.string().trim().max(1000).optional().or(z.literal("")),
     resultUrl: z.string().trim().url("Enter a valid report URL").optional().or(z.literal("")),
     parameters: z.array(z.object({
-      parameter: z.string().trim().max(120).optional(),
-      value: z.string().trim().max(120).optional(),
+      parameter: z.string().trim().min(1, "Parameter name is required").max(120),
+      value: z.string().trim().min(1, "Observed value is required").max(120),
       unit: z.string().trim().max(60).optional(),
       referenceRange: z.string().trim().max(120).optional(),
       flag: z.string().trim().max(40).optional()
@@ -104,5 +104,13 @@ export const labUpdateSchema = z.object({
   }, {
     path: ["resultSummary"],
     message: "Result summary is required when marking lab test as completed"
+  }).refine((data) => {
+    if (data.status === "completed" && (!data.parameters || data.parameters.length === 0)) {
+      return false;
+    }
+    return true;
+  }, {
+    path: ["parameters"],
+    message: "At least one analyte with parameter name and observed value is required for completed results"
   })
 });

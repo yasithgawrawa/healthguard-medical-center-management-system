@@ -489,9 +489,23 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
       }
       if (modal.type === "lab-request") await clinicalApi.createLabRequest({ appointmentId: record._id, ...values });
       if (modal.type === "lab-update") {
+        const filledParams = labParameters.filter((p) => p.parameter?.trim() && p.value?.trim());
+        const incompleteParams = labParameters.filter((p) => (p.parameter?.trim() && !p.value?.trim()) || (!p.parameter?.trim() && p.value?.trim()));
+
+        if (values.status === "completed" && filledParams.length === 0) {
+          setToast({ type: "error", message: "At least one analyte with parameter name and observed value is required for completed results" });
+          setBusy(false);
+          return;
+        }
+        if (incompleteParams.length > 0) {
+          setToast({ type: "error", message: "Each analyte row must have both a parameter name and an observed value, or be removed" });
+          setBusy(false);
+          return;
+        }
+
         await clinicalApi.updateLabRequest(record._id, {
           ...values,
-          parameters: labParameters.filter((p) => p.parameter?.trim() || p.value?.trim()),
+          parameters: filledParams,
           specimenType
         });
       }
@@ -1680,7 +1694,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                           placeholder="e.g. Total Cholesterol"
                           value={p.parameter}
                           onChange={(e) => updateLabParamRow(pIdx, "parameter", e.target.value)}
-                          style={{ width: "100%", padding: "5px 6px", fontSize: "0.78rem", border: "1px solid #cbd5e1", borderRadius: "4px" }}
+                          style={{ width: "100%", padding: "5px 6px", fontSize: "0.78rem", border: `1px solid ${!p.parameter?.trim() && p.value?.trim() ? "#ef4444" : "#cbd5e1"}`, borderRadius: "4px" }}
                           required
                         />
                       </div>
@@ -1690,7 +1704,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                           placeholder="Value (e.g. 185)"
                           value={p.value}
                           onChange={(e) => updateLabParamRow(pIdx, "value", e.target.value)}
-                          style={{ width: "100%", padding: "5px 6px", fontSize: "0.78rem", fontWeight: 600, border: "1px solid #cbd5e1", borderRadius: "4px" }}
+                          style={{ width: "100%", padding: "5px 6px", fontSize: "0.78rem", fontWeight: 600, border: `1px solid ${p.parameter?.trim() && !p.value?.trim() ? "#ef4444" : "#cbd5e1"}`, borderRadius: "4px" }}
                         />
                       </div>
                       <div>
