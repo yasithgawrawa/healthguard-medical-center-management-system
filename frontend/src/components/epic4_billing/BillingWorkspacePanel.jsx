@@ -64,6 +64,7 @@ export const BillingWorkspacePanel = () => {
   const [toast, setToast] = useState(null);
   const isManager = [ROLES.MANAGER, ROLES.ADMIN].includes(user?.role);
   const isCashier = [ROLES.CASHIER, ROLES.ADMIN].includes(user?.role);
+  const canManagePayroll = [ROLES.MANAGER, ROLES.ADMIN, ROLES.CASHIER].includes(user?.role);
 
   const schema = useMemo(() => {
     if (modal.type === "payment") {
@@ -86,7 +87,7 @@ export const BillingWorkspacePanel = () => {
     try {
       const requests = [billingApi.invoices(), billingApi.summary()];
       if (isCashier || isManager) requests.push(billingApi.payments()); else requests.push(Promise.resolve([]));
-      if (isManager) {
+      if (canManagePayroll) {
         requests.push(clinicalApi.listAppointments(), billingApi.payroll(), e1Api.listWorkforceStaff());
       } else {
         requests.push(isCashier ? clinicalApi.listAppointments() : Promise.resolve([]), Promise.resolve([]), Promise.resolve([]));
@@ -238,7 +239,7 @@ export const BillingWorkspacePanel = () => {
         <div><h2>Billing, Payments & Payroll</h2><p>Create invoices, record payments, reconcile revenue and process attendance-based payroll.</p></div>
         <div className="inline-actions">
           {isCashier ? <button className="button-primary" type="button" onClick={() => { reset({}); setModal({ type: "invoice", record: null }); }}><Receipt size={17} /> Create Invoice</button> : null}
-          {isManager ? <button type="button" onClick={() => { reset({ month: new Date().toISOString().slice(0, 7), allowances: 0, deductions: 0 }); setModal({ type: "payroll", record: null }); }}><DollarSign size={17} /> Calculate Payroll</button> : null}
+          {canManagePayroll ? <button type="button" onClick={() => { reset({ month: new Date().toISOString().slice(0, 7), allowances: 0, deductions: 0 }); setModal({ type: "payroll", record: null }); }}><DollarSign size={17} /> Calculate Payroll</button> : null}
         </div>
       </div>
 
@@ -411,7 +412,7 @@ export const BillingWorkspacePanel = () => {
             { key: "attendanceDays", header: "Attendance Days" },
             { key: "netSalary", header: "Net Salary", render: (item) => money(item.netSalary) },
             { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
-            { key: "actions", header: "Actions", render: (item) => isManager ? <div className="inline-actions"><button type="button" onClick={() => changePayrollStatus(item, "reviewed")} disabled={busy || item.status !== "draft"}>Review</button><button type="button" onClick={() => changePayrollStatus(item, "approved")} disabled={busy || item.status !== "reviewed"}>Approve</button><button type="button" onClick={() => changePayrollStatus(item, "paid")} disabled={busy || item.status !== "approved"}>Mark Paid</button><button className="table-link-button" type="button" onClick={() => printPayslip(item)} title="Download Payslip as PDF"><Download size={13} style={{ display: "inline", marginRight: "4px" }} />Download PDF</button></div> : null }
+            { key: "actions", header: "Actions", render: (item) => canManagePayroll ? <div className="inline-actions"><button type="button" onClick={() => changePayrollStatus(item, "reviewed")} disabled={busy || item.status !== "draft"}>Review</button><button type="button" onClick={() => changePayrollStatus(item, "approved")} disabled={busy || item.status !== "reviewed"}>Approve</button><button type="button" onClick={() => changePayrollStatus(item, "paid")} disabled={busy || item.status !== "approved"}>Mark Paid</button><button className="table-link-button" type="button" onClick={() => printPayslip(item)} title="Download Payslip as PDF"><Download size={13} style={{ display: "inline", marginRight: "4px" }} />Download PDF</button></div> : null }
           ]}
           emptyText="No payroll records yet."
         />

@@ -76,16 +76,16 @@ This document tracks completion of all user stories across E1-E4 after the imple
 | E4-US08 Patient views/downloads receipt | Complete | Patient paid invoice card downloads the real backend receipt for their invoice. |
 | E4-US09 Manager views revenue reports | Complete | Revenue tab shows invoiced, collected, outstanding and payroll expense totals. |
 | E4-US10 Manager views outstanding invoices | Complete | Manager invoice table includes outstanding balances and statuses. |
-| E4-US11 Admin/Manager maintains salary information | Complete | Staff profiles store base salary, allowances and deductions; payroll can auto-fill from salary master data. |
+| E4-US11 Admin/Manager/Cashier maintains salary information | Complete | Staff profiles store base salary, allowances and deductions; payroll can auto-fill from salary master data. |
 | E4-US12 System obtains attendance records for salary | Complete | Payroll calculation counts checked-out E1 attendance records by staff/month. |
 | E4-US13 System calculates monthly salary | Complete | Backend computes attendance days, daily rate and net salary. |
-| E4-US14 Manager reviews salaries | Complete | Payroll status transition supports draft to reviewed. |
-| E4-US15 Manager approves salary payments | Complete | Payroll status transition supports reviewed to approved. |
-| E4-US16 Manager records completed salary payments | Complete | Payroll status transition supports approved to paid with paid date. |
+| E4-US14 Manager/Cashier reviews salaries | Complete | Payroll status transition supports draft to reviewed. |
+| E4-US15 Manager/Cashier approves salary payments | Complete | Payroll status transition supports reviewed to approved. |
+| E4-US16 Manager/Cashier records completed salary payments | Complete | Payroll status transition supports approved to paid with paid date. |
 | E4-US17 System generates payslip | Complete | Payroll records expose a protected backend-generated downloadable payslip. |
 | E4-US18 Staff views monthly payslip | Complete | Staff self-service panel includes payslip table and own-payslip download action. |
 | E4-US19 Staff views salary payment history | Complete | Staff self-service payroll table lists salary history. |
-| E4-US20 Manager views payroll reports | Complete | Manager payroll tab lists payroll records and payroll expense summary. |
+| E4-US20 Manager/Cashier views payroll reports | Complete | Billing workspace payroll tab lists payroll records and payroll expense summary. |
 
 ## Verification
 

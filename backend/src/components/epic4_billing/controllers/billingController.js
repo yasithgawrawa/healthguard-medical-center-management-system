@@ -106,7 +106,7 @@ export const createPayroll = async (req, res) => {
 
 export const listPayroll = async (req, res) => {
   const filter = {};
-  if (![ROLES.MANAGER, ROLES.ADMIN].includes(req.user.role)) {
+  if (![ROLES.MANAGER, ROLES.ADMIN, ROLES.CASHIER].includes(req.user.role)) {
     const staff = await Staff.findOne({ userId: req.user._id });
     if (!staff) throw new AppError("Staff profile not found", 404);
     filter.staffId = staff._id;

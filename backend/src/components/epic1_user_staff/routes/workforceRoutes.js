@@ -50,7 +50,7 @@ const myLeaveSchema = z.object({
 
 router.get("/center-location", authorizeRoles(ROLES.ADMIN, ROLES.MANAGER, ROLES.DOCTOR, ROLES.NURSE, ROLES.PHARMACIST, ROLES.CASHIER, ROLES.LAB_ASSISTANT), asyncHandler(getCenterLocation));
 router.patch("/center-location", authorizeRoles(ROLES.ADMIN, ROLES.MANAGER), validateRequest(centerLocationSchema), asyncHandler(updateCenterLocation));
-router.get("/staff", authorizeRoles(ROLES.ADMIN, ROLES.MANAGER), asyncHandler(listWorkforceStaff));
+router.get("/staff", authorizeRoles(ROLES.ADMIN, ROLES.MANAGER, ROLES.CASHIER), asyncHandler(listWorkforceStaff));
 router.post("/shifts", authorizeRoles(ROLES.ADMIN, ROLES.MANAGER), validateRequest(shiftSchema), asyncHandler(createShift));
 router.get("/shifts", authorizeRoles(ROLES.ADMIN, ROLES.MANAGER), asyncHandler(listShifts));
 router.get("/shifts/my", authorizeRoles(ROLES.DOCTOR, ROLES.NURSE, ROLES.PHARMACIST, ROLES.CASHIER, ROLES.LAB_ASSISTANT), asyncHandler(listMyShifts));
