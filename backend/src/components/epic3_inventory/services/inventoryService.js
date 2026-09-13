@@ -105,6 +105,17 @@ export const inventoryService = {
     const medicine = await Medicine.findById(data.medicineId);
     if (!medicine) throw new AppError("Selected medicine not found", 404);
 
+    const mfg = new Date(data.manufactureDate);
+    const exp = new Date(data.expiryDate);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+    if (mfg > endOfToday) {
+      throw new AppError("Manufacture date cannot be in the future", 400);
+    }
+    if (exp <= mfg) {
+      throw new AppError("Expiry date must be after manufacture date", 400);
+    }
+
     return MedicineBatch.create({
       ...data,
       batchNumber: data.batchNumber.trim().toUpperCase()

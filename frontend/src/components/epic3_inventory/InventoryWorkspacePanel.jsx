@@ -50,6 +50,7 @@ import { FormSelect } from "../shared/forms/FormSelect.jsx";
 import { MEDICINE_CATEGORIES } from "./medicineCategories.js";
 
 const dateOnly = (value) => (value ? new Date(value).toISOString().slice(0, 10) : "-");
+const todayStr = () => new Date().toISOString().slice(0, 10);
 const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
 const saveBlob = (blob, filename) => {
   const url = URL.createObjectURL(blob);
@@ -312,20 +313,7 @@ export const InventoryWorkspacePanel = () => {
     if (purchaseIsNewBatch) {
       if (!purchaseBatchNumber.trim()) return setToast({ type: "error", message: "Batch number is required for new batch" });
       if (!purchaseMfgDate || !purchaseExpDate) return setToast({ type: "error", message: "Dates are required for new batch" });
-      const mfg = new Date(purchaseMfgDate);
-      const exp = new Date(purchaseExpDate);
-      const endOfToday = new Date();
-      endOfToday.setHours(23, 59, 59, 999);
-      const startOfToday = new Date();
-      startOfToday.setHours(0, 0, 0, 0);
-
-      if (mfg > endOfToday) {
-        return setToast({ type: "error", message: "Manufacture date cannot be in the future" });
-      }
-      if (exp <= startOfToday) {
-        return setToast({ type: "error", message: "Expiry date must be in the future for newly received stock" });
-      }
-      if (exp <= mfg) {
+      if (new Date(purchaseExpDate) <= new Date(purchaseMfgDate)) {
         return setToast({ type: "error", message: "Expiry date must be after manufacture date" });
       }
       payload.batchNumber = purchaseBatchNumber.trim().toUpperCase();
@@ -1145,8 +1133,8 @@ export const InventoryWorkspacePanel = () => {
           <div className="form-grid">
             <FormInput label="Quantity in Stock" placeholder="100" type="number" min="0" step="1" error={errors.quantity?.message} {...register("quantity")} />
             <FormInput label="Purchase Price (Rs.)" placeholder="10.50" type="number" min="0" step="0.01" error={errors.purchasePrice?.message} {...register("purchasePrice")} />
-            <FormInput label="Manufacture Date" type="date" max={new Date().toLocaleDateString("en-CA")} error={errors.manufactureDate?.message} {...register("manufactureDate")} />
-            <FormInput label="Expiry Date" type="date" min={new Date().toLocaleDateString("en-CA")} error={errors.expiryDate?.message} {...register("expiryDate")} />
+            <FormInput label="Manufacture Date" type="date" max={todayStr()} error={errors.manufactureDate?.message} {...register("manufactureDate")} />
+            <FormInput label="Expiry Date" type="date" min={modal.record ? undefined : todayStr()} error={errors.expiryDate?.message} {...register("expiryDate")} />
           </div>
 
           <div className="modal-actions">
@@ -1260,7 +1248,7 @@ export const InventoryWorkspacePanel = () => {
                 <FormInput
                   label="Manufacture Date"
                   type="date"
-                  max={new Date().toLocaleDateString("en-CA")}
+                  max={todayStr()}
                   value={purchaseMfgDate}
                   onChange={(e) => setPurchaseMfgDate(e.target.value)}
                   required
@@ -1268,7 +1256,7 @@ export const InventoryWorkspacePanel = () => {
                 <FormInput
                   label="Expiry Date"
                   type="date"
-                  min={purchaseMfgDate || new Date().toLocaleDateString("en-CA")}
+                  min={purchaseMfgDate || todayStr()}
                   value={purchaseExpDate}
                   onChange={(e) => setPurchaseExpDate(e.target.value)}
                   required
