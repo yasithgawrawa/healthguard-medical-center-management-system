@@ -175,6 +175,7 @@ export const InventoryWorkspacePanel = () => {
 
   // POS / Dispensing State
   const [posPatientType, setPosPatientType] = useState("walk_in");
+  const [posCustomerName, setPosCustomerName] = useState("");
   const [posPatientId, setPosPatientId] = useState("");
   const [posPrescriptionId, setPosPrescriptionId] = useState("");
   const [posCart, setPosCart] = useState([]);
@@ -271,6 +272,7 @@ export const InventoryWorkspacePanel = () => {
       setPosPrescriptionId(prefillRx._id);
     } else {
       setPosPatientType("walk_in");
+      setPosCustomerName("");
       setPosPatientId("");
       setPosPrescriptionId("");
     }
@@ -425,6 +427,7 @@ export const InventoryWorkspacePanel = () => {
     try {
       const sale = await inventoryApi.createSale({
         patientId: posPatientType === "registered" ? posPatientId : undefined,
+        customerName: posPatientType === "walk_in" && posCustomerName.trim() ? posCustomerName.trim() : undefined,
         prescriptionId: posPrescriptionId || undefined,
         items: posCart.map((item) => ({
           medicineId: item.medicineId,
@@ -977,8 +980,8 @@ export const InventoryWorkspacePanel = () => {
               { key: "saleNumber", header: "Dispensary Slip #", render: (item) => <strong>{item.saleNumber || `PH-${item._id.slice(-6).toUpperCase()}`}</strong> },
               {
                 key: "patient",
-                header: "Patient",
-                render: (item) => [item.patientId?.firstName, item.patientId?.lastName].filter(Boolean).join(" ") || "Walk-in Patient"
+                header: "Patient / Customer",
+                render: (item) => item.customerName || [item.patientId?.firstName, item.patientId?.lastName].filter(Boolean).join(" ") || "Walk-in Patient"
               },
               { key: "items", header: "Items Dispensed", render: (item) => `${item.items?.length || 0} item(s)` },
               { key: "total", header: "Amount Due", render: (item) => <strong>{money(item.total)}</strong> },
@@ -1485,7 +1488,16 @@ export const InventoryWorkspacePanel = () => {
                   </div>
                 ) : null}
               </div>
-            ) : null}
+            ) : (
+              <div style={{ marginTop: "10px" }}>
+                <FormInput
+                  label="Customer Name / Reference (Optional)"
+                  placeholder="e.g. Nimal Fernando (Leave empty for generic Walk-in Customer)"
+                  value={posCustomerName}
+                  onChange={(e) => setPosCustomerName(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
           {/* Add Medicine to Cart Section */}
@@ -1657,7 +1669,7 @@ export const InventoryWorkspacePanel = () => {
               <div className="bill-preview-meta">
                 <div><strong>Bill Reference:</strong> {selectedBill.saleNumber}</div>
                 <div><strong>Issued Date:</strong> {new Date(selectedBill.billIssuedAt || selectedBill.createdAt).toLocaleString("en-LK")}</div>
-                <div><strong>Patient:</strong> {[selectedBill.patientId?.firstName, selectedBill.patientId?.lastName].filter(Boolean).join(" ") || "Walk-in Patient"}</div>
+                <div><strong>Patient / Customer:</strong> {selectedBill.customerName || [selectedBill.patientId?.firstName, selectedBill.patientId?.lastName].filter(Boolean).join(" ") || "Walk-in Patient"}</div>
                 <div><strong>Dispensed By:</strong> {[selectedBill.soldBy?.firstName, selectedBill.soldBy?.lastName].filter(Boolean).join(" ") || "Pharmacist"}</div>
               </div>
 

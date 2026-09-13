@@ -235,7 +235,7 @@ export const inventoryService = {
   },
 
   // --- SALES / POS ---
-  async createSale({ prescriptionId, patientId, items, soldById, paymentStatus }) {
+  async createSale({ prescriptionId, patientId, customerName, items, soldById, paymentStatus }) {
     if (!items || items.length === 0) {
       throw new AppError("Sale must contain at least one item", 400);
     }
@@ -325,17 +325,18 @@ export const inventoryService = {
     }
 
     let createdInvoiceId = undefined;
-    if (patientId) {
-      try {
-        const latestAppt = await Appointment.findOne({ patientId }).sort({ appointmentDate: -1 });
-        const invoiceItems = processedItems.map(({ itemRecord, batch }) => ({
-          description: `Dispensed Medicine: ${itemRecord.medicineId?.name || "Medication"} (${batch?.batchNumber || "Dispensed"})`,
-          quantity: itemRecord.quantity,
-          unitPrice: itemRecord.unitPrice,
-          lineTotal: itemRecord.lineTotal
-        }));
+    try {
+      const invoiceItems = processedItems.map(({ itemRecord, batch }) => ({
+        description: `Dispensed Medicine: ${itemRecord.medicineId?.name || "Medication"} (${batch?.batchNumber || "Dispensed"})`,
+        quantity: itemRecord.quantity,
+        unitPrice: itemRecord.unitPrice,
+        lineTotal: itemRecord.lineTotal
+      }));
 
-        const isPaid = paymentStatus === "paid";
+      const isPaid = paymentStatus === "paid";
+
+      if (patientId) {
+        const latestAppt = await Appointment.findOne({ patientId }).sort({ appointmentDate: -1 });
 
         // Check if there is an active open visit invoice for this patient / appointment
         let existingInvoice = null;
@@ -370,15 +371,30 @@ export const inventoryService = {
           });
           createdInvoiceId = newInvoice._id;
         }
-      } catch (invoiceErr) {
-        // Fallback: don't abort dispensing if invoice generation encounters a transient error
+      } else {
+        // UNREGISTERED / WALK-IN CUSTOMER:
+        // Automatically create an invoice for the Cashier desk to collect payment
+        const walkInDisplayName = customerName ? `${customerName} (${saleNumber})` : `Walk-in Customer (${saleNumber})`;
+        const newInvoice = await Invoice.create({
+          customerName: walkInDisplayName,
+          items: invoiceItems,
+          subtotal: grandTotal,
+          paidAmount: isPaid ? grandTotal : 0,
+          outstandingAmount: isPaid ? 0 : grandTotal,
+          status: isPaid ? "paid" : "issued",
+          createdBy: soldById
+        });
+        createdInvoiceId = newInvoice._id;
       }
+    } catch (invoiceErr) {
+      console.error("Error creating billing invoice for pharmacy sale:", invoiceErr);
     }
 
     const sale = await PharmacySale.create({
       saleNumber,
       prescriptionId: effectivePrescriptionId || undefined,
       patientId: patientId || undefined,
+      customerName: customerName || (patientId ? undefined : "Walk-in Customer"),
       soldBy: soldById,
       items: processedItems.map((p) => p.itemRecord),
       total: grandTotal,
@@ -422,7 +438,7 @@ export const inventoryService = {
 
   async getBillFile(id) {
     const sale = await this.getSaleById(id);
-    const patientName = [sale.patientId?.firstName, sale.patientId?.lastName].filter(Boolean).join(" ") || "Walk-in Patient";
+    const patientName = sale.customerName || [sale.patientId?.firstName, sale.patientId?.lastName].filter(Boolean).join(" ") || "Walk-in Patient";
     const dispenser = [sale.soldBy?.firstName, sale.soldBy?.lastName].filter(Boolean).join(" ") || "Health Guard Pharmacist";
 
     const lines = [

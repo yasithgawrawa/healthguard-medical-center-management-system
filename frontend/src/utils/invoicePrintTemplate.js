@@ -239,7 +239,7 @@ export function downloadInvoicePDF(invoice) {
   const WHITE = [255, 255, 255];
 
   const patient = invoice?.patientId;
-  const patientName = typeof patient === "object" ? fullName(patient) : "Patient";
+  const patientName = invoice?.customerName || (typeof patient === "object" && patient ? fullName(patient) : "Walk-in Customer");
   const patientEmail = typeof patient === "object" ? (patient?.email || "") : "";
   const issuedDate = fmtDate(invoice?.createdAt);
   const paidDate = fmtDateTime(invoice?.updatedAt);
@@ -680,7 +680,7 @@ function openPrintWindow(title, bodyHtml) {
 
 export function printInvoicePDF(invoice) {
   const patient = invoice?.patientId;
-  const patientName = typeof patient === "object" ? fullName(patient) : "Patient";
+  const patientName = invoice?.customerName || (typeof patient === "object" && patient ? fullName(patient) : "Walk-in Customer");
   const patientEmail = typeof patient === "object" ? (patient?.email || "") : "";
   const issuedDate = fmtDate(invoice?.createdAt);
   const status = invoice?.status || "issued";

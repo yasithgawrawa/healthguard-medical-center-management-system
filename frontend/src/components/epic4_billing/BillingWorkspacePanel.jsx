@@ -19,7 +19,8 @@ import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
 
 const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
-const name = (user) => [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Patient";
+const name = (user, fallback = "Patient") => [user?.firstName, user?.lastName].filter(Boolean).join(" ") || fallback;
+const getInvoiceClient = (item) => item?.customerName || name(item?.patientId, "Walk-in Customer");
 const staffName = (staff) => [staff?.userId?.firstName, staff?.userId?.lastName].filter(Boolean).join(" ") || staff?.employeeId || "Staff";
 const saveBlob = (blob, filename) => {
   const url = URL.createObjectURL(blob);
@@ -120,7 +121,7 @@ export const BillingWorkspacePanel = () => {
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return invoices.filter((item) => {
-      const text = [name(item.patientId), item.status, item.subtotal, item.outstandingAmount, item.items?.map((i) => i.description).join(" ")].join(" ").toLowerCase();
+      const text = [getInvoiceClient(item), item.status, item.subtotal, item.outstandingAmount, item.items?.map((i) => i.description).join(" ")].join(" ").toLowerCase();
       const matchesQuery = !query || text.includes(query);
       const matchesStatus = statusFilter === "all" ? true : statusFilter === "pending" ? item.status !== "paid" : item.status === statusFilter;
       return matchesQuery && matchesStatus;
@@ -263,7 +264,7 @@ export const BillingWorkspacePanel = () => {
           <DataTable
             rows={rows}
             columns={[
-              { key: "patient", header: "Patient", render: (item) => name(item.patientId) },
+              { key: "patient", header: "Patient / Customer", render: (item) => getInvoiceClient(item) },
               {
                 key: "details",
                 header: "Visit Services & Charges",
@@ -386,7 +387,7 @@ export const BillingWorkspacePanel = () => {
       <Modal
         open={Boolean(modal.type)}
         title={modal.type === "payment" ? "Record Cashier Payment" : modal.type === "payroll" ? "Calculate Payroll" : "Create Invoice"}
-        subtitle={modal.type === "payment" && modal.record ? `Patient: ${name(modal.record.patientId)} • Due: ${money(modal.record.outstandingAmount)}` : ""}
+        subtitle={modal.type === "payment" && modal.record ? `Patient: ${getInvoiceClient(modal.record)} • Due: ${money(modal.record.outstandingAmount)}` : ""}
         onClose={() => setModal({ type: null, record: null })}
       >
         <form onSubmit={handleSubmit(submit)}>

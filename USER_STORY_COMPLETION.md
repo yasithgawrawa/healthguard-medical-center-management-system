@@ -56,7 +56,7 @@ This document tracks completion of all user stories across E1-E4 after the imple
 | E3-US13 Manager receives expiry alerts | Complete | Expiry alerts tab highlighting batches expiring in 60 days and expired batches. |
 | E3-US14 Pharmacist/Manager views low-stock medicines | Complete | Actionable Low-Stock Alert Table with current stock, deficit, threshold, shortage severity, and one-click reorder action. |
 | E3-US15 Pharmacist/Manager views expiry information | Complete | Actionable Expiry Alert Table with days remaining, value at risk, expiry status tags, and quarantine/adjust action. |
-| E3-US16 Pharmacist sells medicines | Complete | Multi-item Pharmacy POS counter supporting registered patient select / walk-in toggle, doctor prescription linkage, live stock checks, and atomic dispensing. |
+| E3-US16 Pharmacist sells medicines | Complete | Multi-item Pharmacy POS counter supporting registered patient select / walk-in toggle with customer name, automated cashier invoice forwarding, doctor prescription linkage, live stock checks, and atomic dispensing. |
 | E3-US17 Pharmacist generates bill for medicine sale | Complete | Interactive Pharmacy Bill preview modal with center branding, itemized invoice breakdown, browser printing, and text bill download. |
 | E3-US18 System reduces stock after sale | Complete | Backend sale transaction verifies non-expired stock and atomically deducts batch quantities. |
 | E3-US19 Pharmacist views previous sales | Complete | Sales history tab with search, bill numbers, patient info, item counts, total amounts, and view/print bill actions. |
@@ -66,7 +66,7 @@ This document tracks completion of all user stories across E1-E4 after the imple
 
 | Story | Status | Completed implementation |
 | --- | --- | --- |
-| E4-US01 Cashier generates invoice | Complete | Cashier invoice workflow creates backend-calculated invoices from appointments. |
+| E4-US01 Cashier generates invoice | Complete | Cashier invoice workflow creates backend-calculated invoices from appointments, plus automatic visit bill integration and unregistered walk-in pharmacy purchase invoices for cashier payment collection. |
 | E4-US02 Patient views invoices | Complete | Patient records panel lists scoped bills and receipts. |
 | E4-US03 Patient views outstanding balance | Complete | Patient invoice cards show outstanding amount. |
 | E4-US04 Cashier records payments | Complete | Cashier payment modal records cash/card/bank transfer payments. |

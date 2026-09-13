@@ -106,6 +106,7 @@ export const saleSchema = z.object({
   body: z.object({
     prescriptionId: objectIdSchema.optional(),
     patientId: objectIdSchema.optional(),
+    customerName: z.string().trim().max(120).optional(),
     items: z.array(z.object({
       medicineId: objectIdSchema,
       batchId: objectIdSchema,

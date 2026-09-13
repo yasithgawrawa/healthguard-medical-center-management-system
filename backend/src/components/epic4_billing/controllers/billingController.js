@@ -28,6 +28,7 @@ export const createInvoice = async (req, res) => {
   const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
   const invoice = await Invoice.create({
     patientId: req.body.patientId,
+    customerName: req.body.customerName || (req.body.patientId ? undefined : "Walk-in Customer"),
     appointmentId: req.body.appointmentId,
     items,
     subtotal,
@@ -65,7 +66,7 @@ export const recordPayment = async (req, res) => {
 
 export const listPayments = async (req, res) => {
   const payments = await Payment.find()
-    .populate("invoiceId", "patientId subtotal outstandingAmount status")
+    .populate("invoiceId", "patientId customerName subtotal outstandingAmount status")
     .sort({ createdAt: -1 });
   return successResponse(res, "Payment list loaded", payments);
 };
@@ -142,7 +143,7 @@ export const downloadInvoiceReceipt = async (req, res) => {
     "Payment Receipt",
     `Invoice: ${invoice._id}`,
     `Issued: ${invoice.updatedAt.toISOString()}`,
-    `Patient: ${nameFromUser(invoice.patientId)}`,
+    `Patient: ${invoice.customerName || nameFromUser(invoice.patientId, "Walk-in Customer")}`,
     "",
     "Items",
     ...invoice.items.map((item) => `${item.description} x ${item.quantity} @ Rs. ${item.unitPrice.toFixed(2)} = Rs. ${item.lineTotal.toFixed(2)}`),
@@ -227,4 +228,4 @@ export const revenueSummary = async (req, res) => {
   return successResponse(res, "Revenue summary loaded", { invoiced, collected, outstanding, payrollExpense });
 };
 
-const nameFromUser = (user) => [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "Health Guard user";
+const nameFromUser = (user, fallback = "Health Guard user") => [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || fallback;

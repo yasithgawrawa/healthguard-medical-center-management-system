@@ -4,7 +4,8 @@ import { idParamSchema, objectIdSchema } from "../../../shared/validators/common
 
 export const invoiceSchema = z.object({
   body: z.object({
-    patientId: objectIdSchema,
+    patientId: objectIdSchema.optional(),
+    customerName: z.string().trim().max(120).optional(),
     appointmentId: objectIdSchema.optional(),
     items: z.array(z.object({
       description: z.string().trim().min(2, "Description is required").max(120),
