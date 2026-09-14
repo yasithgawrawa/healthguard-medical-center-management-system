@@ -22,8 +22,9 @@ const QUICK_ACCESS_ROLES = [
   { roleKey: "nurse2", label: "Nurse (Ward)", email: "nurse2@healthguard.com", password: "Pass@12345" },
   { roleKey: "pharmacist", label: "Pharmacist", email: "pharmacist@healthguard.com", password: "Pass@12345" },
   { roleKey: "cashier", label: "Cashier", email: "cashier@healthguard.com", password: "Pass@12345" },
-  { roleKey: "lab", label: "Lab MLT", email: "lab@healthguard.com", password: "Pass@12345" },
-  { roleKey: "patient", label: "Patient", email: "saman.kumara82@gmail.com", password: "Pass@12345" }
+  { roleKey: "lab", label: "Lab MLT 1", email: "lab@healthguard.com", password: "Pass@12345" },
+  { roleKey: "lab2", label: "Lab MLT 2", email: "lab2@healthguard.com", password: "Pass@12345" },
+  { roleKey: "patient", label: "Patient", email: "saman.kumara@gmail.com", password: "Pass@12345" }
 ];
 
 export const LoginPage = () => {
