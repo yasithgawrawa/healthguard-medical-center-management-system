@@ -210,6 +210,62 @@ const staffAccountDefs = [
     allowances: 7500,
     deductions: 2200,
     emergencyContact: "+94771234008"
+  },
+  {
+    firstName: "Gayani",
+    lastName: "Fernando",
+    email: "cashier2@healthguard.com",
+    phone: "+94771234508",
+    role: ROLES.CASHIER,
+    employeeId: "HG-CAS-002",
+    department: "Billing & Patient Registration",
+    employmentDate: new Date("2022-09-05"),
+    baseSalary: 88000,
+    allowances: 5500,
+    deductions: 1200,
+    emergencyContact: "+94771234009"
+  },
+  {
+    firstName: "Sameera",
+    lastName: "Madushanka",
+    email: "pharmacist2@healthguard.com",
+    phone: "+94771234509",
+    role: ROLES.PHARMACIST,
+    employeeId: "HG-PHA-002",
+    department: "Dispensary & Stock Control",
+    employmentDate: new Date("2023-01-12"),
+    baseSalary: 118000,
+    allowances: 7500,
+    deductions: 1800,
+    emergencyContact: "+94771234010"
+  },
+  {
+    firstName: "Dilini",
+    lastName: "Karunaratne",
+    email: "lab2@healthguard.com",
+    phone: "+94771234510",
+    role: ROLES.LAB_ASSISTANT,
+    employeeId: "HG-LAB-002",
+    department: "Sample Collection & Reporting",
+    employmentDate: new Date("2023-04-20"),
+    baseSalary: 96000,
+    allowances: 6500,
+    deductions: 1600,
+    emergencyContact: "+94771234011"
+  },
+  {
+    firstName: "Chamodi",
+    lastName: "Senanayake",
+    email: "nurse3@healthguard.com",
+    phone: "+94771234511",
+    role: ROLES.NURSE,
+    employeeId: "HG-NUR-003",
+    department: "OPD Nursing",
+    employmentDate: new Date("2022-12-01"),
+    baseSalary: 95000,
+    allowances: 6500,
+    deductions: 1500,
+    emergencyContact: "+94771234012"
   }
 ];
 
@@ -303,6 +359,69 @@ const patientAccountDefs = [
     address: "No. 14, High Level Road, Nugegoda",
     dateOfBirth: new Date("1972-11-14"),
     gender: "male"
+  },
+  {
+    firstName: "Anjali",
+    lastName: "Dias",
+    email: "anjali.dias@gmail.com",
+    phone: "+94712345676",
+    address: "No. 31, Negombo Road, Wattala",
+    dateOfBirth: new Date("1988-03-28"),
+    gender: "female"
+  },
+  {
+    firstName: "Mohamed",
+    lastName: "Hameed",
+    email: "mohamed.hameed@gmail.com",
+    phone: "+94712345677",
+    address: "No. 9, Main Street, Beruwala",
+    dateOfBirth: new Date("1968-09-17"),
+    gender: "male"
+  },
+  {
+    firstName: "Dinuka",
+    lastName: "Ekanayake",
+    email: "dinuka.ekanayake@gmail.com",
+    phone: "+94712345678",
+    address: "No. 52, Lake Road, Boralesgamuwa",
+    dateOfBirth: new Date("2001-12-05"),
+    gender: "male"
+  },
+  {
+    firstName: "Shalini",
+    lastName: "Mendis",
+    email: "shalini.mendis@gmail.com",
+    phone: "+94712345679",
+    address: "No. 7, Hospital Road, Kalutara",
+    dateOfBirth: new Date("1992-05-19"),
+    gender: "female"
+  },
+  {
+    firstName: "Bimal",
+    lastName: "Pathirana",
+    email: "bimal.pathirana@gmail.com",
+    phone: "+94712345680",
+    address: "No. 64, Old Kottawa Road, Maharagama",
+    dateOfBirth: new Date("1980-08-11"),
+    gender: "male"
+  },
+  {
+    firstName: "Yasodha",
+    lastName: "Gunawardena",
+    email: "yasodha.gunawardena@gmail.com",
+    phone: "+94712345681",
+    address: "No. 22, Temple Lane, Homagama",
+    dateOfBirth: new Date("1975-02-24"),
+    gender: "female"
+  },
+  {
+    firstName: "Kavishka",
+    lastName: "Samarasinghe",
+    email: "kavishka.samarasinghe@gmail.com",
+    phone: "+94712345682",
+    address: "No. 101, High Level Road, Pannipitiya",
+    dateOfBirth: new Date("1999-06-30"),
+    gender: "male"
   }
 ];
 
@@ -319,60 +438,71 @@ for (const p of patientAccountDefs) {
   }
   patientUserList.push(patient);
 }
-console.log(`   ✓ 9 Staff accounts & 5 Patient accounts confirmed active.`);
+console.log(`   ✓ ${staffAccountDefs.length} Staff accounts & ${patientAccountDefs.length} Patient accounts confirmed active.`);
 
 // ============================================================================
 // STEP 5: SEED REAL WORKFORCE SHIFTS, ATTENDANCE & LEAVE (EPIC 1)
 // ============================================================================
 console.log("\n4. Seeding Workforce Shifts, Geofenced Attendance & Leave...");
-const shiftsData = [
-  { empId: "HG-DOC-001", dayOffset: 0, startHour: 8, endHour: 16, loc: "OPD Consultation Room 1" },
-  { empId: "HG-NUR-001", dayOffset: 0, startHour: 7, endHour: 15, loc: "Triage & Vitals Desk" },
-  { empId: "HG-NUR-002", dayOffset: 0, startHour: 13, endHour: 21, loc: "Observation Ward Station" },
-  { empId: "HG-PHA-001", dayOffset: 0, startHour: 8, endHour: 17, loc: "Main Dispensary Counter" },
-  { empId: "HG-CAS-001", dayOffset: 0, startHour: 8, endHour: 17, loc: "Cashier Counter 01" },
-  { empId: "HG-LAB-001", dayOffset: 0, startHour: 8, endHour: 16, loc: "Pathology & Diagnostic Lab" },
-  { empId: "HG-DOC-001", dayOffset: 1, startHour: 8, endHour: 16, loc: "OPD Consultation Room 1" },
-  { empId: "HG-NUR-001", dayOffset: 1, startHour: 7, endHour: 15, loc: "Triage & Vitals Desk" }
-];
+const shiftPatterns = {
+  "HG-DOC-001": { startHour: 8, endHour: 14, notes: "Doctor OPD roster - single clinic location" },
+  "HG-NUR-001": { startHour: 7, endHour: 15, notes: "Triage and vitals roster" },
+  "HG-NUR-002": { startHour: 13, endHour: 21, notes: "Afternoon nursing cover" },
+  "HG-NUR-003": { startHour: 8, endHour: 16, notes: "OPD nursing cover" },
+  "HG-PHA-001": { startHour: 8, endHour: 17, notes: "Main dispensary counter" },
+  "HG-PHA-002": { startHour: 10, endHour: 19, notes: "Stock and dispensing support" },
+  "HG-CAS-001": { startHour: 8, endHour: 17, notes: "Billing and revenue counter" },
+  "HG-CAS-002": { startHour: 9, endHour: 18, notes: "Registration and cashier support" },
+  "HG-LAB-001": { startHour: 8, endHour: 16, notes: "Laboratory sample processing" },
+  "HG-LAB-002": { startHour: 9, endHour: 17, notes: "Sample collection and reporting" }
+};
+const shiftByEmpDate = new Map();
+const shiftKey = (empId, date) => `${empId}:${date.toISOString().slice(0, 10)}`;
 
-for (const s of shiftsData) {
-  const staff = staffProfileMap.get(s.empId);
-  await Shift.create({
-    staffId: staff._id,
-    startTime: offsetDate(s.dayOffset, s.startHour),
-    endTime: offsetDate(s.dayOffset, s.endHour),
-    location: "Health Guard Medical Center",
-    status: "scheduled",
-    notes: "Regular Clinical Roster - Health Guard Colombo 07"
-  });
+for (const [empId, pattern] of Object.entries(shiftPatterns)) {
+  const staff = staffProfileMap.get(empId);
+  if (!staff) continue;
+  for (const dayOffset of [-4, -3, -2, -1, 0, 1, 2, 3, 4]) {
+    const shift = await Shift.create({
+      staffId: staff._id,
+      startTime: offsetDate(dayOffset, pattern.startHour),
+      endTime: offsetDate(dayOffset, pattern.endHour),
+      location: "Health Guard Medical Center",
+      status: dayOffset < -3 && empId === "HG-NUR-002" ? "cancelled" : "scheduled",
+      notes: pattern.notes
+    });
+    shiftByEmpDate.set(shiftKey(empId, shift.startTime), shift);
+  }
 }
 
-// Attendance (Biometric & Geofenced within Ward Place Colombo 07)
 const attendanceSeeds = [
-  { empId: "HG-NUR-001", dayOffset: -1, inHour: 7, outHour: 15 },
-  { empId: "HG-PHA-001", dayOffset: -1, inHour: 8, outHour: 17 },
-  { empId: "HG-CAS-001", dayOffset: -1, inHour: 8, outHour: 17 },
-  { empId: "HG-LAB-001", dayOffset: -1, inHour: 8, outHour: 16 }
+  ...Object.keys(shiftPatterns).flatMap((empId) => [-3, -2, -1].map((dayOffset) => ({ empId, dayOffset, status: "checked_out" }))),
+  { empId: "HG-NUR-001", dayOffset: 0, status: "checked_in" },
+  { empId: "HG-PHA-001", dayOffset: 0, status: "checked_in" },
+  { empId: "HG-CAS-001", dayOffset: 0, status: "checked_in" },
+  { empId: "HG-LAB-001", dayOffset: 0, status: "checked_in" }
 ];
 
 for (const a of attendanceSeeds) {
   const staff = staffProfileMap.get(a.empId);
-  const checkInAt = offsetDate(a.dayOffset, a.inHour, 5);
-  const checkOutAt = offsetDate(a.dayOffset, a.outHour, 2);
+  const pattern = shiftPatterns[a.empId];
+  const checkInAt = offsetDate(a.dayOffset, pattern.startHour, 4 + Math.abs(a.dayOffset));
+  const checkOutAt = a.status === "checked_out" ? offsetDate(a.dayOffset, pattern.endHour, 2) : undefined;
+  const shift = shiftByEmpDate.get(shiftKey(a.empId, checkInAt));
   await Attendance.create({
     staffId: staff._id,
     workDate: checkInAt.toISOString().slice(0, 10),
     checkInAt,
     checkOutAt,
-    status: "checked_out",
+    status: a.status,
+    shiftId: shift?._id,
     checkInLocation: {
       latitude: 6.91472,
       longitude: 79.87802,
       accuracyMeters: 10,
       distanceFromShiftMeters: 5
     },
-    notes: "GPS verified check-in at Ward Place premises."
+    notes: "GPS verified check-in at the Health Guard clinic."
   });
 }
 
@@ -389,6 +519,30 @@ await LeaveRequest.create({
 console.log("   ✓ Seeded duty shifts, geofenced attendance logs, and leave request.");
 
 // ============================================================================
+await LeaveRequest.create([
+  {
+    staffId: staffProfileMap.get("HG-LAB-002")._id,
+    leaveType: "sick",
+    startDate: offsetDate(-2, 0),
+    endDate: offsetDate(-1, 0),
+    reason: "Viral fever with medical certificate from Kalubowila Hospital",
+    status: "approved",
+    reviewedBy: staffUserMap.get("manager@healthguard.com")._id,
+    reviewNote: "Approved with submitted medical certificate."
+  },
+  {
+    staffId: staffProfileMap.get("HG-CAS-002")._id,
+    leaveType: "casual",
+    startDate: offsetDate(7, 0),
+    endDate: offsetDate(7, 0),
+    reason: "Bank documentation work at Borella branch",
+    status: "rejected",
+    reviewedBy: staffUserMap.get("manager@healthguard.com")._id,
+    reviewNote: "Roster already short-staffed; reschedule with manager."
+  }
+]);
+console.log(`   ✓ Seeded ${await Shift.countDocuments()} shifts, ${await Attendance.countDocuments()} attendance logs, and ${await LeaveRequest.countDocuments()} leave requests.`);
+
 // STEP 6: SEED DIAGNOSTIC LAB TEST CATALOG (EPIC 2)
 // ============================================================================
 console.log("\n5. Seeding Sri Lankan Diagnostic Test Catalog...");
@@ -400,7 +554,11 @@ const labCatalogDefs = [
   { testName: "Serum Creatinine & Electrolytes", category: "Renal Profile", price: 1200, urgentPrice: 1500, description: "Kidney function test with Sodium, Potassium, and Chloride" },
   { testName: "Dengue Antigen NS1 & Antibody", category: "Serology", price: 2500, urgentPrice: 3200, description: "Early dengue antigen detection with IgM and IgG antibodies" },
   { testName: "ECG 12-Lead", category: "Cardiology", price: 1200, urgentPrice: 1600, description: "Standard 12-lead resting electrocardiogram investigation" },
-  { testName: "Urine Full Report (UFR)", category: "Clinical Pathology", price: 400, urgentPrice: 550, description: "Urine microscopic and biochemical analysis" }
+  { testName: "Urine Full Report (UFR)", category: "Clinical Pathology", price: 400, urgentPrice: 550, description: "Urine microscopic and biochemical analysis" },
+  { testName: "Liver Function Test (LFT)", category: "Biochemistry", price: 1800, urgentPrice: 2300, description: "Bilirubin, SGOT, SGPT, ALP, albumin and protein assessment" },
+  { testName: "Thyroid Profile (TSH, T3, T4)", category: "Endocrinology", price: 3200, urgentPrice: 3900, description: "Screening profile for hypothyroidism and hyperthyroidism" },
+  { testName: "HbA1c", category: "Diabetes", price: 1750, urgentPrice: 2200, description: "Three-month glycemic control monitoring" },
+  { testName: "Chest X-Ray PA View", category: "Radiology", price: 1900, urgentPrice: 2400, description: "Standard posterior-anterior chest radiograph" }
 ];
 
 for (const item of labCatalogDefs) {
@@ -555,6 +713,84 @@ const medicineCatalog = [
     mfgOffset: -300,
     expOffset: 35,
     supplier: spcSupplier
+  },
+  {
+    name: "Amlodipine 5mg Tablets",
+    category: "Cardiology",
+    unit: "tablet",
+    price: 16.00,
+    reorderLevel: 80,
+    batchNumber: "AML-LK-2601",
+    quantity: 210,
+    purchasePrice: 10.00,
+    mfgOffset: -80,
+    expOffset: 420,
+    supplier: hemasSupplier
+  },
+  {
+    name: "ORS Sachets",
+    category: "Emergency",
+    unit: "sachet",
+    price: 55.00,
+    reorderLevel: 40,
+    batchNumber: "ORS-LK-2601",
+    quantity: 95,
+    purchasePrice: 34.00,
+    mfgOffset: -35,
+    expOffset: 300,
+    supplier: spcSupplier
+  },
+  {
+    name: "Ferrous Sulphate + Folic Acid Tablets",
+    category: "Vitamins & Supplements",
+    unit: "tablet",
+    price: 10.00,
+    reorderLevel: 120,
+    batchNumber: "FER-LK-2601",
+    quantity: 260,
+    purchasePrice: 6.00,
+    mfgOffset: -100,
+    expOffset: 500,
+    supplier: spcSupplier
+  },
+  {
+    name: "Cefuroxime 500mg Tablets",
+    category: "Antibiotic",
+    unit: "tablet",
+    price: 110.00,
+    reorderLevel: 35,
+    batchNumber: "CEF-LK-2601",
+    quantity: 28,
+    purchasePrice: 78.00,
+    mfgOffset: -40,
+    expOffset: 260,
+    supplier: emerchemieSupplier
+  },
+  {
+    name: "Insulin Glargine Pen",
+    category: "Diabetes",
+    unit: "pen",
+    price: 4250.00,
+    reorderLevel: 8,
+    batchNumber: "INS-LK-2601",
+    quantity: 12,
+    purchasePrice: 3550.00,
+    mfgOffset: -25,
+    expOffset: 180,
+    supplier: baursSupplier
+  },
+  {
+    name: "Vitamin D3 1000IU Tablets",
+    category: "Vitamins & Supplements",
+    unit: "tablet",
+    price: 22.00,
+    reorderLevel: 60,
+    batchNumber: "VTD-LK-2601",
+    quantity: 150,
+    purchasePrice: 14.00,
+    mfgOffset: -50,
+    expOffset: 450,
+    supplier: hemasSupplier
   }
 ];
 
@@ -741,6 +977,147 @@ const appt5 = await Appointment.create({
 console.log("   ✓ Clinical visits, vitals, consultation notes, prescriptions, and lab tests recorded.");
 
 // ============================================================================
+const appt6 = await Appointment.create({
+  patientId: patientUserList[5]._id,
+  doctorId: doc1User._id,
+  appointmentDate: offsetDate(0, 12),
+  slotLabel: "Noon 12:00",
+  reason: "Persistent cough after recent viral upper respiratory infection",
+  status: "completed"
+});
+
+await Consultation.create({
+  appointmentId: appt6._id,
+  patientId: appt6.patientId,
+  doctorId: doc1User._id,
+  diagnosis: "Post-viral cough with mild bronchospasm",
+  clinicalNotes: "Chest clear except mild expiratory wheeze. No fever, no crepitations, oxygen saturation normal. Advised inhaler technique and return if fever or shortness of breath worsens.",
+  finalized: true
+});
+
+await Prescription.create({
+  appointmentId: appt6._id,
+  patientId: appt6.patientId,
+  doctorId: doc1User._id,
+  items: [
+    { medicineName: "Salbutamol Inhaler 100mcg", dosage: "2 puffs", frequency: "Every 6 hours PRN", duration: "5 days", instructions: "Use with spacer if available." },
+    { medicineName: "Cetirizine 10mg Tablets", dosage: "10mg", frequency: "At night", duration: "5 days", instructions: "May cause drowsiness." }
+  ],
+  status: "active"
+});
+
+const appt7 = await Appointment.create({
+  patientId: patientUserList[6]._id,
+  doctorId: doc1User._id,
+  appointmentDate: offsetDate(-2, 10),
+  slotLabel: "Morning 10:00",
+  reason: "Diabetes follow-up and HbA1c review",
+  status: "completed"
+});
+
+await Consultation.create({
+  appointmentId: appt7._id,
+  patientId: appt7.patientId,
+  doctorId: doc1User._id,
+  diagnosis: "Type 2 diabetes mellitus, suboptimal glycemic control",
+  clinicalNotes: "HbA1c remains above target. Reinforced diet, walking after dinner, and medication adherence. Review in 6 weeks with fasting blood sugar log.",
+  finalized: true
+});
+
+await LabRequest.create({
+  appointmentId: appt7._id,
+  patientId: appt7.patientId,
+  doctorId: doc1User._id,
+  testName: "HbA1c",
+  priority: "routine",
+  status: "completed",
+  resultSummary: "HbA1c: 8.1%. Estimated average glucose: 186 mg/dL.",
+  parameters: [
+    { parameter: "HbA1c", value: "8.1", unit: "%", referenceRange: "< 5.7", flag: "high" }
+  ],
+  specimenType: "EDTA Whole Blood",
+  sampleCollectedAt: offsetDate(-2, 10, 20),
+  reportedAt: offsetDate(-2, 13, 10),
+  verifiedBy: labUser._id
+});
+
+const appt8 = await Appointment.create({
+  patientId: patientUserList[7]._id,
+  doctorId: doc1User._id,
+  appointmentDate: offsetDate(0, 15),
+  slotLabel: "Afternoon 03:00",
+  reason: "Sports injury after school cricket practice",
+  status: "checked_in"
+});
+
+await Vitals.create({
+  appointmentId: appt8._id,
+  patientId: appt8.patientId,
+  temperature: 36.7,
+  bloodPressure: "118/76",
+  heartRate: 78,
+  weight: 61,
+  height: 171,
+  spo2: 99,
+  recordedBy: nurseUser._id
+});
+
+const appt9 = await Appointment.create({
+  patientId: patientUserList[8]._id,
+  doctorId: doc1User._id,
+  appointmentDate: offsetDate(2, 10),
+  slotLabel: "Morning 10:00",
+  reason: "Thyroid profile review and weight change assessment",
+  status: "booked"
+});
+
+const appt10 = await Appointment.create({
+  patientId: patientUserList[9]._id,
+  doctorId: doc1User._id,
+  appointmentDate: offsetDate(-5, 16),
+  slotLabel: "Afternoon 04:00",
+  reason: "Acute gastritis review",
+  status: "cancelled"
+});
+
+const appt11 = await Appointment.create({
+  patientId: patientUserList[10]._id,
+  doctorId: doc1User._id,
+  appointmentDate: offsetDate(0, 16),
+  slotLabel: "Afternoon 04:00",
+  reason: "Fever for two days with body aches; dengue screening requested",
+  status: "booked"
+});
+
+const dengueLab = await LabRequest.create({
+  appointmentId: appt11._id,
+  patientId: appt11.patientId,
+  doctorId: doc1User._id,
+  testName: "Dengue Antigen NS1 & Antibody",
+  priority: "urgent",
+  status: "requested",
+  specimenType: "Venous Blood"
+});
+
+await Notification.create({
+  patientId: dengueLab.patientId,
+  type: "lab_request",
+  title: "Dengue Screening Requested",
+  message: "A dengue NS1 and antibody test has been requested. Please visit the lab counter after registration.",
+  relatedModel: "LabRequest",
+  relatedId: dengueLab._id,
+  createdBy: doc1User._id
+});
+
+const appt12 = await Appointment.create({
+  patientId: patientUserList[11]._id,
+  doctorId: doc1User._id,
+  appointmentDate: offsetDate(4, 11),
+  slotLabel: "Morning 11:00",
+  reason: "University medical certificate and fitness review",
+  status: "booked"
+});
+
 // STEP 10: SEED PHARMACY SALES & DISPENSING (EPIC 3)
 // ============================================================================
 console.log("\n9. Seeding Pharmacy POS Sales...");
@@ -748,6 +1125,14 @@ const pcmMed = medicineMap.get("Paracetamol 500mg Tablets");
 const pcmBatch = batchMap.get("PCM-LK-2601");
 const omeMed = medicineMap.get("Omeprazole 20mg Capsules");
 const omeBatch = batchMap.get("OME-LK-2601");
+const salMed = medicineMap.get("Salbutamol Inhaler 100mcg");
+const salBatch = batchMap.get("SAL-LK-2601");
+const cetMed = medicineMap.get("Cetirizine 10mg Tablets");
+const cetBatch = batchMap.get("CET-LK-2501");
+const orsMed = medicineMap.get("ORS Sachets");
+const orsBatch = batchMap.get("ORS-LK-2601");
+const metMed = medicineMap.get("Metformin HCl 500mg Tablets");
+const metBatch = batchMap.get("MET-LK-2601");
 
 // Prescription Dispensed Sale for Ruwan Bandara
 const rxSale = await PharmacySale.create({
@@ -793,9 +1178,50 @@ const otcSale = await PharmacySale.create({
   paymentStatus: "paid",
   billIssuedAt: offsetDate(0, 11, 15)
 });
-console.log(`   ✓ Seeded Pharmacy sales: Prescription Dispense (${rxSale.saleNumber}) & Walk-in OTC (${otcSale.saleNumber}).`);
 
 // ============================================================================
+const respiratorySale = await PharmacySale.create({
+  saleNumber: `PH-${now.toISOString().slice(0, 10).replace(/-/g, "")}-0003`,
+  patientId: appt6.patientId,
+  soldBy: pharmaUser._id,
+  items: [
+    { medicineId: salMed._id, batchId: salBatch._id, quantity: 1, unitPrice: salMed.price, lineTotal: salMed.price },
+    { medicineId: cetMed._id, batchId: cetBatch._id, quantity: 10, unitPrice: cetMed.price, lineTotal: cetMed.price * 10 }
+  ],
+  total: salMed.price + cetMed.price * 10,
+  paymentStatus: "pending_cashier",
+  billIssuedAt: offsetDate(0, 12, 35)
+});
+
+const diabetesSale = await PharmacySale.create({
+  saleNumber: `PH-${now.toISOString().slice(0, 10).replace(/-/g, "")}-0004`,
+  patientId: appt7.patientId,
+  customerPhone: patientUserList[6].phone,
+  soldBy: staffUserMap.get("pharmacist2@healthguard.com")._id,
+  items: [
+    { medicineId: metMed._id, batchId: metBatch._id, quantity: 30, unitPrice: metMed.price, lineTotal: metMed.price * 30 }
+  ],
+  total: metMed.price * 30,
+  paymentStatus: "paid",
+  billIssuedAt: offsetDate(-2, 14, 20)
+});
+
+const walkInPendingSale = await PharmacySale.create({
+  saleNumber: `PH-${now.toISOString().slice(0, 10).replace(/-/g, "")}-0005`,
+  customerName: "Walk-in Customer - Nugegoda",
+  customerPhone: "+94771239001",
+  soldBy: pharmaUser._id,
+  items: [
+    { medicineId: orsMed._id, batchId: orsBatch._id, quantity: 4, unitPrice: orsMed.price, lineTotal: orsMed.price * 4 },
+    { medicineId: pcmMed._id, batchId: pcmBatch._id, quantity: 12, unitPrice: pcmMed.price, lineTotal: pcmMed.price * 12 }
+  ],
+  total: orsMed.price * 4 + pcmMed.price * 12,
+  paymentStatus: "pending_cashier",
+  billIssuedAt: offsetDate(0, 13, 10)
+});
+
+console.log(`   ✓ Seeded ${await PharmacySale.countDocuments()} pharmacy sales including paid and cashier-pending bills.`);
+
 // STEP 11: SEED PATIENT INVOICES & PAYMENTS (EPIC 4)
 // ============================================================================
 console.log("\n10. Seeding Patient Invoices & Payments...");
@@ -865,34 +1291,133 @@ const payment3 = await Payment.create({
 console.log("   ✓ Invoices seeded: Paid (Card), Unpaid (Issued), and Partially Paid (Cash).");
 
 // ============================================================================
+const invoice6 = await Invoice.create({
+  patientId: appt6.patientId,
+  appointmentId: appt6._id,
+  items: [
+    { description: "General OPD Consultation (Dr. Amara Perera)", quantity: 1, unitPrice: 1500, lineTotal: 1500 },
+    { description: "Respiratory medication dispense", quantity: 1, unitPrice: respiratorySale.total, lineTotal: respiratorySale.total }
+  ],
+  subtotal: 2470,
+  paidAmount: 1000,
+  outstandingAmount: 1470,
+  status: "partially_paid",
+  createdBy: cashierUser._id
+});
+respiratorySale.invoiceId = invoice6._id;
+await respiratorySale.save();
+
+await Payment.create({
+  invoiceId: invoice6._id,
+  amount: 1000,
+  method: "cash",
+  status: "verified",
+  recordedBy: cashierUser._id,
+  verifiedBy: cashierUser._id
+});
+
+const invoice7 = await Invoice.create({
+  patientId: appt7.patientId,
+  appointmentId: appt7._id,
+  items: [
+    { description: "Diabetes review consultation", quantity: 1, unitPrice: 1500, lineTotal: 1500 },
+    { description: "HbA1c Investigation", quantity: 1, unitPrice: 1750, lineTotal: 1750 },
+    { description: "Metformin monthly dispense", quantity: 1, unitPrice: diabetesSale.total, lineTotal: diabetesSale.total }
+  ],
+  subtotal: 3790,
+  paidAmount: 3790,
+  outstandingAmount: 0,
+  status: "paid",
+  createdBy: cashierUser._id
+});
+
+await Payment.create({
+  invoiceId: invoice7._id,
+  amount: 3790,
+  method: "bank_transfer",
+  status: "reconciled",
+  recordedBy: cashierUser._id,
+  verifiedBy: cashierUser._id
+});
+
+const walkInInvoice = await Invoice.create({
+  customerName: walkInPendingSale.customerName,
+  customerPhone: walkInPendingSale.customerPhone,
+  items: [
+    { description: "Walk-in pharmacy sale - ORS and Paracetamol", quantity: 1, unitPrice: walkInPendingSale.total, lineTotal: walkInPendingSale.total }
+  ],
+  subtotal: walkInPendingSale.total,
+  paidAmount: 0,
+  outstandingAmount: walkInPendingSale.total,
+  status: "issued",
+  createdBy: cashierUser._id
+});
+walkInPendingSale.invoiceId = walkInInvoice._id;
+await walkInPendingSale.save();
+
+console.log(`   ✓ Billing data now includes ${await Invoice.countDocuments()} invoices and ${await Payment.countDocuments()} payment records.`);
+
 // STEP 12: SEED STAFF PAYROLLS (EPIC 4)
 // ============================================================================
 console.log("\n11. Seeding Staff Payroll Records...");
-const payrollStaffList = ["HG-NUR-001", "HG-PHA-001", "HG-CAS-001"];
+const payrollStaffList = Object.keys(shiftPatterns);
 
 for (const empId of payrollStaffList) {
   const staff = staffProfileMap.get(empId);
-  const attendanceDays = 22;
-  const dailyRate = staff.baseSalary / 26;
-  const netSalary = Math.round(dailyRate * attendanceDays + staff.allowances - staff.deductions);
+  const staffAttendance = await Attendance.find({ staffId: staff._id, workDate: { $regex: `^${currentMonth}` }, status: "checked_out" })
+    .populate("shiftId", "startTime endTime location")
+    .sort({ workDate: 1 });
+  const scheduledShifts = await Shift.countDocuments({
+    staffId: staff._id,
+    startTime: {
+      $gte: new Date(`${currentMonth}-01T00:00:00.000Z`),
+      $lt: new Date(new Date(`${currentMonth}-01T00:00:00.000Z`).setUTCMonth(Number(currentMonth.slice(5, 7))))
+    },
+    status: { $ne: "cancelled" }
+  });
+  const shiftRate = Number((staff.baseSalary / 26).toFixed(2));
+  const payrollLines = staffAttendance.map((item) => {
+    const start = item.shiftId?.startTime || item.checkInAt;
+    const end = item.shiftId?.endTime || item.checkOutAt;
+    const hours = Number(((new Date(end) - new Date(start)) / 3600000).toFixed(2));
+    return {
+      attendanceId: item._id,
+      shiftId: item.shiftId?._id,
+      workDate: item.workDate,
+      shiftLabel: "Health Guard clinic shift",
+      hours,
+      amount: shiftRate
+    };
+  });
+  const payableShifts = payrollLines.length;
+  const totalShiftHours = Number(payrollLines.reduce((sum, item) => sum + item.hours, 0).toFixed(2));
+  const grossShiftPay = Number((payableShifts * shiftRate).toFixed(2));
+  const netSalary = Math.max(Number((grossShiftPay + staff.allowances - staff.deductions).toFixed(2)), 0);
 
   await Payroll.create({
     staffId: staff._id,
     month: currentMonth,
-    baseSalary: staff.baseSalary,
-    attendanceDays,
+    payBasis: "shift",
+    baseSalary: grossShiftPay,
+    shiftRate,
+    scheduledShifts,
+    payableShifts,
+    totalShiftHours,
+    attendanceDays: payableShifts,
+    payrollLines,
     allowances: staff.allowances,
     deductions: staff.deductions,
     netSalary,
-    status: empId === "HG-CAS-001" ? "reviewed" : "paid",
+    status: empId === "HG-CAS-002" || empId === "HG-LAB-002" ? "reviewed" : "paid",
     reviewedBy: staffUserMap.get("manager@healthguard.com")._id,
-    approvedBy: empId !== "HG-CAS-001" ? staffUserMap.get("manager@healthguard.com")._id : undefined,
-    paidAt: empId !== "HG-CAS-001" ? offsetDate(-2, 16) : undefined
+    approvedBy: empId === "HG-CAS-002" || empId === "HG-LAB-002" ? undefined : staffUserMap.get("manager@healthguard.com")._id,
+    paidAt: empId === "HG-CAS-002" || empId === "HG-LAB-002" ? undefined : offsetDate(-2, 16)
   });
 }
-console.log("   ✓ Seeded 3 monthly payroll records with attendance calculations.");
 
 // ============================================================================
+console.log(`   ✓ Seeded ${await Payroll.countDocuments()} shift-based payroll records.`);
+
 // STEP 13: SYNCHRONIZE STATE TO 'test' DATABASE (For Vercel Deployment Safety)
 // ============================================================================
 console.log("\n12. Synchronizing dataset to 'test' database...");
