@@ -14,6 +14,7 @@ const invoiceSchema = new mongoose.Schema(
   {
     patientId: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
     customerName: { type: String, trim: true },
+    customerPhone: { type: String, trim: true },
     appointmentId: { type: mongoose.Schema.Types.ObjectId, ref: "Appointment" },
     items: { type: [invoiceItemSchema], validate: [(items) => items.length > 0, "At least one item is required"] },
     subtotal: { type: Number, required: true, min: 0 },

@@ -62,13 +62,32 @@ export const shiftSchema = z.object({
     staffId: objectIdSchema,
     startTime: z.coerce.date(),
     endTime: z.coerce.date(),
-    location: z.string().trim().min(2, "Location is required").max(120),
+    location: z.string().trim().max(120).optional(),
     geoFence: z.object({
       latitude: z.coerce.number().min(-90).max(90),
       longitude: z.coerce.number().min(-180).max(180),
       radiusMeters: z.coerce.number().min(10).max(1000).default(100)
     }).optional(),
     notes: z.string().trim().max(250).optional().default("")
+  }).refine((data) => data.endTime > data.startTime, {
+    path: ["endTime"],
+    message: "End time must be after start time"
+  })
+});
+
+export const bulkShiftSchema = z.object({
+  body: z.object({
+    staffIds: z.array(objectIdSchema).min(1, "Select at least one staff member").max(50, "Too many staff members selected"),
+    startDate: z.coerce.date(),
+    endDate: z.coerce.date(),
+    startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Start time must be HH:mm"),
+    endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "End time must be HH:mm"),
+    weekdays: z.array(z.coerce.number().int().min(0).max(6)).min(1, "Select at least one weekday").max(7),
+    location: z.string().trim().max(120).optional(),
+    notes: z.string().trim().max(250).optional().default("")
+  }).refine((data) => data.endDate >= data.startDate, {
+    path: ["endDate"],
+    message: "End date must be on or after start date"
   }).refine((data) => data.endTime > data.startTime, {
     path: ["endTime"],
     message: "End time must be after start time"
@@ -108,7 +127,7 @@ export const reviewLeaveSchema = z.object({
 
 export const centerLocationSchema = z.object({
   body: z.object({
-    name: z.string().trim().min(2, "Center name is required").max(120),
+    name: z.string().trim().max(120).optional(),
     latitude: z.coerce.number().min(-90).max(90),
     longitude: z.coerce.number().min(-180).max(180),
     radiusMeters: z.coerce.number().min(10).max(1000)

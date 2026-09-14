@@ -4,8 +4,21 @@ const payrollSchema = new mongoose.Schema(
   {
     staffId: { type: mongoose.Schema.Types.ObjectId, ref: "Staff", required: true, index: true },
     month: { type: String, required: true },
+    payBasis: { type: String, enum: ["shift"], default: "shift" },
     baseSalary: { type: Number, required: true, min: 0 },
+    shiftRate: { type: Number, default: 0, min: 0 },
+    scheduledShifts: { type: Number, default: 0, min: 0 },
+    payableShifts: { type: Number, default: 0, min: 0 },
+    totalShiftHours: { type: Number, default: 0, min: 0 },
     attendanceDays: { type: Number, required: true, min: 0 },
+    payrollLines: [{
+      attendanceId: { type: mongoose.Schema.Types.ObjectId, ref: "Attendance" },
+      shiftId: { type: mongoose.Schema.Types.ObjectId, ref: "Shift" },
+      workDate: { type: String, required: true },
+      shiftLabel: { type: String, trim: true },
+      hours: { type: Number, default: 0, min: 0 },
+      amount: { type: Number, default: 0, min: 0 }
+    }],
     allowances: { type: Number, default: 0, min: 0 },
     deductions: { type: Number, default: 0, min: 0 },
     netSalary: { type: Number, required: true, min: 0 },

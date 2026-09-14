@@ -70,6 +70,10 @@ export const CashierDashboard = () => {
           detail={metrics.outstandingSum > 0 ? `${money(metrics.outstandingSum)} outstanding` : "All accounts settled"}
           icon={Receipt}
           change={metrics.pendingInvoicesCount > 0 ? "Awaiting Payment" : "All Clear"}
+          href="#billing-payments"
+          command={{ workspace: "billing", tab: "invoices", statusFilter: "pending", search: "" }}
+          actionLabel={metrics.pendingInvoicesCount > 0 ? "Collect payment" : "Open billing"}
+          priority={metrics.pendingInvoicesCount > 0 ? "high" : "normal"}
         />
         <DashboardCard
           title="Today's Collections"
@@ -77,6 +81,9 @@ export const CashierDashboard = () => {
           detail="Cash, card & transfer payments received today"
           icon={CreditCard}
           change="Collections Synced"
+          href="#billing-payments"
+          command={{ workspace: "billing", tab: "payments", statusFilter: "all", search: "" }}
+          actionLabel="Review payments"
         />
         <DashboardCard
           title="Unbilled Consultations"
@@ -84,6 +91,10 @@ export const CashierDashboard = () => {
           detail={metrics.unbilledVisits > 0 ? "Completed doctor visits ready to bill" : "All visits invoiced"}
           icon={DollarSign}
           change={metrics.unbilledVisits > 0 ? "Ready to Bill" : "Up To Date"}
+          href="#billing-payments"
+          command={{ workspace: "billing", tab: "invoices", statusFilter: "all", search: "", action: "createInvoice" }}
+          actionLabel={metrics.unbilledVisits > 0 ? "Create invoice" : "Review invoices"}
+          priority={metrics.unbilledVisits > 0 ? "medium" : "normal"}
         />
         <DashboardCard
           title="Settled Paid Bills"
@@ -91,6 +102,9 @@ export const CashierDashboard = () => {
           detail="Fully paid invoices with official receipts"
           icon={CheckCircle}
           change="Audited & Paid"
+          href="#billing-payments"
+          command={{ workspace: "billing", tab: "invoices", statusFilter: "paid", search: "" }}
+          actionLabel="View receipts"
         />
       </div>
 

@@ -11,6 +11,12 @@ import { AppError } from "../../../shared/utils/AppError.js";
 import { User } from "../../epic1_user_staff/models/User.js";
 import { Invoice } from "../../epic4_billing/models/Invoice.js";
 
+const isFutureAppointmentDate = (value) => {
+  const startOfTomorrow = new Date();
+  startOfTomorrow.setHours(24, 0, 0, 0);
+  return new Date(value) >= startOfTomorrow;
+};
+
 export const createAppointment = async (req, res) => {
   const payload = {
     ...req.body,
@@ -145,6 +151,9 @@ export const updateAppointmentStatus = async (req, res) => {
   if (appointment.status === "cancelled" || appointment.status === "completed") {
     throw new AppError("Finalized appointments cannot change status", 409);
   }
+  if (["checked_in", "in_consultation", "completed"].includes(req.body.status) && isFutureAppointmentDate(appointment.appointmentDate)) {
+    throw new AppError("Future appointments cannot be checked in or moved to consultation", 409);
+  }
   appointment.status = req.body.status;
   await appointment.save();
   return successResponse(res, "Appointment status updated", appointment);
@@ -164,6 +173,9 @@ export const recordVitals = async (req, res) => {
 export const saveConsultation = async (req, res) => {
   const appointment = await Appointment.findById(req.body.appointmentId);
   if (!appointment) throw new AppError("Appointment not found", 404);
+  if (isFutureAppointmentDate(appointment.appointmentDate)) {
+    throw new AppError("Consultation can only be recorded on or after the appointment date", 409);
+  }
   const consultation = await Consultation.findOneAndUpdate(
     { appointmentId: req.body.appointmentId },
     {

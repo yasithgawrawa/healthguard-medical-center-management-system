@@ -54,6 +54,10 @@ export const NurseDashboard = () => {
           detail="Booked patients scheduled for check-in"
           icon={Activity}
           change="Arrival Queue"
+          href="#patient-check-in-vitals"
+          command={{ workspace: "clinical", mode: "nurse", queueTab: "all", dateScope: "today", status: "booked", priority: "", search: "" }}
+          actionLabel="Open check-in queue"
+          priority={metrics.awaitingArrival > 0 ? "medium" : "normal"}
         />
         <DashboardCard
           title="In Triage (Needs Vitals)"
@@ -61,6 +65,10 @@ export const NurseDashboard = () => {
           detail={metrics.inTriage > 0 ? "Arrived patients awaiting vitals capture" : "Triage station clear"}
           icon={UserCheck}
           change={metrics.inTriage > 0 ? "Immediate Action" : "Up To Date"}
+          href="#patient-check-in-vitals"
+          command={{ workspace: "clinical", mode: "nurse", queueTab: "waiting", dateScope: "today", status: "", priority: "", search: "" }}
+          actionLabel={metrics.inTriage > 0 ? "Record vitals now" : "Monitor triage"}
+          priority={metrics.inTriage > 0 ? "high" : "normal"}
         />
         <DashboardCard
           title="Vitals Recorded"
@@ -68,6 +76,9 @@ export const NurseDashboard = () => {
           detail="Temperature, BP, Pulse & SpO2 recorded"
           icon={Thermometer}
           change="Baseline Logged"
+          href="#patient-check-in-vitals"
+          command={{ workspace: "clinical", mode: "nurse", queueTab: "in_consultation", dateScope: "today", status: "", priority: "", search: "" }}
+          actionLabel="Review handoffs"
         />
         <DashboardCard
           title="Active Doctors On Duty"
@@ -75,6 +86,9 @@ export const NurseDashboard = () => {
           detail="OPD consultation room physicians"
           icon={Stethoscope}
           change="Clinicians Active"
+          href="#patient-check-in-vitals"
+          command={{ workspace: "clinical", mode: "nurse", queueTab: "all", dateScope: "today", status: "", priority: "", search: "" }}
+          actionLabel="Check clinic queue"
         />
       </div>
 

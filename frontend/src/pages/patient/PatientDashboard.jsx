@@ -64,6 +64,9 @@ export const PatientDashboard = () => {
           detail={metrics.nextApptDate ? `Next visit: ${metrics.nextApptDate}` : "Book a doctor below"}
           icon={Calendar}
           change={metrics.upcomingAppts > 0 ? "Confirmed" : "Ready to Book"}
+          href={metrics.upcomingAppts > 0 ? "#patient-records-upcomingAppointments" : "#book-appointment"}
+          actionLabel={metrics.upcomingAppts > 0 ? "Open upcoming bookings" : "Book appointment"}
+          priority={metrics.upcomingAppts > 0 ? "normal" : "medium"}
         />
         <DashboardCard
           title="Diagnostic Lab Reports"
@@ -71,6 +74,9 @@ export const PatientDashboard = () => {
           detail={metrics.completedLabs > 0 ? "Diagnostic results ready to view" : "No lab reports published yet"}
           icon={FileText}
           change={metrics.completedLabs > 0 ? "Verified by Lab" : "Normal"}
+          href="#patient-records-labs"
+          actionLabel="View lab reports"
+          priority={metrics.completedLabs > 0 ? "medium" : "normal"}
         />
         <DashboardCard
           title="Prescriptions"
@@ -78,6 +84,8 @@ export const PatientDashboard = () => {
           detail="Doctor medications for pharmacy dispensing"
           icon={Pill}
           change="Doctor Prescribed"
+          href="#patient-records-prescriptions"
+          actionLabel="Review medicines"
         />
         <DashboardCard
           title="Billing & Balance"
@@ -85,6 +93,9 @@ export const PatientDashboard = () => {
           detail={metrics.outstandingBalance > 0 ? "Outstanding balance due at counter" : "All medical visits paid"}
           icon={CreditCard}
           change={metrics.outstandingBalance > 0 ? "Payment Due" : "Account Good"}
+          href="#patient-records-invoices"
+          actionLabel={metrics.outstandingBalance > 0 ? "Check balance" : "View receipts"}
+          priority={metrics.outstandingBalance > 0 ? "high" : "normal"}
         />
       </div>
 

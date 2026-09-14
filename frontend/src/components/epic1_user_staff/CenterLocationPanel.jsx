@@ -7,7 +7,6 @@ import { e1Api } from "../../services/e1Api.js";
 import { FormInput } from "../shared/forms/FormInput.jsx";
 
 const centerSchema = z.object({
-  name: z.string().trim().min(2, "Center name is required").max(120, "Center name is too long"),
   latitude: z.coerce.number().min(-90, "Latitude is required").max(90),
   longitude: z.coerce.number().min(-180, "Longitude is required").max(180),
   radiusMeters: z.coerce.number().int("Radius must be a whole number").min(10, "Minimum radius is 10m").max(1000, "Maximum radius is 1000m")
@@ -25,14 +24,18 @@ export const CenterLocationPanel = ({ onToast }) => {
   } = useForm({
     resolver: zodResolver(centerSchema),
     mode: "onChange",
-    defaultValues: { name: "Health Guard Medical Center", latitude: "", longitude: "", radiusMeters: 100 }
+    defaultValues: { latitude: "", longitude: "", radiusMeters: 100 }
   });
 
   useEffect(() => {
     e1Api
       .getCenterLocation()
       .then((center) => {
-        if (center) reset(center);
+        if (center) reset({
+          latitude: center.latitude ?? "",
+          longitude: center.longitude ?? "",
+          radiusMeters: center.radiusMeters ?? 100
+        });
       })
       .catch(() => {});
   }, [reset]);
@@ -40,14 +43,14 @@ export const CenterLocationPanel = ({ onToast }) => {
   const useCurrentLocation = () => {
     setLocationMessage("");
     if (!navigator.geolocation) {
-      setLocationMessage("Location is not supported in this browser.");
+      setLocationMessage("Browser location is not supported.");
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setValue("latitude", Number(position.coords.latitude.toFixed(6)), { shouldValidate: true });
         setValue("longitude", Number(position.coords.longitude.toFixed(6)), { shouldValidate: true });
-        setLocationMessage("Center location captured.");
+        setLocationMessage("Clinic check-in point captured.");
       },
       () => setLocationMessage("Unable to capture location. Allow browser location access or enter coordinates manually."),
       { enableHighAccuracy: true, timeout: 10000 }
@@ -58,9 +61,9 @@ export const CenterLocationPanel = ({ onToast }) => {
     setBusy(true);
     try {
       await e1Api.saveCenterLocation(values);
-      onToast?.({ type: "success", message: "Center check-in location saved" });
+      onToast?.({ type: "success", message: "Clinic attendance point saved" });
     } catch (error) {
-      onToast?.({ type: "error", message: error.response?.data?.message || "Unable to save center location" });
+      onToast?.({ type: "error", message: error.response?.data?.message || "Unable to save clinic attendance point" });
     } finally {
       setBusy(false);
     }
@@ -70,23 +73,22 @@ export const CenterLocationPanel = ({ onToast }) => {
     <form className="geo-section" onSubmit={handleSubmit(submit)}>
       <div className="geo-section-header">
         <div>
-          <strong>Health Guard Center Check-In Location</strong>
-          <span>All staff check-ins must happen inside this center radius.</span>
+          <strong>Single Clinic Attendance Point</strong>
+          <span>All staff check-ins are verified against this one Health Guard Medical Center location.</span>
         </div>
         <button className="button-secondary" type="button" onClick={useCurrentLocation}>
           <MapPin size={16} />
-          <span>Use Current Location</span>
+          <span>Capture Clinic Coordinates</span>
         </button>
       </div>
       <div className="form-grid">
-        <FormInput label="Center Name" placeholder="Health Guard Medical Center - Colombo 07" error={errors.name?.message} {...register("name")} />
         <FormInput label="Latitude" placeholder="6.914700" type="number" step="0.000001" error={errors.latitude?.message} {...register("latitude")} />
         <FormInput label="Longitude" placeholder="79.878000" type="number" step="0.000001" error={errors.longitude?.message} {...register("longitude")} />
         <FormInput label="Allowed Radius (meters)" placeholder="100" type="number" error={errors.radiusMeters?.message} {...register("radiusMeters")} />
       </div>
       {locationMessage ? <p className="section-description" style={{ margin: "0 0 12px" }}>{locationMessage}</p> : null}
       <button className="button-primary" type="submit" disabled={busy}>
-        {busy ? "Saving..." : "Save Center Location"}
+        {busy ? "Saving..." : "Save Clinic Attendance Point"}
       </button>
     </form>
   );

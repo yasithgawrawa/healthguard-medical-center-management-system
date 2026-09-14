@@ -51,6 +51,18 @@
   --warning-bg: #fffbeb;
   --warning-border: #fde68a;
 
+  /* Standard interactive controls */
+  --button-primary-bg: linear-gradient(135deg, var(--brand-800) 0%, var(--brand-600) 100%);
+  --button-primary-hover-bg: linear-gradient(135deg, var(--brand-700) 0%, var(--brand-500) 100%);
+  --button-secondary-bg: rgba(255, 255, 255, 0.92);
+  --button-secondary-hover-bg: #ffffff;
+  --button-danger-bg: linear-gradient(135deg, var(--danger), #be123c);
+  --button-danger-hover-bg: linear-gradient(135deg, #be123c, #9f1239);
+  --button-action-bg: #ffffff;
+  --button-action-hover-bg: var(--brand-50);
+  --button-action-border: var(--line);
+  --button-action-hover-border: var(--brand-300);
+
   /* Typography */
   --font-heading: "Outfit", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -227,7 +239,7 @@ button, input, select, textarea {
   justify-content: center;
   gap: 8px;
   padding: 10px 22px;
-  background: linear-gradient(135deg, var(--brand-800) 0%, var(--brand-600) 100%);
+  background: var(--button-primary-bg);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: var(--radius-pill);
   color: #ffffff;
@@ -241,9 +253,9 @@ button, input, select, textarea {
 }
 
 .primary-link:hover,
-.button-primary:hover,
-.submit-button:hover {
-  background: linear-gradient(135deg, var(--brand-700) 0%, var(--brand-500) 100%);
+.button-primary:not(:disabled):hover,
+.submit-button:not(:disabled):hover {
+  background: var(--button-primary-hover-bg);
   box-shadow: 0 12px 28px rgba(19, 62, 104, 0.38);
   transform: translateY(-2px);
   color: #ffffff;
@@ -255,7 +267,7 @@ button, input, select, textarea {
   justify-content: center;
   gap: 8px;
   padding: 10px 22px;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--button-secondary-bg);
   border: 1px solid var(--line-brand);
   border-radius: var(--radius-pill);
   color: var(--brand-900);
@@ -268,8 +280,8 @@ button, input, select, textarea {
   text-decoration: none;
 }
 
-.button-secondary:hover {
-  background: #ffffff;
+.button-secondary:not(:disabled):hover {
+  background: var(--button-secondary-hover-bg);
   border-color: var(--brand-400);
   color: var(--brand-600);
   transform: translateY(-2px);
@@ -1203,8 +1215,15 @@ main {
 }
 
 .danger-action {
-  background: linear-gradient(135deg, var(--danger), #be123c);
+  background: var(--button-danger-bg);
   border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.danger-action:not(:disabled):hover {
+  background: var(--button-danger-hover-bg);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
 }
 
 .confirm-dialog-body {
@@ -1400,12 +1419,12 @@ main {
   position: relative;
 }
 
-.row-actions > button,
-.table-link-button,
-.inline-actions button {
+.row-actions > button:not(.button-primary):not(.button-secondary),
+.table-link-button:not(.button-primary):not(.button-secondary),
+.inline-actions button:not(.button-primary):not(.button-secondary) {
   align-items: center;
-  background: #ffffff;
-  border: 1px solid var(--line);
+  background: var(--button-action-bg);
+  border: 1px solid var(--button-action-border);
   border-radius: 10px;
   color: var(--brand-700);
   cursor: pointer;
@@ -1423,16 +1442,46 @@ main {
   gap: 8px;
 }
 
-.inline-actions button:hover,
-.table-link-button:hover {
-  background: var(--brand-50);
-  border-color: var(--brand-300);
+.inline-actions button:not(.button-primary):not(.button-secondary):not(.danger-action):hover,
+.table-link-button:not(.button-primary):not(.button-secondary):not(.danger-action):hover {
+  background: var(--button-action-hover-bg);
+  border-color: var(--button-action-hover-border);
+  color: var(--brand-600);
+}
+
+.row-actions > button.danger-action,
+.table-link-button.danger-action,
+.inline-actions button.danger-action {
+  background: var(--button-danger-bg);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.row-actions > button.danger-action:not(:disabled):hover,
+.table-link-button.danger-action:not(:disabled):hover,
+.inline-actions button.danger-action:not(:disabled):hover {
+  background: var(--button-danger-hover-bg);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
 }
 
 .inline-actions button:disabled,
-.table-link-button:disabled {
+.table-link-button:disabled,
+.button-primary:disabled,
+.button-secondary:disabled,
+.submit-button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+  transform: none;
+  box-shadow: none;
+}
+
+.inline-actions button:disabled:hover,
+.table-link-button:disabled:hover,
+.button-primary:disabled:hover,
+.button-secondary:disabled:hover,
+.submit-button:disabled:hover {
+  transform: none;
 }
 
 .checkbox-line {
@@ -1516,8 +1565,8 @@ main {
 
 .pagination button {
   align-items: center;
-  background: #ffffff;
-  border: 1px solid var(--line);
+  background: var(--button-action-bg);
+  border: 1px solid var(--button-action-border);
   border-radius: var(--radius-pill);
   color: var(--brand-700);
   cursor: pointer;
@@ -1525,6 +1574,13 @@ main {
   font-weight: 800;
   gap: 6px;
   padding: 8px 13px;
+  transition: all 0.2s ease;
+}
+
+.pagination button:not(:disabled):hover {
+  background: var(--button-action-hover-bg);
+  border-color: var(--button-action-hover-border);
+  color: var(--brand-600);
 }
 
 .pagination button:disabled {
@@ -1620,10 +1676,16 @@ main {
   cursor: pointer;
   font-weight: 800;
   padding: 10px 14px;
+  transition: all 0.2s ease;
+}
+
+.e1-tabbar button:hover {
+  background: var(--button-action-hover-bg);
+  color: var(--brand-700);
 }
 
 .e1-tabbar button.active {
-  background: #ffffff;
+  background: var(--button-action-bg);
   box-shadow: var(--shadow-sm);
   color: var(--brand-800);
 }
@@ -2115,18 +2177,6 @@ main {
   border-radius: var(--radius-md);
   white-space: nowrap;
   box-sizing: border-box;
-  background: var(--brand-600);
-  color: #ffffff;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(13, 71, 161, 0.25);
-  transition: all 0.2s ease;
-}
-
-.pos-add-btn:hover {
-  background: var(--brand-700);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(13, 71, 161, 0.35);
 }
 
 @media (max-width: 768px) {
@@ -2422,6 +2472,8 @@ main {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  text-align: left;
+  width: 100%;
 }
 
 .dashboard-card::before {
@@ -2434,10 +2486,40 @@ main {
   background: linear-gradient(90deg, var(--brand-500), var(--brand-300));
 }
 
-.dashboard-card:hover {
+.dashboard-card:hover,
+.dashboard-card:focus-visible {
   transform: translateY(-4px);
   border-color: var(--brand-300);
   box-shadow: var(--shadow-lg);
+}
+
+.dashboard-card-clickable {
+  appearance: none;
+  cursor: pointer;
+  font: inherit;
+}
+
+.dashboard-card-clickable:focus-visible {
+  outline: 3px solid var(--brand-200);
+  outline-offset: 3px;
+}
+
+.dashboard-card-high::before {
+  background: linear-gradient(90deg, var(--danger), #fb7185);
+}
+
+.dashboard-card-high .dashboard-card-icon {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.dashboard-card-medium::before {
+  background: linear-gradient(90deg, var(--warning), #fbbf24);
+}
+
+.dashboard-card-medium .dashboard-card-icon {
+  background: var(--warning-bg);
+  color: var(--warning);
 }
 
 .dashboard-card-top {
@@ -2478,6 +2560,21 @@ main {
   font-size: 0.85rem;
   color: var(--muted);
   margin: 0;
+}
+
+.dashboard-card-change,
+.dashboard-card-action {
+  align-items: center;
+  color: var(--success);
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 700;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.dashboard-card-action {
+  color: var(--brand-700);
 }
 
 .quick-actions-panel,
@@ -2635,8 +2732,8 @@ main {
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: var(--brand-50);
-  border: 1px solid var(--brand-200);
+  background: var(--button-action-bg);
+  border: 1px solid var(--button-action-border);
   border-radius: var(--radius-pill);
   font-size: 0.85rem;
   font-weight: 700;
@@ -2646,9 +2743,9 @@ main {
 }
 
 .operation-header button:hover {
-  background: var(--brand-600);
-  color: #ffffff;
-  border-color: var(--brand-600);
+  background: var(--button-action-hover-bg);
+  color: var(--brand-600);
+  border-color: var(--button-action-hover-border);
 }
 
 .operation-actions-grid {
@@ -2769,7 +2866,7 @@ main {
   border: 1px solid var(--brand-100);
   border-radius: var(--radius-md);
   display: grid;
-  gap: 3px;
+  gap: 8px;
   padding: 12px;
 }
 
@@ -2785,10 +2882,53 @@ main {
   text-transform: capitalize;
 }
 
+.patient-record-main,
+.patient-record-meta {
+  display: grid;
+  gap: 3px;
+}
+
+.patient-record-main span,
+.patient-record-meta span,
+.patient-record-meta small {
+  text-transform: none;
+}
+
+.patient-appointment-note {
+  background: #ffffff;
+  border: 1px solid var(--brand-200);
+  border-radius: 8px;
+  color: var(--ink-700);
+  display: grid;
+  font-size: 0.82rem;
+  gap: 3px;
+  padding: 8px 10px;
+}
+
+.patient-appointment-note strong {
+  color: var(--brand-700);
+  font-size: 0.82rem;
+}
+
+.patient-appointment-note em,
+.patient-appointment-note b {
+  color: var(--ink-700);
+  font-style: normal;
+}
+
 .record-item-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+}
+
+.compact-action-button {
+  border-radius: 8px;
+  font-size: 0.8rem;
+  min-height: 30px;
+  padding: 0 11px;
+  white-space: nowrap;
 }
 
 .record-id {

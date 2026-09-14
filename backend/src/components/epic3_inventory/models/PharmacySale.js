@@ -17,6 +17,7 @@ const pharmacySaleSchema = new mongoose.Schema(
     prescriptionId: { type: mongoose.Schema.Types.ObjectId, ref: "Prescription" },
     patientId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     customerName: { type: String, trim: true },
+    customerPhone: { type: String, trim: true },
     soldBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     items: { type: [saleItemSchema], validate: [(items) => items.length > 0, "At least one item is required"] },
     total: { type: Number, required: true, min: 0 },

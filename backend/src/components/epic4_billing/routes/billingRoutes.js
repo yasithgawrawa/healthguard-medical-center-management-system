@@ -13,12 +13,13 @@ import {
   listInvoices,
   listPayments,
   listPayroll,
+  previewPayroll,
   recordPayment,
   revenueSummary,
   updatePaymentStatus,
   updatePayrollStatus
 } from "../controllers/billingController.js";
-import { invoiceSchema, paymentSchema, paymentStatusSchema, payrollSchema, payrollStatusSchema } from "../validators/billingValidators.js";
+import { invoiceSchema, paymentSchema, paymentStatusSchema, payrollPreviewSchema, payrollSchema, payrollStatusSchema } from "../validators/billingValidators.js";
 
 const router = Router();
 router.use(authenticate);
@@ -31,6 +32,7 @@ router.get("/invoices/:id/receipt", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER,
 router.post("/payments", authorizeRoles(ROLES.CASHIER, ROLES.ADMIN), validateRequest(paymentSchema), asyncHandler(recordPayment));
 router.get("/payments", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN), asyncHandler(listPayments));
 router.patch("/payments/:id/status", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER), validateRequest(paymentStatusSchema), asyncHandler(updatePaymentStatus));
+router.post("/payroll/preview", authorizeRoles(ROLES.MANAGER, ROLES.ADMIN, ROLES.CASHIER), validateRequest(payrollPreviewSchema), asyncHandler(previewPayroll));
 router.post("/payroll", authorizeRoles(ROLES.MANAGER, ROLES.ADMIN, ROLES.CASHIER), validateRequest(payrollSchema), asyncHandler(createPayroll));
 router.get("/payroll", authorizeRoles(ROLES.MANAGER, ROLES.ADMIN, ROLES.DOCTOR, ROLES.NURSE, ROLES.PHARMACIST, ROLES.CASHIER, ROLES.LAB_ASSISTANT), asyncHandler(listPayroll));
 router.get("/payroll/:id/payslip", authorizeRoles(ROLES.MANAGER, ROLES.ADMIN, ROLES.DOCTOR, ROLES.NURSE, ROLES.PHARMACIST, ROLES.CASHIER, ROLES.LAB_ASSISTANT), validateRequest(idParamSchema), asyncHandler(downloadPayslip));

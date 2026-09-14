@@ -13,9 +13,11 @@ export const e1Api = {
   saveCenterLocation: async (payload) => unwrap(await apiClient.patch("/e1/workforce/center-location", payload)),
   listShifts: async () => unwrap(await apiClient.get("/e1/workforce/shifts")),
   createShift: async (payload) => unwrap(await apiClient.post("/e1/workforce/shifts", payload)),
+  createBulkShifts: async (payload) => unwrap(await apiClient.post("/e1/workforce/shifts/bulk", payload)),
   updateShiftStatus: async (id, status) => unwrap(await apiClient.patch(`/e1/workforce/shifts/${id}/status`, { status })),
 
   listAttendance: async () => unwrap(await apiClient.get("/e1/workforce/attendance")),
+  checkOutAttendance: async (id) => unwrap(await apiClient.patch(`/e1/workforce/attendance/${id}/check-out`)),
   listLeave: async () => unwrap(await apiClient.get("/e1/workforce/leave")),
   reviewLeave: async (id, payload) => unwrap(await apiClient.patch(`/e1/workforce/leave/${id}/review`, payload)),
 

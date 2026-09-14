@@ -78,20 +78,21 @@ const offsetDate = (dayOffset, hour = 9, minute = 0) => {
 };
 
 // ============================================================================
-// STEP 3: ENSURE PRIMARY CENTER LOCATION (Colombo 07 - Ward Place)
+// STEP 3: ENSURE PRIMARY CLINIC ATTENDANCE POINT
 // ============================================================================
-console.log("\n2. Configuring Medical Center Location...");
-let primaryLocation = await CenterLocation.findOne({ key: "primary" });
-if (!primaryLocation) {
-  primaryLocation = await CenterLocation.create({
+console.log("\n2. Configuring Clinic Attendance Point...");
+let primaryLocation = await CenterLocation.findOneAndUpdate(
+  { key: "primary" },
+  {
     key: "primary",
-    name: "Health Guard Medical Center - Colombo 07",
+    name: "Health Guard Medical Center",
     latitude: 6.9147,
     longitude: 79.8780,
     radiusMeters: 1000
-  });
-}
-console.log(`   ✓ Center Location active: ${primaryLocation.name}`);
+  },
+  { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+);
+console.log(`   ✓ Clinic attendance point active: ${primaryLocation.name}`);
 
 // ============================================================================
 // STEP 4: VERIFY / UPSERT FOUNDATION STAFF & PATIENT ACCOUNTS
@@ -341,7 +342,7 @@ for (const s of shiftsData) {
     staffId: staff._id,
     startTime: offsetDate(s.dayOffset, s.startHour),
     endTime: offsetDate(s.dayOffset, s.endHour),
-    location: s.loc,
+    location: "Health Guard Medical Center",
     status: "scheduled",
     notes: "Regular Clinical Roster - Health Guard Colombo 07"
   });

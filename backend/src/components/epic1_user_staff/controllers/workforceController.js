@@ -6,6 +6,8 @@ import { Staff } from "../models/Staff.js";
 import { successResponse } from "../../../shared/utils/apiResponse.js";
 import { AppError } from "../../../shared/utils/AppError.js";
 
+const SINGLE_CLINIC_LOCATION = "Health Guard Medical Center";
+
 const assertActiveStaff = async (staffId) => {
   const staff = await Staff.findById(staffId);
   if (!staff || staff.status !== "active") throw new AppError("Active staff member not found", 404);
@@ -44,8 +46,8 @@ const dayRange = (date) => {
 const getConfiguredCenterLocation = async () => {
   const center = await CenterLocation.findOne({ key: "primary" });
   if (!center) {
-    throw new AppError("Center check-in location is not configured", 403, {
-      location: "Ask an admin to set the Health Guard center location first."
+    throw new AppError("Clinic attendance point is not configured", 403, {
+      location: "Ask an admin to set the Health Guard clinic attendance point first."
     });
   }
   return center;
@@ -81,16 +83,16 @@ const findEligibleShift = async (staffId, now) => {
 
 export const getCenterLocation = async (req, res) => {
   const center = await CenterLocation.findOne({ key: "primary" });
-  return successResponse(res, "Center location loaded", center);
+  return successResponse(res, "Clinic attendance point loaded", center);
 };
 
 export const updateCenterLocation = async (req, res) => {
   const center = await CenterLocation.findOneAndUpdate(
     { key: "primary" },
-    { ...req.body, key: "primary", updatedBy: req.user._id },
+    { ...req.body, key: "primary", name: SINGLE_CLINIC_LOCATION, updatedBy: req.user._id },
     { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
   );
-  return successResponse(res, "Center check-in location saved", center);
+  return successResponse(res, "Clinic attendance point saved", center);
 };
 
 export const createShift = async (req, res) => {
@@ -103,8 +105,59 @@ export const createShift = async (req, res) => {
   });
   if (overlap) throw new AppError("Shift overlaps an existing scheduled shift", 409, { startTime: "Overlapping shift" });
 
-  const shift = await Shift.create(req.body);
+  const shift = await Shift.create({ ...req.body, location: SINGLE_CLINIC_LOCATION });
   return successResponse(res, "Shift created successfully", shift, 201);
+};
+
+const combineDateAndTime = (date, time) => {
+  const [hours, minutes] = time.split(":").map(Number);
+  const value = new Date(date);
+  value.setHours(hours, minutes, 0, 0);
+  return value;
+};
+
+export const createBulkShifts = async (req, res) => {
+  const { staffIds, startDate, endDate, startTime, endTime, weekdays, notes } = req.body;
+  const activeStaff = await Staff.find({ _id: { $in: staffIds }, status: "active" }).select("_id");
+  const activeStaffIds = new Set(activeStaff.map((item) => item._id.toString()));
+  const selectedWeekdays = new Set(weekdays.map(Number));
+  const created = [];
+  const skipped = [];
+
+  for (const staffId of staffIds) {
+    if (!activeStaffIds.has(staffId.toString())) {
+      skipped.push({ staffId, reason: "Inactive or missing staff profile" });
+      continue;
+    }
+
+    const current = new Date(startDate);
+    current.setHours(0, 0, 0, 0);
+    const last = new Date(endDate);
+    last.setHours(0, 0, 0, 0);
+
+    while (current <= last) {
+      if (selectedWeekdays.has(current.getDay())) {
+        const shiftStart = combineDateAndTime(current, startTime);
+        const shiftEnd = combineDateAndTime(current, endTime);
+        const overlap = await Shift.findOne({
+          staffId,
+          status: "scheduled",
+          startTime: { $lt: shiftEnd },
+          endTime: { $gt: shiftStart }
+        }).select("_id");
+
+        if (overlap) {
+          skipped.push({ staffId, date: current.toISOString().slice(0, 10), reason: "Overlapping scheduled shift" });
+        } else {
+          created.push({ staffId, startTime: shiftStart, endTime: shiftEnd, location: SINGLE_CLINIC_LOCATION, notes });
+        }
+      }
+      current.setDate(current.getDate() + 1);
+    }
+  }
+
+  const inserted = created.length ? await Shift.insertMany(created, { ordered: false }) : [];
+  return successResponse(res, `Created ${inserted.length} shift(s)`, { createdCount: inserted.length, skipped }, 201);
 };
 
 export const listWorkforceStaff = async (req, res) => {
@@ -205,13 +258,19 @@ export const checkOutSelf = async (req, res) => {
 };
 
 export const listAttendance = async (req, res) => {
-  const attendance = await Attendance.find().populate("staffId").sort({ workDate: -1 });
+  const attendance = await Attendance.find()
+    .populate("staffId")
+    .populate("shiftId", "startTime endTime location")
+    .sort({ workDate: -1 });
   return successResponse(res, "Attendance list loaded", attendance);
 };
 
 export const listMyAttendance = async (req, res) => {
   const staff = await getCurrentActiveStaff(req.user._id);
-  const attendance = await Attendance.find({ staffId: staff._id }).populate("staffId").sort({ workDate: -1 });
+  const attendance = await Attendance.find({ staffId: staff._id })
+    .populate("staffId")
+    .populate("shiftId", "startTime endTime location")
+    .sort({ workDate: -1 });
   return successResponse(res, "My attendance history loaded", attendance);
 };
 

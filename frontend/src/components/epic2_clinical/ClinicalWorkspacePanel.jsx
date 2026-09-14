@@ -37,11 +37,12 @@ import { FormSelect } from "../shared/forms/FormSelect.jsx";
 import { FormTextarea } from "../shared/forms/FormTextarea.jsx";
 import { bloodPressurePattern, optionalVitalsNumber } from "../../utils/validationSchemas.js";
 import { printLabReportPDF } from "../../utils/invoicePrintTemplate.js";
+import { DASHBOARD_COMMAND_EVENT } from "../../utils/dashboardCommands.js";
+import { patientLabel } from "../../utils/personLabels.js";
 
 const patientName = (item) => {
   const patient = item?.patientId || {};
-  if (typeof patient === "string") return "Patient";
-  return [patient.firstName, patient.lastName].filter(Boolean).join(" ") || "Patient";
+  return patientLabel(patient);
 };
 
 const getStandardLabParameters = (testName = "") => {
@@ -114,6 +115,12 @@ const doctorName = (item) => {
 };
 
 const formatDateTime = (value) => (value ? new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "-");
+const localDateKey = (value) => {
+  const date = value ? new Date(value) : new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
+const isFutureLocalDate = (value) => localDateKey(value) > localDateKey();
+const isTodayLocalDate = (value) => localDateKey(value) === localDateKey();
 
 const vitalsSchema = z.object({
   temperature: optionalVitalsNumber("Temperature", 25, 45),
@@ -154,6 +161,8 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
   const [labs, setLabs] = useState([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [statusGroup, setStatusGroup] = useState([]);
+  const [priorityFilter, setPriorityFilter] = useState("");
   const [queueTab, setQueueTab] = useState("all");
   const [dateScope, setDateScope] = useState("all");
   const [modal, setModal] = useState({ type: null, record: null });
@@ -311,6 +320,28 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
     };
   }, [mode]);
 
+  useEffect(() => {
+    const handleDashboardCommand = (event) => {
+      const command = event.detail || {};
+      if (command.workspace !== "clinical" || (command.mode && command.mode !== mode)) return;
+      if (command.queueTab !== undefined) setQueueTab(command.queueTab);
+      if (command.dateScope !== undefined) setDateScope(command.dateScope);
+      if (command.status !== undefined) {
+        setStatus(command.status);
+        setStatusGroup([]);
+      }
+      if (command.statuses !== undefined) {
+        setStatus("");
+        setStatusGroup(command.statuses);
+      }
+      if (command.priority !== undefined) setPriorityFilter(command.priority);
+      if (command.search !== undefined) setSearch(command.search);
+    };
+
+    window.addEventListener(DASHBOARD_COMMAND_EVENT, handleDashboardCommand);
+    return () => window.removeEventListener(DASHBOARD_COMMAND_EVENT, handleDashboardCommand);
+  }, [mode]);
+
   const openModal = (type, record) => {
     if (type === "lab-update") {
       const initialParams = Array.isArray(record.parameters) && record.parameters.length > 0
@@ -360,6 +391,10 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
 
   const startConsultation = async (appointment) => {
     try {
+      if (isFutureLocalDate(appointment.appointmentDate)) {
+        setToast({ type: "error", message: "Future bookings cannot be called into consultation before the appointment date." });
+        return;
+      }
       if (appointment.status === "checked_in") {
         await clinicalApi.updateAppointmentStatus(appointment._id, "in_consultation");
         appointment.status = "in_consultation";
@@ -409,7 +444,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
     setValue("chiefComplaints", parts.join(" | "), { shouldValidate: true, shouldDirty: true });
   };
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = localDateKey();
 
   const sourceRows = mode === "lab" ? labs : appointments;
   const rows = useMemo(() => {
@@ -426,6 +461,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
         d.lastName,
         item.reason,
         item.testName,
+        item.priority,
         item.status,
         item.slotLabel,
         diag
@@ -437,11 +473,14 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
       if (query && !text.includes(query)) return false;
 
       if (mode === "lab") {
-        return !status || item.status === status;
+        if (status && item.status !== status) return false;
+        if (statusGroup.length && !statusGroup.includes(item.status)) return false;
+        if (priorityFilter && item.priority !== priorityFilter) return false;
+        return true;
       }
 
       if (dateScope === "today") {
-        const itemDate = (item.appointmentDate || "").slice(0, 10);
+        const itemDate = localDateKey(item.appointmentDate);
         if (itemDate !== todayStr) return false;
       }
 
@@ -453,7 +492,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
 
       return true;
     });
-  }, [sourceRows, search, status, queueTab, dateScope, mode, todayStr]);
+  }, [sourceRows, search, status, statusGroup, priorityFilter, queueTab, dateScope, mode, todayStr]);
 
   const submit = async (values) => {
     setBusy(true);
@@ -534,10 +573,9 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
       header: "Patient",
       render: (item) => {
         const p = item.patientId || {};
-        const name = [p.firstName, p.lastName].filter(Boolean).join(" ") || "Patient";
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-            <span style={{ fontWeight: 600, color: "#0f172a", fontSize: "0.88rem" }}>{name}</span>
+            <span style={{ fontWeight: 600, color: "#0f172a", fontSize: "0.88rem" }}>{patientLabel(p)}</span>
             {p.phone ? (
               <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.75rem", color: "#64748b" }}>
                 <Phone size={11} color="#94a3b8" />
@@ -552,7 +590,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
       key: "date",
       header: "Schedule & Slot",
       render: (item) => {
-        const isToday = (item.appointmentDate || "").slice(0, 10) === todayStr;
+        const isToday = isTodayLocalDate(item.appointmentDate);
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
             <div>
@@ -768,52 +806,33 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
             </div>
           );
         }
+        const canCallToday = item.status === "checked_in" && !isFutureLocalDate(item.appointmentDate);
         return (
           <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", whiteSpace: "nowrap" }}>
-            {item.status === "checked_in" ? (
+            {item.status === "checked_in" && canCallToday ? (
               <button
                 type="button"
-                style={{
-                  height: "30px",
-                  padding: "0 11px",
-                  fontSize: "0.8rem",
-                  fontWeight: 600,
-                  color: "#ffffff",
-                  background: "#16a34a",
-                  border: "1px solid #15803d",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "5px",
-                  whiteSpace: "nowrap",
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
-                }}
+                className="button-primary compact-action-button"
                 onClick={() => startConsultation(item)}
                 title="Call patient into doctor's room & begin consultation"
               >
                 <Play size={12} fill="#ffffff" />
                 Call & Consult
               </button>
+            ) : item.status === "checked_in" ? (
+              <button
+                type="button"
+                className="button-secondary compact-action-button"
+                disabled
+                title="This patient can be called only on the appointment date"
+              >
+                <Clock size={12} />
+                Future Booking
+              </button>
             ) : item.status === "in_consultation" ? (
               <button
                 type="button"
-                style={{
-                  height: "30px",
-                  padding: "0 11px",
-                  fontSize: "0.8rem",
-                  fontWeight: 600,
-                  color: "#ffffff",
-                  background: "#0284c7",
-                  border: "1px solid #0369a1",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "5px",
-                  whiteSpace: "nowrap",
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
-                }}
+                className="button-primary compact-action-button"
                 onClick={() => openModal("consultation", item)}
                 title="Continue active consultation"
               >
@@ -823,21 +842,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
             ) : item.status === "completed" ? (
               <button
                 type="button"
-                style={{
-                  height: "30px",
-                  padding: "0 10px",
-                  fontSize: "0.8rem",
-                  fontWeight: 500,
-                  color: "#334155",
-                  background: "#ffffff",
-                  border: "1px solid #cbd5e1",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "5px",
-                  whiteSpace: "nowrap"
-                }}
+                className="table-link-button"
                 onClick={() => openModal("consultation", item)}
                 title="View finalized consultation notes"
               >
@@ -847,21 +852,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
             ) : (
               <button
                 type="button"
-                style={{
-                  height: "30px",
-                  padding: "0 10px",
-                  fontSize: "0.8rem",
-                  fontWeight: 500,
-                  color: "#334155",
-                  background: "#ffffff",
-                  border: "1px solid #cbd5e1",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "5px",
-                  whiteSpace: "nowrap"
-                }}
+                className="table-link-button"
                 onClick={() => openModal("consultation", item)}
               >
                 Consult
@@ -972,13 +963,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
               <button
                 type="button"
                 className={queueTab === "waiting" ? "button-primary" : "button-secondary"}
-                style={{
-                  padding: "5px 12px",
-                  fontSize: "0.82rem",
-                  background: queueTab === "waiting" ? "#f59e0b" : undefined,
-                  borderColor: queueTab === "waiting" ? "#f59e0b" : undefined,
-                  color: queueTab === "waiting" ? "#ffffff" : undefined
-                }}
+                style={{ padding: "5px 12px", fontSize: "0.82rem" }}
                 onClick={() => { setQueueTab("waiting"); setStatus(""); }}
               >
                 Waiting Room ({appointments.filter((a) => a.status === "checked_in").length})
@@ -986,13 +971,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
               <button
                 type="button"
                 className={queueTab === "in_consultation" ? "button-primary" : "button-secondary"}
-                style={{
-                  padding: "5px 12px",
-                  fontSize: "0.82rem",
-                  background: queueTab === "in_consultation" ? "#0284c7" : undefined,
-                  borderColor: queueTab === "in_consultation" ? "#0284c7" : undefined,
-                  color: queueTab === "in_consultation" ? "#ffffff" : undefined
-                }}
+                style={{ padding: "5px 12px", fontSize: "0.82rem" }}
                 onClick={() => { setQueueTab("in_consultation"); setStatus(""); }}
               >
                 In Consultation ({appointments.filter((a) => a.status === "in_consultation").length})
@@ -1000,13 +979,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
               <button
                 type="button"
                 className={queueTab === "completed" ? "button-primary" : "button-secondary"}
-                style={{
-                  padding: "5px 12px",
-                  fontSize: "0.82rem",
-                  background: queueTab === "completed" ? "#16a34a" : undefined,
-                  borderColor: queueTab === "completed" ? "#16a34a" : undefined,
-                  color: queueTab === "completed" ? "#ffffff" : undefined
-                }}
+                style={{ padding: "5px 12px", fontSize: "0.82rem" }}
                 onClick={() => { setQueueTab("completed"); setStatus(""); }}
               >
                 Completed ({appointments.filter((a) => a.status === "completed").length})
@@ -1022,11 +995,20 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
             </div>
           </div>
         ) : (
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", flexWrap: "wrap" }}>
+            <FilterSelect
+              label="Priority"
+              value={priorityFilter}
+              onChange={setPriorityFilter}
+              options={["routine", "urgent"]}
+            />
             <FilterSelect
               label="Status"
               value={status}
-              onChange={setStatus}
+              onChange={(value) => {
+                setStatus(value);
+                setStatusGroup([]);
+              }}
               options={["requested", "verified", "in_progress", "completed", "cancelled"]}
             />
           </div>

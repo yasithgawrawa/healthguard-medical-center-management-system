@@ -10,6 +10,8 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import { ROLES } from "../../utils/roles.js";
 import { requiredMoney, requiredQuantity } from "../../utils/validationSchemas.js";
 import { printInvoicePDF, printPayslipPDF } from "../../utils/invoicePrintTemplate.js";
+import { DASHBOARD_COMMAND_EVENT } from "../../utils/dashboardCommands.js";
+import { customerLabel, patientLabel } from "../../utils/personLabels.js";
 import { DataTable } from "../shared/DataTable.jsx";
 import { Modal } from "../shared/Modal.jsx";
 import { SearchBar } from "../shared/SearchBar.jsx";
@@ -19,8 +21,7 @@ import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
 
 const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
-const name = (user, fallback = "Patient") => [user?.firstName, user?.lastName].filter(Boolean).join(" ") || fallback;
-const getInvoiceClient = (item) => item?.customerName || name(item?.patientId, "Walk-in Customer");
+const getInvoiceClient = (item) => customerLabel(item);
 const staffName = (staff) => [staff?.userId?.firstName, staff?.userId?.lastName].filter(Boolean).join(" ") || staff?.employeeId || "Staff";
 const saveBlob = (blob, filename) => {
   const url = URL.createObjectURL(blob);
@@ -44,7 +45,7 @@ const paymentSchema = z.object({
 const payrollSchema = z.object({
   staffId: z.string().min(1, "Select staff member"),
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Select payroll month"),
-  baseSalary: requiredMoney("Base salary").min(0.01, "Base salary must be greater than 0"),
+  shiftRate: requiredMoney("Shift payment rate").min(0.01, "Shift payment rate must be greater than 0"),
   allowances: requiredMoney("Allowances"),
   deductions: requiredMoney("Deductions")
 });
@@ -61,6 +62,8 @@ export const BillingWorkspacePanel = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [modal, setModal] = useState({ type: null, record: null });
+  const [payrollPreview, setPayrollPreview] = useState(null);
+  const [payrollPreviewLoading, setPayrollPreviewLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
   const isManager = [ROLES.MANAGER, ROLES.ADMIN].includes(user?.role);
@@ -83,6 +86,10 @@ export const BillingWorkspacePanel = () => {
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({ resolver: zodResolver(schema), mode: "onChange" });
   const selectedStaffId = watch("staffId");
+  const selectedPayrollMonth = watch("month");
+  const selectedShiftRate = watch("shiftRate");
+  const selectedAllowances = watch("allowances");
+  const selectedDeductions = watch("deductions");
 
   const load = async () => {
     try {
@@ -110,18 +117,63 @@ export const BillingWorkspacePanel = () => {
   }, []);
 
   useEffect(() => {
+    const handleDashboardCommand = (event) => {
+      const command = event.detail || {};
+      if (command.workspace !== "billing") return;
+      if (command.tab) setActiveTab(command.tab);
+      if (command.statusFilter !== undefined) setStatusFilter(command.statusFilter);
+      if (command.search !== undefined) setSearch(command.search);
+      if (command.action === "createInvoice" && isCashier) {
+        reset({});
+        setModal({ type: "invoice", record: null });
+      }
+    };
+
+    window.addEventListener(DASHBOARD_COMMAND_EVENT, handleDashboardCommand);
+    return () => window.removeEventListener(DASHBOARD_COMMAND_EVENT, handleDashboardCommand);
+  }, [isCashier, reset]);
+
+  useEffect(() => {
     if (modal.type !== "payroll" || !selectedStaffId) return;
     const selectedStaff = staff.find((item) => item._id === selectedStaffId);
     if (!selectedStaff) return;
-    setValue("baseSalary", selectedStaff.baseSalary || 0, { shouldValidate: true });
+    const defaultShiftRate = selectedStaff.baseSalary ? Number((Number(selectedStaff.baseSalary) / 26).toFixed(2)) : 0;
+    setValue("shiftRate", defaultShiftRate, { shouldValidate: true });
     setValue("allowances", selectedStaff.allowances || 0, { shouldValidate: true });
     setValue("deductions", selectedStaff.deductions || 0, { shouldValidate: true });
   }, [modal.type, selectedStaffId, setValue, staff]);
 
+  useEffect(() => {
+    if (modal.type !== "payroll" || !selectedStaffId || !selectedPayrollMonth) {
+      setPayrollPreview(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setPayrollPreviewLoading(true);
+      try {
+        const preview = await billingApi.previewPayroll({
+          staffId: selectedStaffId,
+          month: selectedPayrollMonth,
+          shiftRate: selectedShiftRate || undefined,
+          allowances: selectedAllowances || 0,
+          deductions: selectedDeductions || 0
+        });
+        setPayrollPreview(preview);
+      } catch (error) {
+        setPayrollPreview(null);
+      } finally {
+        setPayrollPreviewLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [modal.type, selectedStaffId, selectedPayrollMonth, selectedShiftRate, selectedAllowances, selectedDeductions]);
+
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return invoices.filter((item) => {
-      const text = [getInvoiceClient(item), item.status, item.subtotal, item.outstandingAmount, item.items?.map((i) => i.description).join(" ")].join(" ").toLowerCase();
+      const text = [getInvoiceClient(item), item.customerPhone, item.patientId?.phone, item.status, item.subtotal, item.outstandingAmount, item.items?.map((i) => i.description).join(" ")].join(" ").toLowerCase();
       const matchesQuery = !query || text.includes(query);
       const matchesStatus = statusFilter === "all" ? true : statusFilter === "pending" ? item.status !== "paid" : item.status === statusFilter;
       return matchesQuery && matchesStatus;
@@ -218,7 +270,7 @@ export const BillingWorkspacePanel = () => {
         <div><h2>Billing, Payments & Payroll</h2><p>Create invoices, record payments, reconcile revenue and process attendance-based payroll.</p></div>
         <div className="inline-actions">
           {isCashier ? <button className="button-primary" type="button" onClick={() => { reset({}); setModal({ type: "invoice", record: null }); }}><Receipt size={17} /> Create Invoice</button> : null}
-          {canManagePayroll ? <button type="button" onClick={() => { reset({ month: new Date().toISOString().slice(0, 7), allowances: 0, deductions: 0 }); setModal({ type: "payroll", record: null }); }}><DollarSign size={17} /> Calculate Payroll</button> : null}
+          {canManagePayroll ? <button type="button" onClick={() => { setPayrollPreview(null); reset({ month: new Date().toISOString().slice(0, 7), shiftRate: 0, allowances: 0, deductions: 0 }); setModal({ type: "payroll", record: null }); }}><DollarSign size={17} /> Shift Payroll</button> : null}
         </div>
       </div>
 
@@ -265,6 +317,7 @@ export const BillingWorkspacePanel = () => {
             rows={rows}
             columns={[
               { key: "patient", header: "Patient / Customer", render: (item) => getInvoiceClient(item) },
+              { key: "phone", header: "Phone", render: (item) => item.customerPhone || item.patientId?.phone || "-" },
               {
                 key: "details",
                 header: "Visit Services & Charges",
@@ -375,7 +428,9 @@ export const BillingWorkspacePanel = () => {
           columns={[
             { key: "staff", header: "Staff", render: (item) => staffName(item.staffId) },
             { key: "month", header: "Month" },
-            { key: "attendanceDays", header: "Attendance Days" },
+            { key: "payableShifts", header: "Payable Shifts", render: (item) => item.payableShifts ?? item.attendanceDays },
+            { key: "totalShiftHours", header: "Shift Hours", render: (item) => Number(item.totalShiftHours || 0).toFixed(2) },
+            { key: "shiftRate", header: "Rate / Shift", render: (item) => money(item.shiftRate || 0) },
             { key: "netSalary", header: "Net Salary", render: (item) => money(item.netSalary) },
             { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
             { key: "actions", header: "Actions", render: (item) => canManagePayroll ? <div className="inline-actions"><button type="button" onClick={() => changePayrollStatus(item, "reviewed")} disabled={busy || item.status !== "draft"}>Review</button><button type="button" onClick={() => changePayrollStatus(item, "approved")} disabled={busy || item.status !== "reviewed"}>Approve</button><button type="button" onClick={() => changePayrollStatus(item, "paid")} disabled={busy || item.status !== "approved"}>Mark Paid</button><button className="table-link-button" type="button" onClick={() => printPayslip(item)} title="Download Payslip as PDF"><Download size={13} style={{ display: "inline", marginRight: "4px" }} />Download PDF</button></div> : null }
@@ -386,7 +441,7 @@ export const BillingWorkspacePanel = () => {
 
       <Modal
         open={Boolean(modal.type)}
-        title={modal.type === "payment" ? "Record Cashier Payment" : modal.type === "payroll" ? "Calculate Payroll" : "Create Invoice"}
+        title={modal.type === "payment" ? "Record Cashier Payment" : modal.type === "payroll" ? "Shift-Based Payroll" : "Create Invoice"}
         subtitle={modal.type === "payment" && modal.record ? `Patient: ${getInvoiceClient(modal.record)} • Due: ${money(modal.record.outstandingAmount)}` : ""}
         onClose={() => setModal({ type: null, record: null })}
       >
@@ -411,7 +466,7 @@ export const BillingWorkspacePanel = () => {
                   .filter((item) => item.status === "completed")
                   .map((item) => (
                     <option value={item._id} key={item._id}>
-                      {name(item.patientId)} - {new Date(item.appointmentDate).toLocaleDateString()} ({item.slotLabel || "Visit"})
+                      {patientLabel(item.patientId)} - {new Date(item.appointmentDate).toLocaleDateString()} ({item.slotLabel || "Visit"})
                     </option>
                   ))}
               </FormSelect>
@@ -460,15 +515,65 @@ export const BillingWorkspacePanel = () => {
                 </FormSelect>
                 <FormInput label="Payroll Month" type="month" error={errors.month?.message} {...register("month")} />
               </div>
-              <div className="form-section-title">Compensation Components</div>
+              <div className="form-section-title">Shift Payment Components</div>
               <div className="form-grid-3">
-                <FormInput label="Base Salary (Rs.)" placeholder="95000.00" type="number" min="0" step="0.01" error={errors.baseSalary?.message} {...register("baseSalary")} />
+                <FormInput label="Rate Per Completed Shift (Rs.)" placeholder="3500.00" type="number" min="0" step="0.01" error={errors.shiftRate?.message} {...register("shiftRate")} />
                 <FormInput label="Allowances (Rs.)" placeholder="5000.00" type="number" min="0" step="0.01" error={errors.allowances?.message} {...register("allowances")} />
                 <FormInput label="Deductions (Rs.)" placeholder="1500.00" type="number" min="0" step="0.01" error={errors.deductions?.message} {...register("deductions")} />
               </div>
+              <div style={{ marginTop: "16px", border: "1px solid #e2e8f0", borderRadius: "8px", overflow: "hidden", background: "#ffffff" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", padding: "12px 14px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", flexWrap: "wrap" }}>
+                  <strong style={{ color: "#0f172a" }}>E1 Shift Attendance Preview</strong>
+                  <span style={{ color: "#64748b", fontSize: "0.84rem" }}>
+                    {payrollPreviewLoading ? "Loading linked shifts..." : payrollPreview?.existingPayroll ? "Payroll already exists for this staff/month" : "Checked-out shifts become payable"}
+                  </span>
+                </div>
+                {payrollPreview ? (
+                  <>
+                    <div className="manager-summary-grid" style={{ margin: 0, padding: "12px" }}>
+                      <div><strong>{payrollPreview.scheduledShifts || 0}</strong><span>scheduled shifts</span></div>
+                      <div><strong>{payrollPreview.payableShifts || 0}</strong><span>payable shifts</span></div>
+                      <div><strong>{Number(payrollPreview.totalShiftHours || 0).toFixed(2)}</strong><span>shift hours</span></div>
+                      <div><strong>{money(payrollPreview.netSalary)}</strong><span>net payroll</span></div>
+                    </div>
+                    <div style={{ maxHeight: "220px", overflow: "auto", borderTop: "1px solid #e2e8f0" }}>
+                      <table className="data-table" style={{ margin: 0, width: "100%" }}>
+                        <thead>
+                          <tr>
+                            <th>Date</th>
+                            <th>Shift</th>
+                            <th style={{ textAlign: "right" }}>Hours</th>
+                            <th style={{ textAlign: "right" }}>Pay</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {payrollPreview.payrollLines?.length ? payrollPreview.payrollLines.map((line) => (
+                            <tr key={line.attendanceId || line.workDate}>
+                              <td>{line.workDate}</td>
+                              <td>{line.shiftLabel || "Completed shift"}</td>
+                              <td style={{ textAlign: "right" }}>{Number(line.hours || 0).toFixed(2)}</td>
+                              <td style={{ textAlign: "right", fontWeight: 700 }}>{money(line.amount)}</td>
+                            </tr>
+                          )) : (
+                            <tr>
+                              <td colSpan="4" style={{ textAlign: "center", color: "#64748b", padding: "18px" }}>
+                                No checked-out E1 attendance shifts found for this month.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ padding: "18px", color: "#64748b", fontSize: "0.9rem" }}>
+                    Select staff, month, and shift rate to preview payroll from E1 attendance.
+                  </div>
+                )}
+              </div>
             </>
           ) : null}
-          <div className="modal-actions"><button className="button-secondary" type="button" onClick={() => setModal({ type: null, record: null })} disabled={busy}>Cancel</button><button className="button-primary" type="submit" disabled={busy}><CreditCard size={16} /> {busy ? "Saving..." : "Save"}</button></div>
+          <div className="modal-actions"><button className="button-secondary" type="button" onClick={() => setModal({ type: null, record: null })} disabled={busy}>Cancel</button><button className="button-primary" type="submit" disabled={busy || (modal.type === "payroll" && payrollPreview?.existingPayroll)}><CreditCard size={16} /> {busy ? "Saving..." : modal.type === "payroll" ? "Create Shift Payroll" : "Save"}</button></div>
         </form>
       </Modal>
     </section>

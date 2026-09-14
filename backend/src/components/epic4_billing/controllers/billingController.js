@@ -1,5 +1,6 @@
 import { Attendance } from "../../epic1_user_staff/models/Attendance.js";
 import { Staff } from "../../epic1_user_staff/models/Staff.js";
+import { Shift } from "../../epic1_user_staff/models/Shift.js";
 import { Appointment } from "../../epic2_clinical/models/Appointment.js";
 import { PharmacySale } from "../../epic3_inventory/models/PharmacySale.js";
 import { Invoice } from "../models/Invoice.js";
@@ -13,6 +14,84 @@ const recalculateInvoice = (invoice) => {
   invoice.paidAmount = Math.min(invoice.paidAmount, invoice.subtotal);
   invoice.outstandingAmount = Math.max(invoice.subtotal - invoice.paidAmount, 0);
   invoice.status = invoice.outstandingAmount === 0 ? "paid" : invoice.paidAmount > 0 ? "partially_paid" : "issued";
+};
+
+const roundMoney = (value) => Number(Number(value || 0).toFixed(2));
+
+const shiftLabel = (shift) => {
+  if (!shift?.startTime || !shift?.endTime) return "Attendance shift";
+  const start = new Date(shift.startTime);
+  const end = new Date(shift.endTime);
+  return `${start.toLocaleTimeString("en-LK", { hour: "2-digit", minute: "2-digit" })} - ${end.toLocaleTimeString("en-LK", { hour: "2-digit", minute: "2-digit" })}`;
+};
+
+const hoursBetween = (start, end) => {
+  if (!start || !end) return 0;
+  const diff = new Date(end).getTime() - new Date(start).getTime();
+  return diff > 0 ? Number((diff / 3600000).toFixed(2)) : 0;
+};
+
+const buildShiftPayroll = async ({ staffId, month, shiftRate, allowances = 0, deductions = 0 }) => {
+  const staff = await Staff.findById(staffId).populate("userId", "firstName lastName email");
+  if (!staff) throw new AppError("Staff profile not found", 404);
+
+  const scheduledShifts = await Shift.countDocuments({
+    staffId,
+    startTime: {
+      $gte: new Date(`${month}-01T00:00:00.000Z`),
+      $lt: new Date(new Date(`${month}-01T00:00:00.000Z`).setUTCMonth(Number(month.slice(5, 7))))
+    },
+    status: { $ne: "cancelled" }
+  });
+
+  const attendance = await Attendance.find({
+    staffId,
+    workDate: { $regex: `^${month}` },
+    status: "checked_out"
+  })
+    .populate("shiftId", "startTime endTime location")
+    .sort({ workDate: 1, checkInAt: 1 });
+
+  const defaultShiftRate = staff.baseSalary && staff.baseSalary > 0 ? staff.baseSalary / 26 : 0;
+  const payableShiftRate = Number(shiftRate ?? defaultShiftRate);
+  if (!payableShiftRate || payableShiftRate <= 0) {
+    throw new AppError("Shift payment rate is required on the payroll form or staff profile", 400, { shiftRate: "Shift payment rate is required" });
+  }
+
+  const payrollLines = attendance.map((item) => {
+    const hours = item.shiftId
+      ? hoursBetween(item.shiftId.startTime, item.shiftId.endTime)
+      : hoursBetween(item.checkInAt, item.checkOutAt);
+    return {
+      attendanceId: item._id,
+      shiftId: item.shiftId?._id,
+      workDate: item.workDate,
+      shiftLabel: item.shiftId ? `${shiftLabel(item.shiftId)}${item.shiftId.location ? `, ${item.shiftId.location}` : ""}` : shiftLabel(null),
+      hours,
+      amount: roundMoney(payableShiftRate)
+    };
+  });
+
+  const payableShifts = payrollLines.length;
+  const totalShiftHours = Number(payrollLines.reduce((sum, line) => sum + Number(line.hours || 0), 0).toFixed(2));
+  const grossSalary = roundMoney(payableShifts * payableShiftRate);
+  const netSalary = Math.max(roundMoney(grossSalary + Number(allowances || 0) - Number(deductions || 0)), 0);
+
+  return {
+    staff,
+    month,
+    payBasis: "shift",
+    baseSalary: grossSalary,
+    shiftRate: roundMoney(payableShiftRate),
+    scheduledShifts,
+    payableShifts,
+    totalShiftHours,
+    attendanceDays: payableShifts,
+    payrollLines,
+    allowances: Number(allowances || 0),
+    deductions: Number(deductions || 0),
+    netSalary
+  };
 };
 
 export const createInvoice = async (req, res) => {
@@ -29,6 +108,7 @@ export const createInvoice = async (req, res) => {
   const invoice = await Invoice.create({
     patientId: req.body.patientId,
     customerName: req.body.customerName || (req.body.patientId ? undefined : "Walk-in Customer"),
+    customerPhone: req.body.customerPhone,
     appointmentId: req.body.appointmentId,
     items,
     subtotal,
@@ -41,7 +121,7 @@ export const createInvoice = async (req, res) => {
 export const listInvoices = async (req, res) => {
   const filter = req.user.role === "patient" ? { patientId: req.user._id } : {};
   const invoices = await Invoice.find(filter)
-    .populate("patientId", "firstName lastName email")
+    .populate("patientId", "firstName lastName email phone")
     .sort({ createdAt: -1 });
   return successResponse(res, "Invoice list loaded", invoices);
 };
@@ -66,7 +146,7 @@ export const recordPayment = async (req, res) => {
 
 export const listPayments = async (req, res) => {
   const payments = await Payment.find()
-    .populate("invoiceId", "patientId customerName subtotal outstandingAmount status")
+    .populate("invoiceId", "patientId customerName customerPhone subtotal outstandingAmount status")
     .sort({ createdAt: -1 });
   return successResponse(res, "Payment list loaded", payments);
 };
@@ -82,27 +162,46 @@ export const updatePaymentStatus = async (req, res) => {
 };
 
 export const createPayroll = async (req, res) => {
-  const staff = await Staff.findById(req.body.staffId);
-  if (!staff) throw new AppError("Staff profile not found", 404);
-
   const existingPayroll = await Payroll.findOne({ staffId: req.body.staffId, month: req.body.month });
   if (existingPayroll) {
     throw new AppError(`Payroll has already been processed for this staff member in ${req.body.month}`, 409);
   }
 
-  const baseSalary = req.body.baseSalary ?? staff.baseSalary;
-  const allowances = req.body.allowances ?? staff.allowances ?? 0;
-  const deductions = req.body.deductions ?? staff.deductions ?? 0;
-  if (!baseSalary || baseSalary <= 0) throw new AppError("Base salary is required on staff profile or payroll form", 400, { baseSalary: "Base salary is required" });
-  const attendanceDays = await Attendance.countDocuments({
+  const calculated = await buildShiftPayroll({
     staffId: req.body.staffId,
-    workDate: { $regex: `^${req.body.month}` },
-    status: "checked_out"
+    month: req.body.month,
+    shiftRate: req.body.shiftRate,
+    allowances: req.body.allowances,
+    deductions: req.body.deductions
   });
-  const dailyRate = baseSalary / 26;
-  const netSalary = Math.max(dailyRate * attendanceDays + allowances - deductions, 0);
-  const payroll = await Payroll.create({ ...req.body, baseSalary, allowances, deductions, attendanceDays, netSalary });
+  const payroll = await Payroll.create({
+    staffId: req.body.staffId,
+    month: req.body.month,
+    payBasis: calculated.payBasis,
+    baseSalary: calculated.baseSalary,
+    shiftRate: calculated.shiftRate,
+    scheduledShifts: calculated.scheduledShifts,
+    payableShifts: calculated.payableShifts,
+    totalShiftHours: calculated.totalShiftHours,
+    attendanceDays: calculated.attendanceDays,
+    payrollLines: calculated.payrollLines,
+    allowances: calculated.allowances,
+    deductions: calculated.deductions,
+    netSalary: calculated.netSalary
+  });
   return successResponse(res, "Payroll calculated successfully", payroll, 201);
+};
+
+export const previewPayroll = async (req, res) => {
+  const existingPayroll = await Payroll.findOne({ staffId: req.body.staffId, month: req.body.month });
+  const calculated = await buildShiftPayroll({
+    staffId: req.body.staffId,
+    month: req.body.month,
+    shiftRate: req.body.shiftRate,
+    allowances: req.body.allowances,
+    deductions: req.body.deductions
+  });
+  return successResponse(res, "Shift-based payroll preview loaded", { ...calculated, existingPayroll });
 };
 
 export const listPayroll = async (req, res) => {
@@ -134,7 +233,7 @@ export const updatePayrollStatus = async (req, res) => {
 export const downloadInvoiceReceipt = async (req, res) => {
   const filter = { _id: req.params.id };
   if (req.user.role === ROLES.PATIENT) filter.patientId = req.user._id;
-  const invoice = await Invoice.findOne(filter).populate("patientId", "firstName lastName email");
+  const invoice = await Invoice.findOne(filter).populate("patientId", "firstName lastName email phone");
   if (!invoice) throw new AppError("Invoice not found", 404);
   if (invoice.status !== "paid") throw new AppError("Receipt is available only after the invoice is fully paid", 409);
 
@@ -144,6 +243,7 @@ export const downloadInvoiceReceipt = async (req, res) => {
     `Invoice: ${invoice._id}`,
     `Issued: ${invoice.updatedAt.toISOString()}`,
     `Patient: ${invoice.customerName || nameFromUser(invoice.patientId, "Walk-in Customer")}`,
+    `Phone: ${invoice.customerPhone || invoice.patientId?.phone || "-"}`,
     "",
     "Items",
     ...invoice.items.map((item) => `${item.description} x ${item.quantity} @ Rs. ${item.unitPrice.toFixed(2)} = Rs. ${item.lineTotal.toFixed(2)}`),
@@ -162,7 +262,7 @@ export const downloadPayslip = async (req, res) => {
   const payroll = await Payroll.findById(req.params.id)
     .populate({ path: "staffId", populate: { path: "userId", select: "firstName lastName email" } });
   if (!payroll) throw new AppError("Payroll not found", 404);
-  if (![ROLES.MANAGER, ROLES.ADMIN].includes(req.user.role) && payroll.staffId?.userId?._id?.toString() !== req.user._id.toString()) {
+  if (![ROLES.MANAGER, ROLES.ADMIN, ROLES.CASHIER].includes(req.user.role) && payroll.staffId?.userId?._id?.toString() !== req.user._id.toString()) {
     throw new AppError("You can only download your own payslip", 403);
   }
 
@@ -173,8 +273,12 @@ export const downloadPayslip = async (req, res) => {
     `Staff: ${nameFromUser(payroll.staffId?.userId)} (${payroll.staffId?.employeeId || "-"})`,
     `Status: ${payroll.status}`,
     "",
-    `Base Salary: Rs. ${payroll.baseSalary.toFixed(2)}`,
-    `Attendance Days: ${payroll.attendanceDays}`,
+    `Pay Basis: ${payroll.payBasis || "shift"}`,
+    `Payable Shifts: ${payroll.payableShifts ?? payroll.attendanceDays}`,
+    `Scheduled Shifts: ${payroll.scheduledShifts ?? "-"}`,
+    `Total Shift Hours: ${payroll.totalShiftHours ?? "-"}`,
+    `Shift Rate: Rs. ${Number(payroll.shiftRate || 0).toFixed(2)}`,
+    `Gross Shift Pay: Rs. ${payroll.baseSalary.toFixed(2)}`,
     `Allowances: Rs. ${payroll.allowances.toFixed(2)}`,
     `Deductions: Rs. ${payroll.deductions.toFixed(2)}`,
     `Net Salary: Rs. ${payroll.netSalary.toFixed(2)}`,

@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
-import { Bell, CalendarCheck, CreditCard, Download, FileText, Pill, Printer, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Bell, CalendarCheck, CalendarClock, CreditCard, Download, FileText, History, Pill, Printer, RefreshCw } from "lucide-react";
 import { patientApi } from "../../services/patientApi.js";
 import { printInvoicePDF, printLabReportPDF } from "../../utils/invoicePrintTemplate.js";
+import { customerLabel, patientLabel } from "../../utils/personLabels.js";
 
 const formatDate = (value) => {
   if (!value) return "Not set";
@@ -12,7 +13,9 @@ const formatDate = (value) => {
 };
 
 const emptyText = {
-  appointments: "No appointments saved yet.",
+  todayAppointments: "No appointments scheduled for today.",
+  upcomingAppointments: "No upcoming appointments.",
+  pastAppointments: "No past appointments yet.",
   labs: "No laboratory requests found.",
   prescriptions: "No prescriptions found.",
   invoices: "No invoices found.",
@@ -78,6 +81,25 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
 
   const canCancel = (item) => item.status === "booked" && new Date(item.appointmentDate) > new Date();
 
+  const appointmentBuckets = useMemo(() => {
+    const startToday = new Date();
+    startToday.setHours(0, 0, 0, 0);
+    const endToday = new Date(startToday);
+    endToday.setDate(endToday.getDate() + 1);
+
+    return data.appointments.reduce((buckets, item) => {
+      const appointmentDate = new Date(item.appointmentDate);
+      if (appointmentDate >= startToday && appointmentDate < endToday) {
+        buckets.todayAppointments.push(item);
+      } else if (appointmentDate >= endToday && !["completed", "cancelled"].includes(item.status)) {
+        buckets.upcomingAppointments.push(item);
+      } else {
+        buckets.pastAppointments.push(item);
+      }
+      return buckets;
+    }, { todayAppointments: [], upcomingAppointments: [], pastAppointments: [] });
+  }, [data.appointments]);
+
   const downloadReceipt = async (invoice) => {
     setBusyId(invoice._id);
     try {
@@ -105,6 +127,35 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
     }
   };
 
+  const renderAppointment = (item) => (
+    <>
+      <div className="patient-record-main">
+        <strong>{formatDate(item.appointmentDate)}</strong>
+        <span>{item.doctorId ? `Dr. ${item.doctorId.firstName} ${item.doctorId.lastName}` : "Doctor pending"}</span>
+      </div>
+      <div className="patient-record-meta">
+        <span>{patientLabel(item.patientId)}</span>
+        <small>{item.reason}</small>
+      </div>
+      {item.consultation?.diagnosis ? (
+        <div className="patient-appointment-note">
+          <strong>Diagnosis: </strong>
+          <span>{item.consultation.diagnosis}</span>
+          {item.consultation.patientAdvice ? <em>Care Advice: {item.consultation.patientAdvice}</em> : null}
+          {item.consultation.followUpPlan ? <b>Follow-up: {item.consultation.followUpPlan}</b> : null}
+        </div>
+      ) : null}
+      <div className="record-item-header">
+        <small className={`status-badge status-${item.status?.replace(/_/g, "-")}`}>{item.status?.replace(/_/g, " ")}</small>
+        {canCancel(item) ? (
+          <button className="table-link-button danger-action" type="button" onClick={() => cancelAppointment(item._id)} disabled={busyId === item._id}>
+            {busyId === item._id ? "Cancelling..." : "Cancel"}
+          </button>
+        ) : null}
+      </div>
+    </>
+  );
+
   const sections = [
     {
       key: "notifications",
@@ -125,41 +176,25 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
       )
     },
     {
-      key: "appointments",
-      title: "My Appointments",
+      key: "todayAppointments",
+      title: "Today",
       icon: CalendarCheck,
-      records: data.appointments,
-      render: (item) => (
-        <>
-          <strong>{formatDate(item.appointmentDate)}</strong>
-          <span>{item.doctorId ? `Dr. ${item.doctorId.firstName} ${item.doctorId.lastName}` : "Doctor pending"}</span>
-          <small>{item.reason}</small>
-          {item.consultation?.diagnosis ? (
-            <div style={{ marginTop: "6px", padding: "6px 10px", background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: "6px", fontSize: "0.82rem" }}>
-              <strong style={{ color: "#0369a1" }}>Diagnosis: </strong>
-              <span style={{ color: "#0f172a" }}>{item.consultation.diagnosis}</span>
-              {item.consultation.patientAdvice ? (
-                <div style={{ marginTop: "3px", color: "#475569" }}>
-                  <em>Care Advice: {item.consultation.patientAdvice}</em>
-                </div>
-              ) : null}
-              {item.consultation.followUpPlan ? (
-                <div style={{ marginTop: "3px", color: "#0284c7", fontWeight: 600 }}>
-                  Follow-up: {item.consultation.followUpPlan}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-          <div className="record-item-header">
-            <small>{item.status}</small>
-            {canCancel(item) ? (
-              <button className="table-link-button danger-action" type="button" onClick={() => cancelAppointment(item._id)} disabled={busyId === item._id}>
-                {busyId === item._id ? "Cancelling..." : "Cancel"}
-              </button>
-            ) : null}
-          </div>
-        </>
-      )
+      records: appointmentBuckets.todayAppointments,
+      render: renderAppointment
+    },
+    {
+      key: "upcomingAppointments",
+      title: "Upcoming Bookings",
+      icon: CalendarClock,
+      records: appointmentBuckets.upcomingAppointments,
+      render: renderAppointment
+    },
+    {
+      key: "pastAppointments",
+      title: "Past Bookings",
+      icon: History,
+      records: appointmentBuckets.pastAppointments,
+      render: renderAppointment
     },
     {
       key: "labs",
@@ -210,6 +245,7 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
       render: (item) => (
         <>
           <strong>Rs. {Number(item.outstandingAmount || 0).toFixed(2)} outstanding</strong>
+          <span>{customerLabel(item)}</span>
           <span>{item.status}</span>
           <small>Total: Rs. {Number(item.subtotal || 0).toFixed(2)}</small>
           <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "4px" }}>
@@ -247,7 +283,7 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
         {sections.map((section) => {
           const Icon = section.icon;
           return (
-            <article className="patient-record-card" key={section.key}>
+            <article className="patient-record-card" id={`patient-records-${section.key}`} key={section.key}>
               <div className="record-title-row">
                 <div className="dashboard-card-icon">
                   <Icon size={18} />

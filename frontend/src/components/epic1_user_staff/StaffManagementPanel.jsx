@@ -147,10 +147,10 @@ export const StaffManagementPanel = () => {
     <>
       <Toast toast={toast} onClose={() => setToast(null)} />
       <div className="dashboard-grid">
-        <DashboardCard title="Total Staff" value={staff.length} detail="Registered staff accounts" icon={Users} change="Read Staff" />
-        <DashboardCard title="Active Staff" value={activeCount} detail="Can sign in and work" icon={UserCheck} change="Access enabled" />
-        <DashboardCard title="Inactive Staff" value={staff.length - activeCount} detail="Historical profiles retained" icon={Briefcase} change="Access disabled" />
-        <DashboardCard title="User Roles" value={roleCount} detail="Assigned access groups" icon={Shield} change="Role assignment" />
+        <DashboardCard title="Total Staff" value={staff.length} detail="Registered staff accounts" icon={Users} change="Read Staff" href="#staff-directory" actionLabel="Search directory" />
+        <DashboardCard title="Active Staff" value={activeCount} detail="Can sign in and work" icon={UserCheck} change="Access enabled" href="#staff-directory" actionLabel="Review active users" />
+        <DashboardCard title="Inactive Staff" value={staff.length - activeCount} detail="Historical profiles retained" icon={Briefcase} change="Access disabled" href="#staff-directory" actionLabel="Audit inactive users" priority={staff.length - activeCount > 0 ? "medium" : "normal"} />
+        <DashboardCard title="User Roles" value={roleCount} detail="Assigned access groups" icon={Shield} change="Role assignment" href="#staff-directory" actionLabel="Manage access" />
       </div>
 
       <section className="e1-panel" id="staff-directory">

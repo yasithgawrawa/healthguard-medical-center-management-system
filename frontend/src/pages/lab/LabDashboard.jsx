@@ -51,6 +51,10 @@ export const LabDashboard = () => {
           detail={metrics.requestedCount > 0 ? "Awaiting technician verification" : "No unverified test requests"}
           icon={FlaskConical}
           change={metrics.requestedCount > 0 ? "Intake Queue" : "Clear"}
+          href="#laboratory-results"
+          command={{ workspace: "clinical", mode: "lab", status: "requested", priority: "", search: "" }}
+          actionLabel={metrics.requestedCount > 0 ? "Verify requests" : "Open lab queue"}
+          priority={metrics.requestedCount > 0 ? "medium" : "normal"}
         />
         <DashboardCard
           title="Urgent Priority Tests"
@@ -58,6 +62,10 @@ export const LabDashboard = () => {
           detail={metrics.urgentCount > 0 ? "Immediate diagnostic turnaround" : "No urgent tests pending"}
           icon={AlertCircle}
           change={metrics.urgentCount > 0 ? "High Priority" : "Normal"}
+          href="#laboratory-results"
+          command={{ workspace: "clinical", mode: "lab", status: "", priority: "urgent", search: "" }}
+          actionLabel={metrics.urgentCount > 0 ? "Handle urgent tests" : "Review priorities"}
+          priority={metrics.urgentCount > 0 ? "high" : "normal"}
         />
         <DashboardCard
           title="Under Processing"
@@ -65,6 +73,10 @@ export const LabDashboard = () => {
           detail="Samples undergoing active bench analysis"
           icon={Microscope}
           change="In Laboratory"
+          href="#laboratory-results"
+          command={{ workspace: "clinical", mode: "lab", statuses: ["verified", "in_progress"], priority: "", search: "" }}
+          actionLabel="Update progress"
+          priority={metrics.inProgressCount > 0 ? "medium" : "normal"}
         />
         <DashboardCard
           title="Reports Published"
@@ -72,6 +84,9 @@ export const LabDashboard = () => {
           detail="Results visible to physicians & patients"
           icon={CheckCircle2}
           change="Diagnostics Online"
+          href="#laboratory-results"
+          command={{ workspace: "clinical", mode: "lab", status: "completed", priority: "", search: "" }}
+          actionLabel="View published"
         />
       </div>
 

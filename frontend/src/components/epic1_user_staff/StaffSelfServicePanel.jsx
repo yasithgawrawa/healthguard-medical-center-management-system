@@ -32,6 +32,9 @@ const workedHours = (item) => {
   return `${Math.max((new Date(item.checkOutAt) - new Date(item.checkInAt)) / 36e5, 0).toFixed(1)}h`;
 };
 
+const shiftDate = (item) => (item.startTime ? new Date(item.startTime).toISOString().slice(0, 10) : "");
+const shiftWindow = (shift) => shift?.startTime ? `${formatTime(shift.startTime)} - ${formatTime(shift.endTime)}` : "-";
+
 const saveBlob = (blob, filename) => {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -131,6 +134,14 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
     () => attendance.find((item) => item.workDate === today) || attendance.find((item) => item.status === "checked_in"),
     [attendance, today]
   );
+  const todayShift = useMemo(
+    () => shifts.find((item) => shiftDate(item) === today && item.status === "scheduled"),
+    [shifts, today]
+  );
+  const upcomingShifts = useMemo(
+    () => shifts.filter((item) => item.status === "scheduled" && shiftDate(item) >= today).slice(0, 4),
+    [shifts, today]
+  );
 
   const runAttendance = async (action) => {
     setBusy(true);
@@ -195,7 +206,7 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
             <h2>My Workforce</h2>
             <span className="badge badge-success" style={{ fontSize: "0.75rem", padding: "2px 8px" }}>Attendance & Leave</span>
           </div>
-          <p>Track today's attendance, upcoming shifts and your own leave requests. Check-in is accepted only at the Health Guard center.</p>
+          <p>Track today's attendance, upcoming shifts and your own leave requests. Check-in is accepted only at the Health Guard clinic.</p>
         </div>
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <button className="button-secondary" type="button" onClick={() => setLeaveOpen(true)}>
@@ -218,6 +229,11 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
       <div className="staff-self-grid">
         <div className="staff-self-card">
           <Clock size={22} />
+          <span>Today Shift</span>
+          <strong>{todayShift ? shiftWindow(todayShift) : "No shift today"}</strong>
+        </div>
+        <div className="staff-self-card">
+          <Clock size={22} />
           <span>Current Status</span>
           <strong>{todayAttendance?.status ? todayAttendance.status.replace(/_/g, " ") : "Not checked in"}</strong>
         </div>
@@ -236,7 +252,7 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
       <div className="staff-self-actions">
         <button className="button-primary" type="button" onClick={() => runAttendance("in")} disabled={busy || todayAttendance?.status === "checked_in"}>
           <MapPin size={17} />
-          <span>Check In</span>
+          <span>{busy ? "Checking..." : "Check In For Shift"}</span>
         </button>
         <button className="button-secondary" type="button" onClick={() => runAttendance("out")} disabled={busy || todayAttendance?.status !== "checked_in"}>
           <LogOut size={17} />
@@ -252,10 +268,10 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
               { key: "date", header: "Date", render: (item) => formatDate(item.startTime) },
               { key: "start", header: "Start", render: (item) => formatTime(item.startTime) },
               { key: "end", header: "End", render: (item) => formatTime(item.endTime) },
-              { key: "location", header: "Location" },
+              { key: "location", header: "Clinic" },
               { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> }
             ]}
-            rows={shifts.slice(0, 4)}
+            rows={upcomingShifts}
             emptyText="No shifts scheduled."
           />
         </div>
@@ -264,6 +280,7 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
           <DataTable
             columns={[
               { key: "date", header: "Date", render: (item) => formatDate(item.workDate) },
+              { key: "shift", header: "Linked Shift", render: (item) => shiftWindow(item.shiftId) },
               { key: "checkIn", header: "Check In", render: (item) => formatTime(item.checkInAt) },
               { key: "checkOut", header: "Check Out", render: (item) => formatTime(item.checkOutAt) },
               { key: "hours", header: "Worked Hours", render: workedHours },
@@ -294,8 +311,8 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
         <DataTable
           columns={[
             { key: "month", header: "Month" },
-            { key: "attendanceDays", header: "Attendance Days" },
-            { key: "baseSalary", header: "Base Salary", render: (item) => `Rs. ${Number(item.baseSalary || 0).toFixed(2)}` },
+            { key: "payableShifts", header: "Payable Shifts", render: (item) => item.payableShifts ?? item.attendanceDays },
+            { key: "shiftRate", header: "Rate / Shift", render: (item) => `Rs. ${Number(item.shiftRate || 0).toFixed(2)}` },
             { key: "netSalary", header: "Net Salary", render: (item) => `Rs. ${Number(item.netSalary || 0).toFixed(2)}` },
             { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
             { key: "actions", header: "Actions", render: (item) => (

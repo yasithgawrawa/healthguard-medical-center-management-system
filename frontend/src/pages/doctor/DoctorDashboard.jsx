@@ -121,6 +121,10 @@ export const DoctorDashboard = () => {
           detail={metrics.waitingCount > 0 ? "Checked in & ready for consultation" : "No patients in waiting room"}
           icon={UserCheck}
           change={metrics.waitingCount > 0 ? "In Triage" : "Queue Clear"}
+          href="#clinical-workflow"
+          command={{ workspace: "clinical", mode: "doctor", queueTab: "waiting", dateScope: "today", status: "", priority: "", search: "" }}
+          actionLabel={metrics.waitingCount > 0 ? "Call next patient" : "Open queue"}
+          priority={metrics.waitingCount > 0 ? "high" : "normal"}
         />
         <DashboardCard
           title="Active Appointment Queue"
@@ -128,6 +132,10 @@ export const DoctorDashboard = () => {
           detail="Booked patient visits in system"
           icon={CalendarCheck}
           change="Live Queue"
+          href="#clinical-workflow"
+          command={{ workspace: "clinical", mode: "doctor", queueTab: "all", dateScope: "today", status: "", priority: "", search: "" }}
+          actionLabel="Review schedule"
+          priority={metrics.todayApptCount > 0 ? "medium" : "normal"}
         />
         <DashboardCard
           title="Completed Consultations"
@@ -135,6 +143,9 @@ export const DoctorDashboard = () => {
           detail="Visits with diagnosis & handwritten Rx"
           icon={Stethoscope}
           change="Care Delivered"
+          href="#clinical-workflow"
+          command={{ workspace: "clinical", mode: "doctor", queueTab: "completed", dateScope: "all", status: "", priority: "", search: "" }}
+          actionLabel="View notes"
         />
         <DashboardCard
           title="Diagnostic Lab Orders"
@@ -142,6 +153,9 @@ export const DoctorDashboard = () => {
           detail="Laboratory investigations ordered"
           icon={FlaskConical}
           change="Lab Tracking"
+          href="#clinical-workflow"
+          command={{ workspace: "clinical", mode: "doctor", queueTab: "all", dateScope: "all", status: "", priority: "", search: "" }}
+          actionLabel="Track lab orders"
         />
       </div>
 

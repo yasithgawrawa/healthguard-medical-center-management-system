@@ -9,6 +9,7 @@ import { SearchBar } from "../shared/SearchBar.jsx";
 import { StatusBadge } from "../shared/StatusBadge.jsx";
 import { Toast } from "../shared/Toast.jsx";
 import { e1Api } from "../../services/e1Api.js";
+import { DASHBOARD_COMMAND_EVENT } from "../../utils/dashboardCommands.js";
 import { CenterLocationPanel } from "./CenterLocationPanel.jsx";
 import { formatDate, formatTime, roleLabel, staffName } from "./e1Constants.js";
 import { ShiftFormModal } from "./ShiftFormModal.jsx";
@@ -22,6 +23,7 @@ const workedHours = (item) => {
 };
 
 const shiftDate = (item) => (item.startTime ? new Date(item.startTime).toISOString().slice(0, 10) : "");
+const shiftWindow = (shift) => shift?.startTime ? `${formatTime(shift.startTime)} - ${formatTime(shift.endTime)}` : "-";
 
 export const WorkforceManagementPanel = () => {
   const [activeTab, setActiveTab] = useState("shifts");
@@ -57,6 +59,20 @@ export const WorkforceManagementPanel = () => {
 
   useEffect(() => {
     load();
+  }, []);
+
+  useEffect(() => {
+    const handleDashboardCommand = (event) => {
+      const command = event.detail || {};
+      if (command.workspace !== "workforce") return;
+      if (command.tab) setActiveTab(command.tab);
+      if (command.date !== undefined) setDate(command.date);
+      if (command.role !== undefined) setRole(command.role);
+      if (command.search !== undefined) setSearch(command.search);
+    };
+
+    window.addEventListener(DASHBOARD_COMMAND_EVENT, handleDashboardCommand);
+    return () => window.removeEventListener(DASHBOARD_COMMAND_EVENT, handleDashboardCommand);
   }, []);
 
   useEffect(() => {
@@ -103,6 +119,34 @@ export const WorkforceManagementPanel = () => {
     }
   };
 
+  const createBulkShifts = async (payload) => {
+    setBusy(true);
+    try {
+      const result = await e1Api.createBulkShifts(payload);
+      setShiftOpen(false);
+      const skipped = result?.skipped?.length || 0;
+      setToast({ type: "success", message: `Created ${result?.createdCount || 0} shifts${skipped ? `, skipped ${skipped} overlap(s)` : ""}` });
+      await load();
+    } catch (error) {
+      setToast({ type: "error", message: error.response?.data?.message || "Unable to create roster" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const checkoutAttendance = async (item) => {
+    setBusy(true);
+    try {
+      await e1Api.checkOutAttendance(item._id);
+      setToast({ type: "success", message: "Attendance checked out" });
+      await load();
+    } catch (error) {
+      setToast({ type: "error", message: error.response?.data?.message || "Unable to check out attendance" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const submitLeaveReview = async (status) => {
     setBusy(true);
     try {
@@ -123,17 +167,27 @@ export const WorkforceManagementPanel = () => {
     { key: "date", header: "Date", render: (item) => formatDate(item.startTime) },
     { key: "start", header: "Start", render: (item) => formatTime(item.startTime) },
     { key: "end", header: "End", render: (item) => formatTime(item.endTime) },
-    { key: "location", header: "Location" },
+    { key: "location", header: "Clinic" },
     { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> }
   ];
 
   const attendanceColumns = [
     { key: "date", header: "Date", render: (item) => formatDate(item.workDate) },
     { key: "employee", header: "Employee", render: (item) => staffName(item.staffId) },
+    { key: "shift", header: "Linked Shift", render: (item) => shiftWindow(item.shiftId) },
     { key: "checkIn", header: "Check In", render: (item) => formatTime(item.checkInAt) },
     { key: "checkOut", header: "Check Out", render: (item) => formatTime(item.checkOutAt) },
     { key: "hours", header: "Worked Hours", render: workedHours },
-    { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> }
+    { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
+    {
+      key: "actions",
+      header: "Actions",
+      render: (item) => item.status === "checked_in" ? (
+        <button className="table-link-button" type="button" onClick={() => checkoutAttendance(item)} disabled={busy}>
+          Check Out
+        </button>
+      ) : null
+    }
   ];
 
   const leaveColumns = [
@@ -158,10 +212,10 @@ export const WorkforceManagementPanel = () => {
     <>
       <Toast toast={toast} onClose={() => setToast(null)} />
       <div className="dashboard-grid">
-        <DashboardCard title="Staff Today" value={staffTodayIds.size} detail="Scheduled for duty today" icon={Clock} change="Shift management" />
-        <DashboardCard title="Present" value={presentIds.size} detail="Checked in today" icon={UserCheck} change="Attendance" />
-        <DashboardCard title="On Leave" value={onLeaveIds.size} detail="Approved current leave" icon={Plane} change="Leave calendar" />
-        <DashboardCard title="Pending Leave Requests" value={pendingLeave.length} detail="Waiting for review" icon={ClipboardList} change="Approval queue" />
+        <DashboardCard title="Staff Today" value={staffTodayIds.size} detail="Scheduled for duty today" icon={Clock} change="Shift management" href="#manager-workforce" command={{ workspace: "workforce", tab: "shifts", date: today, role: "", search: "" }} actionLabel="Open shifts" priority={staffTodayIds.size ? "medium" : "normal"} />
+        <DashboardCard title="Present" value={presentIds.size} detail="Checked in today" icon={UserCheck} change="Attendance" href="#manager-workforce" command={{ workspace: "workforce", tab: "attendance", date: today, role: "", search: "" }} actionLabel="Review attendance" />
+        <DashboardCard title="On Leave" value={onLeaveIds.size} detail="Approved current leave" icon={Plane} change="Leave calendar" href="#manager-workforce" command={{ workspace: "workforce", tab: "leave", date: "", role: "", search: "approved" }} actionLabel="Open leave calendar" />
+        <DashboardCard title="Pending Leave Requests" value={pendingLeave.length} detail="Waiting for review" icon={ClipboardList} change="Approval queue" href="#manager-workforce" command={{ workspace: "workforce", tab: "leave", date: "", role: "", search: "pending" }} actionLabel={pendingLeave.length ? "Review requests" : "View leave"} priority={pendingLeave.length ? "high" : "normal"} />
       </div>
 
       <section className="e1-panel" id="manager-workforce">
@@ -202,7 +256,7 @@ export const WorkforceManagementPanel = () => {
             {activeTab === "shifts" ? <CenterLocationPanel onToast={setToast} /> : null}
 
             <div className="table-toolbar">
-              <SearchBar value={search} onChange={setSearch} placeholder="Search employee, role, location or status" />
+              <SearchBar value={search} onChange={setSearch} placeholder="Search employee, role or status" />
               <FilterSelect label="Role" value={role} onChange={setRole} options={[...new Set(staff.map((item) => item.role))].map((item) => ({ value: item, label: roleLabel(item) }))} />
               <label className="filter-select">
                 <span>Date</span>
@@ -216,7 +270,7 @@ export const WorkforceManagementPanel = () => {
         )}
       </section>
 
-      <ShiftFormModal open={shiftOpen} staff={staff} busy={busy} onClose={() => setShiftOpen(false)} onSubmit={createShift} />
+      <ShiftFormModal open={shiftOpen} staff={staff} busy={busy} onClose={() => setShiftOpen(false)} onSubmit={createShift} onBulkSubmit={createBulkShifts} />
 
       <Modal
         open={Boolean(reviewLeave)}

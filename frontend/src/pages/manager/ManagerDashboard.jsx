@@ -62,6 +62,9 @@ export const ManagerDashboard = () => {
           detail="Verified check-ins at medical center"
           icon={Users}
           change="Workforce Active"
+          href="#manager-workforce"
+          command={{ workspace: "workforce", tab: "attendance", date: new Date().toISOString().slice(0, 10), role: "", search: "" }}
+          actionLabel="Review attendance"
         />
         <DashboardCard
           title="Pending Leave Queue"
@@ -69,6 +72,10 @@ export const ManagerDashboard = () => {
           detail={metrics.pendingLeaves > 0 ? "Staff leave requests awaiting review" : "All leave requests processed"}
           icon={ClipboardList}
           change={metrics.pendingLeaves > 0 ? "Review Required" : "Up To Date"}
+          href="#manager-workforce"
+          command={{ workspace: "workforce", tab: "leave", date: "", role: "", search: "pending" }}
+          actionLabel={metrics.pendingLeaves > 0 ? "Approve leave" : "Open leave history"}
+          priority={metrics.pendingLeaves > 0 ? "high" : "normal"}
         />
         <DashboardCard
           title="Revenue Collected"
@@ -76,6 +83,9 @@ export const ManagerDashboard = () => {
           detail="Total payments collected across services"
           icon={DollarSign}
           change="Billing Synced"
+          href="#billing-payments"
+          command={{ workspace: "billing", tab: "revenue", statusFilter: "all", search: "" }}
+          actionLabel="Open finance"
         />
         <DashboardCard
           title="Stock & Expiry Alerts"
@@ -83,6 +93,10 @@ export const ManagerDashboard = () => {
           detail={metrics.totalAlerts > 0 ? "Pharmacy shortages / expiring batches" : "Dispensary stock healthy"}
           icon={AlertTriangle}
           change={metrics.totalAlerts > 0 ? "Critical" : "Protected"}
+          href="#pharmacy-inventory"
+          command={{ workspace: "inventory", tab: "alerts", stockStatus: "", category: "", search: "" }}
+          actionLabel={metrics.totalAlerts > 0 ? "Resolve alerts" : "Review inventory"}
+          priority={metrics.totalAlerts > 0 ? "high" : "normal"}
         />
       </div>
 

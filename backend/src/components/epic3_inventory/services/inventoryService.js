@@ -235,7 +235,7 @@ export const inventoryService = {
   },
 
   // --- SALES / POS ---
-  async createSale({ prescriptionId, patientId, customerName, items, soldById, paymentStatus }) {
+  async createSale({ prescriptionId, patientId, customerName, customerPhone, items, soldById, paymentStatus }) {
     if (!items || items.length === 0) {
       throw new AppError("Sale must contain at least one item", 400);
     }
@@ -377,6 +377,7 @@ export const inventoryService = {
         const walkInDisplayName = customerName ? `${customerName} (${saleNumber})` : `Walk-in Customer (${saleNumber})`;
         const newInvoice = await Invoice.create({
           customerName: walkInDisplayName,
+          customerPhone,
           items: invoiceItems,
           subtotal: grandTotal,
           paidAmount: isPaid ? grandTotal : 0,
@@ -395,6 +396,7 @@ export const inventoryService = {
       prescriptionId: effectivePrescriptionId || undefined,
       patientId: patientId || undefined,
       customerName: customerName || (patientId ? undefined : "Walk-in Customer"),
+      customerPhone: patientId ? undefined : customerPhone,
       soldBy: soldById,
       items: processedItems.map((p) => p.itemRecord),
       total: grandTotal,
@@ -439,6 +441,7 @@ export const inventoryService = {
   async getBillFile(id) {
     const sale = await this.getSaleById(id);
     const patientName = sale.customerName || [sale.patientId?.firstName, sale.patientId?.lastName].filter(Boolean).join(" ") || "Walk-in Patient";
+    const patientPhone = sale.customerPhone || sale.patientId?.phone || "-";
     const dispenser = [sale.soldBy?.firstName, sale.soldBy?.lastName].filter(Boolean).join(" ") || "Health Guard Pharmacist";
 
     const lines = [
@@ -450,6 +453,7 @@ export const inventoryService = {
       `Bill Number : ${sale.saleNumber || `PH-${sale._id.toString().slice(-8).toUpperCase()}`}`,
       `Date & Time : ${(sale.billIssuedAt || sale.createdAt).toLocaleString("en-LK")}`,
       `Patient     : ${patientName}`,
+      `Phone       : ${patientPhone}`,
       `Dispenser   : ${dispenser}`,
       "------------------------------------------------------------",
       "Item Description         Batch      Qty    Unit (Rs)  Total (Rs)",

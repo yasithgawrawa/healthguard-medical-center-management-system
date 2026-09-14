@@ -51,6 +51,8 @@ export const AdminDashboard = () => {
           detail="Doctors, nurses, pharmacists & staff"
           icon={Users}
           change="Profiles Synced"
+          href="#staff-directory"
+          actionLabel="Manage staff"
         />
         <DashboardCard
           title="Configured Roles"
@@ -58,13 +60,19 @@ export const AdminDashboard = () => {
           detail="Role-based access permissions"
           icon={Shield}
           change="Access Enforced"
+          href="#staff-directory"
+          actionLabel="Review roles"
         />
         <DashboardCard
           title="Today's Check-ins"
           value={`${metrics.todayAttendanceCount} Attended`}
-          detail="Geofence-verified center arrivals"
+          detail="Geofence-verified clinic arrivals"
           icon={CheckCircle2}
           change="Geo-Verified"
+          href="#manager-workforce"
+          command={{ workspace: "workforce", tab: "attendance", date: new Date().toISOString().slice(0, 10), role: "", search: "" }}
+          actionLabel="Open attendance"
+          priority={metrics.todayAttendanceCount > 0 ? "medium" : "normal"}
         />
         <DashboardCard
           title="Access Security"
@@ -72,6 +80,8 @@ export const AdminDashboard = () => {
           detail="Bcrypt hashing & JWT authentication"
           icon={Lock}
           change="Audited Safe"
+          href="#staff-directory"
+          actionLabel="Audit users"
         />
       </div>
 
@@ -80,7 +90,7 @@ export const AdminDashboard = () => {
           { label: "Add Staff", detail: "Create a login and staff profile", icon: UserPlus, href: "#staff-directory" },
           { label: "Manage Staff", detail: "Search, edit or deactivate staff", icon: Users, href: "#staff-directory" },
           { label: "Manage Roles", detail: "Change staff access level", icon: Shield, href: "#staff-directory" },
-          { label: "Set Center Location", detail: "Use one check-in radius for all staff", icon: CalendarPlus, href: "#manager-workforce" }
+          { label: "Clinic Attendance Point", detail: "Maintain the one check-in radius", icon: CalendarPlus, href: "#manager-workforce", command: { workspace: "workforce", tab: "shifts", date: "", role: "", search: "" } }
         ]}
       />
 

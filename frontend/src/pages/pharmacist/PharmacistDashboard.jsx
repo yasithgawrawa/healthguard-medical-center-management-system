@@ -57,6 +57,9 @@ export const PharmacistDashboard = () => {
           detail="Formulary items in dispensary"
           icon={Pill}
           change="Catalog Synced"
+          href="#pharmacy-inventory"
+          command={{ workspace: "inventory", tab: "catalog", stockStatus: "", category: "", search: "" }}
+          actionLabel="Open catalog"
         />
         <DashboardCard
           title="Low-Stock Shortages"
@@ -64,6 +67,10 @@ export const PharmacistDashboard = () => {
           detail={metrics.lowStockCount > 0 ? "Below reorder threshold" : "All stock levels healthy"}
           icon={AlertCircle}
           change={metrics.lowStockCount > 0 ? "Replenish Soon" : "Optimal"}
+          href="#pharmacy-inventory"
+          command={{ workspace: "inventory", tab: "catalog", stockStatus: "low_stock", category: "", search: "" }}
+          actionLabel={metrics.lowStockCount > 0 ? "Reorder stock" : "Review stock"}
+          priority={metrics.lowStockCount > 0 ? "high" : "normal"}
         />
         <DashboardCard
           title="Batches At Risk"
@@ -71,6 +78,10 @@ export const PharmacistDashboard = () => {
           detail={metrics.expiringCount > 0 ? "Expiring within 60 days / expired" : "No batches near expiry"}
           icon={AlertTriangle}
           change={metrics.expiringCount > 0 ? "Action Required" : "Shelf-Life OK"}
+          href="#pharmacy-inventory"
+          command={{ workspace: "inventory", tab: "alerts", stockStatus: "", category: "", search: "" }}
+          actionLabel={metrics.expiringCount > 0 ? "Check expiries" : "Open batches"}
+          priority={metrics.expiringCount > 0 ? "medium" : "normal"}
         />
         <DashboardCard
           title="Today's Dispensing"
@@ -78,6 +89,9 @@ export const PharmacistDashboard = () => {
           detail={`${metrics.todaySalesCount} sales dispensed today`}
           icon={ShoppingCart}
           change="POS Live"
+          href="#pharmacy-inventory"
+          command={{ workspace: "inventory", tab: "sales", stockStatus: "", category: "", search: "" }}
+          actionLabel="Open POS / sales"
         />
       </div>
 

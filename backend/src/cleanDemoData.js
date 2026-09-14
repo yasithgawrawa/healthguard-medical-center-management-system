@@ -68,7 +68,7 @@ if (adminUser) {
     { key: "primary" },
     {
       key: "primary",
-      name: "Health Guard Medical Center - Colombo 07",
+      name: "Health Guard Medical Center",
       latitude: 6.9147,
       longitude: 79.8780,
       radiusMeters: 1000,

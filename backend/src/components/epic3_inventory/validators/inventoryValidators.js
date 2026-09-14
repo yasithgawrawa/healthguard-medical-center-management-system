@@ -107,11 +107,15 @@ export const saleSchema = z.object({
     prescriptionId: objectIdSchema.optional(),
     patientId: objectIdSchema.optional(),
     customerName: z.string().trim().max(120).optional(),
+    customerPhone: phoneSchema.optional(),
     items: z.array(z.object({
       medicineId: objectIdSchema,
       batchId: objectIdSchema,
       quantity: quantitySchema()
     })).min(1, "At least one item is required in the sale")
+  }).refine((data) => data.patientId || (data.customerName && data.customerPhone), {
+    path: ["customerPhone"],
+    message: "Walk-in customer name and phone number are required"
   })
 });
 

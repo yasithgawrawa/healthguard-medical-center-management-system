@@ -28,6 +28,8 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { ROLES } from "../../utils/roles.js";
+import { DASHBOARD_COMMAND_EVENT } from "../../utils/dashboardCommands.js";
+import { customerLabel, patientLabel } from "../../utils/personLabels.js";
 import { inventoryApi } from "../../services/inventoryApi.js";
 import {
   batchNumberPattern,
@@ -176,6 +178,7 @@ export const InventoryWorkspacePanel = () => {
   // POS / Dispensing State
   const [posPatientType, setPosPatientType] = useState("walk_in");
   const [posCustomerName, setPosCustomerName] = useState("");
+  const [posCustomerPhone, setPosCustomerPhone] = useState("");
   const [posPatientId, setPosPatientId] = useState("");
   const [posPrescriptionId, setPosPrescriptionId] = useState("");
   const [posCart, setPosCart] = useState([]);
@@ -231,6 +234,21 @@ export const InventoryWorkspacePanel = () => {
     loadData();
   }, [reportPeriod]);
 
+  useEffect(() => {
+    const handleDashboardCommand = (event) => {
+      const command = event.detail || {};
+      if (command.workspace !== "inventory") return;
+      if (command.tab) setActiveTab(command.tab);
+      if (command.search !== undefined) setSearch(command.search);
+      if (command.stockStatus !== undefined) setStockStatusFilter(command.stockStatus);
+      if (command.category !== undefined) setCategoryFilter(command.category);
+      if (command.reportPeriod) setReportPeriod(command.reportPeriod);
+    };
+
+    window.addEventListener(DASHBOARD_COMMAND_EVENT, handleDashboardCommand);
+    return () => window.removeEventListener(DASHBOARD_COMMAND_EVENT, handleDashboardCommand);
+  }, []);
+
   // Open Standard Modal (Medicine, Batch, Supplier)
   const openStandardModal = (type, record = null) => {
     const defaults = record
@@ -270,9 +288,11 @@ export const InventoryWorkspacePanel = () => {
       setPosPatientType("registered");
       setPosPatientId(prefillRx.patientId?._id || prefillRx.patientId || "");
       setPosPrescriptionId(prefillRx._id);
+      setPosCustomerPhone("");
     } else {
       setPosPatientType("walk_in");
       setPosCustomerName("");
+      setPosCustomerPhone("");
       setPosPatientId("");
       setPosPrescriptionId("");
     }
@@ -422,12 +442,19 @@ export const InventoryWorkspacePanel = () => {
     if (posPatientType === "registered" && !posPatientId) {
       return setToast({ type: "error", message: "Please select a registered patient" });
     }
+    if (posPatientType === "walk_in" && !posCustomerName.trim()) {
+      return setToast({ type: "error", message: "Walk-in customer name is required" });
+    }
+    if (posPatientType === "walk_in" && !posCustomerPhone.trim()) {
+      return setToast({ type: "error", message: "Walk-in customer phone number is required" });
+    }
 
     setBusy(true);
     try {
       const sale = await inventoryApi.createSale({
         patientId: posPatientType === "registered" ? posPatientId : undefined,
-        customerName: posPatientType === "walk_in" && posCustomerName.trim() ? posCustomerName.trim() : undefined,
+        customerName: posPatientType === "walk_in" ? posCustomerName.trim() : undefined,
+        customerPhone: posPatientType === "walk_in" ? posCustomerPhone.trim() : undefined,
         prescriptionId: posPrescriptionId || undefined,
         items: posCart.map((item) => ({
           medicineId: item.medicineId,
@@ -513,8 +540,7 @@ export const InventoryWorkspacePanel = () => {
   const salesRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return sales.filter((s) => {
-      const pName = [s.patientId?.firstName, s.patientId?.lastName].filter(Boolean).join(" ");
-      return [s.saleNumber, pName].join(" ").toLowerCase().includes(q);
+      return [s.saleNumber, customerLabel(s), s.customerPhone, s.patientId?.phone].join(" ").toLowerCase().includes(q);
     });
   }, [sales, search]);
 
@@ -663,7 +689,7 @@ export const InventoryWorkspacePanel = () => {
                             <Edit2 size={14} /> Edit
                           </button>
                           {item.status === "active" ? (
-                            <button className="table-link-button" type="button" onClick={() => handleDeactivateMedicine(item)} style={{ color: "var(--danger)" }}>
+                            <button className="table-link-button danger-action" type="button" onClick={() => handleDeactivateMedicine(item)}>
                               Deactivate
                             </button>
                           ) : null}
@@ -764,7 +790,7 @@ export const InventoryWorkspacePanel = () => {
                             <Edit2 size={14} /> Edit
                           </button>
                           {item.status === "active" ? (
-                            <button className="table-link-button" type="button" onClick={() => handleDeactivateSupplier(item)} style={{ color: "var(--danger)" }}>
+                            <button className="table-link-button danger-action" type="button" onClick={() => handleDeactivateSupplier(item)}>
                               Deactivate
                             </button>
                           ) : null}
@@ -981,8 +1007,9 @@ export const InventoryWorkspacePanel = () => {
               {
                 key: "patient",
                 header: "Patient / Customer",
-                render: (item) => item.customerName || [item.patientId?.firstName, item.patientId?.lastName].filter(Boolean).join(" ") || "Walk-in Patient"
+                render: (item) => customerLabel(item)
               },
+              { key: "phone", header: "Phone", render: (item) => item.customerPhone || item.patientId?.phone || "-" },
               { key: "items", header: "Items Dispensed", render: (item) => `${item.items?.length || 0} item(s)` },
               { key: "total", header: "Amount Due", render: (item) => <strong>{money(item.total)}</strong> },
               {
@@ -1435,7 +1462,7 @@ export const InventoryWorkspacePanel = () => {
                     <option value="">Choose Patient</option>
                     {patients.map((p) => (
                       <option value={p._id} key={p._id}>
-                        {p.firstName} {p.lastName} ({p.phone || p.email})
+                        {patientLabel(p)} ({p.phone || p.email})
                       </option>
                     ))}
                   </FormSelect>
@@ -1489,12 +1516,22 @@ export const InventoryWorkspacePanel = () => {
                 ) : null}
               </div>
             ) : (
-              <div style={{ marginTop: "10px" }}>
+              <div className="form-grid" style={{ marginTop: "10px" }}>
                 <FormInput
-                  label="Customer Name / Reference (Optional)"
-                  placeholder="e.g. Nimal Fernando (Leave empty for generic Walk-in Customer)"
+                  label="Customer Name"
+                  placeholder="e.g. Nimal Fernando"
                   value={posCustomerName}
                   onChange={(e) => setPosCustomerName(e.target.value)}
+                  required
+                />
+                <FormInput
+                  label="Customer Phone"
+                  placeholder="+94 77 123 4567"
+                  inputMode="tel"
+                  sanitize={stripNonPhone}
+                  value={posCustomerPhone}
+                  onChange={(e) => setPosCustomerPhone(e.target.value)}
+                  required
                 />
               </div>
             )}
@@ -1669,7 +1706,8 @@ export const InventoryWorkspacePanel = () => {
               <div className="bill-preview-meta">
                 <div><strong>Bill Reference:</strong> {selectedBill.saleNumber}</div>
                 <div><strong>Issued Date:</strong> {new Date(selectedBill.billIssuedAt || selectedBill.createdAt).toLocaleString("en-LK")}</div>
-                <div><strong>Patient / Customer:</strong> {selectedBill.customerName || [selectedBill.patientId?.firstName, selectedBill.patientId?.lastName].filter(Boolean).join(" ") || "Walk-in Patient"}</div>
+                <div><strong>Patient / Customer:</strong> {customerLabel(selectedBill)}</div>
+                <div><strong>Phone:</strong> {selectedBill.customerPhone || selectedBill.patientId?.phone || "-"}</div>
                 <div><strong>Dispensed By:</strong> {[selectedBill.soldBy?.firstName, selectedBill.soldBy?.lastName].filter(Boolean).join(" ") || "Pharmacist"}</div>
               </div>
 

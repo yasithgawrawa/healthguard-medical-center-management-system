@@ -1,7 +1,41 @@
 import { Activity, ArrowUpRight } from "lucide-react";
+import { dispatchDashboardCommand } from "../../utils/dashboardCommands.js";
 
-export const DashboardCard = ({ title, value, detail, icon: Icon = Activity, change }) => (
-  <article className="dashboard-card">
+const handleCardClick = (href, onClick, command) => (event) => {
+  if (onClick) onClick(event);
+  if (!event.defaultPrevented && href?.startsWith("#")) {
+    const target = document.querySelector(href);
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  if (!event.defaultPrevented) dispatchDashboardCommand(command);
+};
+
+export const DashboardCard = ({
+  title,
+  value,
+  detail,
+  icon: Icon = Activity,
+  change,
+  href,
+  onClick,
+  command,
+  actionLabel,
+  priority = "normal"
+}) => {
+  const clickable = Boolean(href || onClick || command);
+  const Tag = clickable ? "button" : "article";
+  const props = clickable
+    ? {
+        type: "button",
+        onClick: handleCardClick(href, onClick, command),
+        className: `dashboard-card dashboard-card-clickable dashboard-card-${priority}`
+      }
+    : {
+        className: `dashboard-card dashboard-card-${priority}`
+      };
+
+  return (
+  <Tag {...props}>
     <div className="dashboard-card-top">
       <span className="dashboard-card-label">{title}</span>
       <div className="dashboard-card-icon">
@@ -11,10 +45,12 @@ export const DashboardCard = ({ title, value, detail, icon: Icon = Activity, cha
     <strong>{value}</strong>
     {detail ? <p>{detail}</p> : null}
     {change ? (
-      <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "8px", fontSize: "0.75rem", color: "var(--success)", fontWeight: "700" }}>
+      <div className="dashboard-card-change">
         <ArrowUpRight size={14} />
         <span>{change}</span>
       </div>
     ) : null}
-  </article>
-);
+    {actionLabel ? <span className="dashboard-card-action">{actionLabel}</span> : null}
+  </Tag>
+  );
+};
