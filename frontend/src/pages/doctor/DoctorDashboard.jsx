@@ -9,6 +9,7 @@ import { Toast } from "../../components/shared/Toast.jsx";
 import { FormInput } from "../../components/shared/forms/FormInput.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { clinicalApi } from "../../services/clinicalApi.js";
+import { billingApi } from "../../services/billingApi.js";
 
 const money = (val) => `Rs. ${Number(val || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -20,6 +21,14 @@ export const DoctorDashboard = () => {
     completedCount: 0,
     labOrderCount: 0
   });
+  const [earnings, setEarnings] = useState({
+    totalAppointments: 0,
+    completedConsultations: 0,
+    consultationFeesBilled: 0,
+    consultationFeesCollected: 0,
+    outstandingFees: 0,
+    consultations: []
+  });
   const [feeModalOpen, setFeeModalOpen] = useState(false);
   const [myFee, setMyFee] = useState(user?.consultationFee || 1500);
   const [newFeeInput, setNewFeeInput] = useState(user?.consultationFee || 1500);
@@ -30,8 +39,9 @@ export const DoctorDashboard = () => {
     Promise.all([
       clinicalApi.listAppointments().catch(() => []),
       clinicalApi.listLabRequests().catch(() => []),
-      clinicalApi.listDoctors().catch(() => [])
-    ]).then(([appointments, labRequests, doctors]) => {
+      clinicalApi.listDoctors().catch(() => []),
+      billingApi.doctorEarnings().catch(() => null)
+    ]).then(([appointments, labRequests, doctors, earningsData]) => {
       const today = new Date().toISOString().slice(0, 10);
       const todayAppts = (appointments || []).filter((a) => (a.appointmentDate || "").slice(0, 10) === today);
       const waiting = (appointments || []).filter((a) => a.status === "checked_in");
@@ -41,6 +51,10 @@ export const DoctorDashboard = () => {
       if (me?.consultationFee) {
         setMyFee(me.consultationFee);
         setNewFeeInput(me.consultationFee);
+      }
+
+      if (earningsData) {
+        setEarnings(earningsData);
       }
 
       setMetrics({
@@ -93,6 +107,11 @@ export const DoctorDashboard = () => {
           <p>Review appointments, record consultations, issue handwritten prescriptions and request laboratory tests.</p>
         </div>
         <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ background: "#ecfdf5", padding: "6px 14px", borderRadius: "8px", border: "1px solid #a7f3d0", display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#065f46" }}>
+              👑 Clinic Owner
+            </span>
+          </div>
           <div style={{ background: "#ffffff", padding: "6px 14px", borderRadius: "8px", border: "1px solid #bae6fd", display: "flex", alignItems: "center", gap: "8px" }}>
             <DollarSign size={15} color="#0284c7" />
             <span style={{ fontSize: "0.85rem", color: "#0f172a" }}>
@@ -111,6 +130,48 @@ export const DoctorDashboard = () => {
             <div className="live-dot" />
             <span>Clinical Queue Active</span>
           </div>
+        </div>
+      </div>
+
+      <div style={{
+        background: "linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%)",
+        border: "1px solid #bbf7d0",
+        borderRadius: "12px",
+        padding: "16px 20px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: "14px"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "#15803d", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", fontWeight: 700 }}>
+            🩺
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, color: "#14532d", fontSize: "0.98rem" }}>
+              Clinic Owner Compensation Model
+            </div>
+            <div style={{ color: "#334155", fontSize: "0.85rem" }}>
+              Compensated via patient appointment fees ({money(myFee)} / visit). Exempt from employee shift payroll.
+            </div>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: "18px", alignItems: "center" }}>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: "0.74rem", color: "#64748b", textTransform: "uppercase", fontWeight: 600 }}>Consultation Fees Collected</div>
+            <div style={{ fontSize: "1.18rem", fontWeight: 800, color: "#15803d" }}>
+              {money(earnings.consultationFeesCollected)}
+            </div>
+          </div>
+          {earnings.outstandingFees > 0 && (
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: "0.74rem", color: "#64748b", textTransform: "uppercase", fontWeight: 600 }}>Pending Collection</div>
+              <div style={{ fontSize: "1.18rem", fontWeight: 800, color: "#ea580c" }}>
+                {money(earnings.outstandingFees)}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

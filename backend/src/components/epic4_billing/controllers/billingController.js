@@ -1,5 +1,6 @@
 import { Attendance } from "../../epic1_user_staff/models/Attendance.js";
 import { Staff } from "../../epic1_user_staff/models/Staff.js";
+import { User } from "../../epic1_user_staff/models/User.js";
 import { Shift } from "../../epic1_user_staff/models/Shift.js";
 import { Appointment } from "../../epic2_clinical/models/Appointment.js";
 import { PharmacySale } from "../../epic3_inventory/models/PharmacySale.js";
@@ -34,6 +35,10 @@ const hoursBetween = (start, end) => {
 const buildShiftPayroll = async ({ staffId, month, shiftRate, allowances = 0, deductions = 0 }) => {
   const staff = await Staff.findById(staffId).populate("userId", "firstName lastName email");
   if (!staff) throw new AppError("Staff profile not found", 404);
+
+  if (staff.role === ROLES.DOCTOR || staff.payBasis === "exempt") {
+    throw new AppError("The doctor is the clinic owner, compensated per appointment consultation, and exempt from employee shift payroll.", 400);
+  }
 
   const scheduledShifts = await Shift.countDocuments({
     staffId,
@@ -329,7 +334,105 @@ export const revenueSummary = async (req, res) => {
   const collected = payments.reduce((sum, payment) => sum + payment.amount, 0);
   const payroll = await Payroll.find();
   const payrollExpense = payroll.reduce((sum, item) => sum + item.netSalary, 0);
-  return successResponse(res, "Revenue summary loaded", { invoiced, collected, outstanding, payrollExpense });
+
+  let doctorConsultationInvoiced = 0;
+  invoices.forEach((inv) => {
+    inv.items?.forEach((item) => {
+      const desc = (item.description || "").toLowerCase();
+      if (desc.includes("consultation") || desc.includes("channelling")) {
+        doctorConsultationInvoiced += Number(item.lineTotal || 0);
+      }
+    });
+  });
+
+  return successResponse(res, "Revenue summary loaded", {
+    invoiced,
+    collected,
+    outstanding,
+    payrollExpense,
+    doctorConsultationInvoiced,
+    netClinicProfit: collected - payrollExpense
+  });
+};
+
+export const getDoctorEarnings = async (req, res) => {
+  let doctorUserId = req.user.role === ROLES.DOCTOR ? req.user._id : req.query.doctorId;
+  if (!doctorUserId) {
+    const defaultDoc = await User.findOne({ role: ROLES.DOCTOR, status: "active" });
+    if (defaultDoc) doctorUserId = defaultDoc._id;
+  }
+
+  if (!doctorUserId) {
+    return successResponse(res, "Doctor earnings loaded", {
+      totalAppointments: 0,
+      completedConsultations: 0,
+      consultationFeesBilled: 0,
+      consultationFeesCollected: 0,
+      outstandingFees: 0,
+      consultations: []
+    });
+  }
+
+  const appointments = await Appointment.find({ doctorId: doctorUserId })
+    .populate("patientId", "firstName lastName email phone")
+    .sort({ appointmentDate: -1 });
+
+  const apptIds = appointments.map((a) => a._id);
+  const invoices = await Invoice.find({ appointmentId: { $in: apptIds } });
+
+  const invoiceByApptId = new Map();
+  invoices.forEach((inv) => {
+    invoiceByApptId.set(inv.appointmentId.toString(), inv);
+  });
+
+  let totalBilled = 0;
+  let totalCollected = 0;
+  let totalOutstanding = 0;
+
+  const consultationList = appointments.map((appt) => {
+    const inv = invoiceByApptId.get(appt._id.toString());
+    const consultItem = inv?.items?.find((item) => {
+      const d = (item.description || "").toLowerCase();
+      return d.includes("consultation") || d.includes("channelling");
+    });
+    const fee = consultItem ? Number(consultItem.lineTotal || 0) : Number(inv?.subtotal || 0);
+    const isPaid = inv?.status === "paid";
+    const isPartial = inv?.status === "partially_paid";
+    const paid = isPaid ? fee : isPartial ? Math.min(Number(inv.paidAmount || 0), fee) : 0;
+    const due = Math.max(fee - paid, 0);
+
+    if (fee > 0) {
+      totalBilled += fee;
+      totalCollected += paid;
+      totalOutstanding += due;
+    }
+
+    return {
+      appointmentId: appt._id,
+      patientName: nameFromUser(appt.patientId, "Registered Patient"),
+      patientPhone: appt.patientId?.phone || "-",
+      appointmentDate: appt.appointmentDate,
+      slotLabel: appt.slotLabel,
+      reason: appt.reason,
+      status: appt.status,
+      consultationFee: fee,
+      paidAmount: paid,
+      outstandingAmount: due,
+      paymentStatus: inv ? inv.status : "unbilled",
+      invoiceId: inv?._id
+    };
+  });
+
+  const completed = appointments.filter((a) => a.status === "completed").length;
+
+  return successResponse(res, "Doctor earnings loaded", {
+    totalAppointments: appointments.length,
+    completedConsultations: completed,
+    consultationFeesBilled: totalBilled,
+    consultationFeesCollected: totalCollected,
+    outstandingFees: totalOutstanding,
+    consultations: consultationList.slice(0, 20)
+  });
 };
 
 const nameFromUser = (user, fallback = "Health Guard user") => [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || fallback;

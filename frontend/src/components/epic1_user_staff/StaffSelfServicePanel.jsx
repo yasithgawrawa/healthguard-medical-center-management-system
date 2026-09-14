@@ -12,6 +12,7 @@ import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
 import { e1Api } from "../../services/e1Api.js";
 import { billingApi } from "../../services/billingApi.js";
+import { useAuth } from "../../context/AuthContext.jsx";
 import { printPayslipPDF } from "../../utils/invoicePrintTemplate.js";
 import { formatDate, formatTime, LEAVE_TYPES } from "./e1Constants.js";
 
@@ -58,6 +59,7 @@ const getCurrentPosition = () =>
   });
 
 export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
+  const { user } = useAuth();
   const location = useLocation();
   const outletContext = useOutletContext();
 
@@ -306,31 +308,44 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
         />
       </div>
 
-      <div className="staff-self-leave">
-        <h3>My Payslips & Salary History</h3>
-        <DataTable
-          columns={[
-            { key: "month", header: "Month" },
-            { key: "payableShifts", header: "Payable Shifts", render: (item) => item.payableShifts ?? item.attendanceDays },
-            { key: "shiftRate", header: "Rate / Shift", render: (item) => `Rs. ${Number(item.shiftRate || 0).toFixed(2)}` },
-            { key: "netSalary", header: "Net Salary", render: (item) => `Rs. ${Number(item.netSalary || 0).toFixed(2)}` },
-            { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
-            { key: "actions", header: "Actions", render: (item) => (
-              <button
-                className="table-link-button"
-                type="button"
-                onClick={() => printPayslipPDF(item)}
-                title="View & Print payslip as PDF"
-              >
-                <Printer size={13} style={{ display: "inline", marginRight: "4px" }} />
-                Payslip PDF
-              </button>
-            ) }
-          ]}
-          rows={payroll.slice(0, 5)}
-          emptyText="No payslips available yet."
-        />
-      </div>
+      {user?.role === "doctor" ? (
+        <div className="staff-self-leave" style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: "12px", padding: "18px 20px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+            <span style={{ fontSize: "1.2rem" }}>🩺</span>
+            <h3 style={{ margin: 0, color: "#0369a1" }}>Clinic Owner & Appointment Compensation</h3>
+          </div>
+          <p style={{ margin: 0, color: "#0f172a", fontSize: "0.88rem", lineHeight: 1.5 }}>
+            As the clinic owner, you are compensated per completed appointment consultation fee and are exempt from standard employee shift payroll.
+            Detailed consultation fee earnings and invoice breakdowns are tracked in real time on your <strong>Doctor Workspace</strong>.
+          </p>
+        </div>
+      ) : (
+        <div className="staff-self-leave">
+          <h3>My Payslips & Salary History</h3>
+          <DataTable
+            columns={[
+              { key: "month", header: "Month" },
+              { key: "payableShifts", header: "Payable Shifts", render: (item) => item.payableShifts ?? item.attendanceDays },
+              { key: "shiftRate", header: "Rate / Shift", render: (item) => `Rs. ${Number(item.shiftRate || 0).toFixed(2)}` },
+              { key: "netSalary", header: "Net Salary", render: (item) => `Rs. ${Number(item.netSalary || 0).toFixed(2)}` },
+              { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
+              { key: "actions", header: "Actions", render: (item) => (
+                <button
+                  className="table-link-button"
+                  type="button"
+                  onClick={() => printPayslipPDF(item)}
+                  title="View & Print payslip as PDF"
+                >
+                  <Printer size={13} style={{ display: "inline", marginRight: "4px" }} />
+                  Payslip PDF
+                </button>
+              ) }
+            ]}
+            rows={payroll.slice(0, 5)}
+            emptyText="No payslips available yet."
+          />
+        </div>
+      )}
 
       <Modal open={leaveOpen} title="Request Leave" subtitle="Submit your leave request for manager review." onClose={() => setLeaveOpen(false)}>
         <form onSubmit={handleSubmit(requestLeave)}>

@@ -197,14 +197,22 @@ export const StaffFormModal = ({ open, mode = "create", staff, existingStaff = [
         </div>
 
         <div className="form-section-title">Shift-Based Payroll Setup</div>
-        <div className="form-grid-3">
-          <FormInput label="Rate Per Completed Shift (Rs.)" placeholder="3500.00" type="number" min="0" step="0.01" error={errors.shiftRate?.message} {...register("shiftRate")} />
-          <FormInput label="Fixed Allowances (Rs.)" placeholder="5000.00" type="number" min="0" step="0.01" error={errors.allowances?.message} {...register("allowances")} />
-          <FormInput label="Fixed Deductions (Rs.)" placeholder="1500.00" type="number" min="0" step="0.01" error={errors.deductions?.message} {...register("deductions")} />
-        </div>
-        <p className="section-description" style={{ margin: "-4px 0 14px" }}>
-          Payroll uses completed shift attendance: payable shifts x shift rate + fixed allowances - fixed deductions.
-        </p>
+        {selectedRole === "doctor" ? (
+          <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "8px", padding: "12px 14px", marginBottom: "14px", color: "#166534", fontSize: "0.85rem" }}>
+            <strong>Clinic Owner Notice:</strong> The doctor is the clinic owner, compensated per appointment consultation fee, and is exempt from employee shift payroll.
+          </div>
+        ) : (
+          <>
+            <div className="form-grid-3">
+              <FormInput label="Rate Per Completed Shift (Rs.)" placeholder="3500.00" type="number" min="0" step="0.01" error={errors.shiftRate?.message} {...register("shiftRate")} />
+              <FormInput label="Fixed Allowances (Rs.)" placeholder="5000.00" type="number" min="0" step="0.01" error={errors.allowances?.message} {...register("allowances")} />
+              <FormInput label="Fixed Deductions (Rs.)" placeholder="1500.00" type="number" min="0" step="0.01" error={errors.deductions?.message} {...register("deductions")} />
+            </div>
+            <p className="section-description" style={{ margin: "-4px 0 14px" }}>
+              Payroll uses completed shift attendance: payable shifts x shift rate + fixed allowances - fixed deductions.
+            </p>
+          </>
+        )}
 
         {!isEdit ? (
           <>

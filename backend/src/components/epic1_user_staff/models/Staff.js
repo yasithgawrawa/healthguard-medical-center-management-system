@@ -21,6 +21,7 @@ const staffSchema = new mongoose.Schema(
     },
     status: { type: String, enum: ["active", "inactive"], default: "active", index: true },
     emergencyContact: { type: String, trim: true },
+    payBasis: { type: String, enum: ["shift", "exempt"], default: "shift" },
     baseSalary: { type: Number, default: 0, min: 0 },
     shiftRate: { type: Number, default: 0, min: 0 },
     allowances: { type: Number, default: 0, min: 0 },

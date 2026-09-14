@@ -10,6 +10,7 @@ import {
   createPayroll,
   downloadInvoiceReceipt,
   downloadPayslip,
+  getDoctorEarnings,
   listInvoices,
   listPayments,
   listPayroll,
@@ -24,7 +25,8 @@ import { invoiceSchema, paymentSchema, paymentStatusSchema, payrollPreviewSchema
 const router = Router();
 router.use(authenticate);
 
-router.get("/summary", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN), asyncHandler(revenueSummary));
+router.get("/summary", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN, ROLES.DOCTOR), asyncHandler(revenueSummary));
+router.get("/doctor-earnings", authorizeRoles(ROLES.DOCTOR, ROLES.MANAGER, ROLES.ADMIN), asyncHandler(getDoctorEarnings));
 router.post("/invoices/consolidate", authorizeRoles(ROLES.CASHIER, ROLES.ADMIN), asyncHandler(consolidatePatientInvoices));
 router.post("/invoices", authorizeRoles(ROLES.CASHIER, ROLES.ADMIN), validateRequest(invoiceSchema), asyncHandler(createInvoice));
 router.get("/invoices", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.PATIENT, ROLES.ADMIN), asyncHandler(listInvoices));

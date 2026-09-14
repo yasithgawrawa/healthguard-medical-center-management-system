@@ -511,7 +511,14 @@ export const BillingWorkspacePanel = () => {
               <div className="form-grid">
                 <FormSelect label="Staff Member" error={errors.staffId?.message} {...register("staffId")}>
                   <option value="">Select staff</option>
-                  {staff.map((item) => <option value={item._id} key={item._id}>{staffName(item)} - {item.employeeId}</option>)}
+                  {staff.map((item) => {
+                    const isExempt = item.role === "doctor" || item.payBasis === "exempt";
+                    return (
+                      <option value={item._id} key={item._id} disabled={isExempt}>
+                        {staffName(item)} - {item.employeeId} {isExempt ? "• Clinic Owner (Paid per Consultation • Exempt)" : `(${item.role})`}
+                      </option>
+                    );
+                  })}
                 </FormSelect>
                 <FormInput label="Payroll Month" type="month" error={errors.month?.message} {...register("month")} />
               </div>

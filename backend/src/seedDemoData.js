@@ -115,11 +115,12 @@ const staffDefs = [
     role: ROLES.DOCTOR, gender: "female",
     dateOfBirth: new Date("1980-06-10"),
     address: "No. 7/A, Rosmead Place, Colombo 07",
-    employeeId: "HG-DOC-001", department: "Outpatient Department (OPD)",
+    employeeId: "HG-DOC-001", department: "Clinic Owner & OPD Specialist",
     employmentDate: new Date("2019-06-10"),
-    baseSalary: 260000, allowances: 20000, deductions: 5000,
+    baseSalary: 0, allowances: 0, deductions: 0,
     emergencyContact: "+94771234002",
-    consultationFee: 2500
+    consultationFee: 2500,
+    payBasis: "exempt"
   },
   {
     firstName: "Ishara", lastName: "Silva",
@@ -221,8 +222,9 @@ for (const s of staffDefs) {
     status: "active",
     employmentDate: s.employmentDate,
     emergencyContact: s.emergencyContact,
+    payBasis: s.payBasis || "shift",
     baseSalary: s.baseSalary,
-    shiftRate: Number((s.baseSalary / 26).toFixed(2)),
+    shiftRate: s.baseSalary > 0 ? Number((s.baseSalary / 26).toFixed(2)) : 0,
     allowances: s.allowances,
     deductions: s.deductions
   });
@@ -799,11 +801,34 @@ await Payment.create({
   verifiedBy: cashier._id
 });
 
+// Invoice 3 — Anjali's consultation visit (fully paid)
+const invoice3 = await Invoice.create({
+  patientId: patients[5]._id,
+  appointmentId: appointments[5]._id,
+  items: [
+    { description: "Doctor Consultation & Channelling – Dr. Amara Perera", quantity: 1, unitPrice: 2500, lineTotal: 2500 }
+  ],
+  subtotal: 2500,
+  paidAmount: 2500,
+  outstandingAmount: 0,
+  status: "paid",
+  createdBy: cashier._id
+});
+
+await Payment.create({
+  invoiceId: invoice3._id,
+  amount: 2500,
+  method: "cash",
+  status: "verified",
+  recordedBy: cashier._id,
+  verifiedBy: cashier._id
+});
+
 console.log(`   ✅ ${await Invoice.countDocuments()} invoices, ${await Payment.countDocuments()} payments created`);
 
-// Payroll — current month for all staff
+// Payroll — current month for employee staff only (Doctor is Clinic Owner & paid per appointment consultation)
 const staffForPayroll = [
-  "HG-DOC-001", "HG-NUR-001", "HG-NUR-002",
+  "HG-NUR-001", "HG-NUR-002",
   "HG-PHA-001", "HG-LAB-001", "HG-LAB-002", "HG-CAS-001"
 ];
 
