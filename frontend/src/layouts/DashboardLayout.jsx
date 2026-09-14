@@ -60,7 +60,7 @@ const roleNavItems = (role) => {
 };
 
 export const DashboardLayout = () => {
-  const { user } = useAuth();
+  const { user, sessionVersion } = useAuth();
   const location = useLocation();
   const navItems = roleNavItems(user?.role);
 
@@ -74,8 +74,10 @@ export const DashboardLayout = () => {
   useEffect(() => {
     if (location.hash) {
       setActiveHash(location.hash);
+    } else {
+      setActiveHash(navItems[0]?.href ?? "#overview");
     }
-  }, [location.hash]);
+  }, [location.hash, user?.role]);
 
   const isItemActive = (href) => {
     if (activeHash === href) return true;
@@ -128,7 +130,7 @@ export const DashboardLayout = () => {
         </aside>
 
         <section className="dashboard-content">
-          <Outlet context={{ activeHash, setActiveHash }} />
+          <Outlet key={`${user?._id || user?.id || "guest"}-${sessionVersion}-${location.pathname}`} context={{ activeHash, setActiveHash }} />
         </section>
       </main>
     </>

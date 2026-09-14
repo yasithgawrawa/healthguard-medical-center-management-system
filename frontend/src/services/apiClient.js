@@ -6,6 +6,16 @@ export const apiClient = axios.create({
   baseURL: API_BASE_URL
 });
 
+export const setAuthToken = (token) => {
+  if (token) {
+    apiClient.defaults.headers.common.Authorization = `Bearer ${token}`;
+  } else {
+    delete apiClient.defaults.headers.common.Authorization;
+  }
+};
+
+setAuthToken(localStorage.getItem("healthguard_token"));
+
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem("healthguard_token");
   if (token) {
