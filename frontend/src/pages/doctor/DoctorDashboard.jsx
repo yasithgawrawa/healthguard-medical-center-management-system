@@ -107,15 +107,15 @@ export const DoctorDashboard = () => {
           <p>Review appointments, record consultations, issue handwritten prescriptions and request laboratory tests.</p>
         </div>
         <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
-          <div style={{ background: "#ecfdf5", padding: "6px 14px", borderRadius: "8px", border: "1px solid #a7f3d0", display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#065f46" }}>
+          <div style={{ background: "var(--success-bg)", padding: "6px 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--success-border)", display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--success)" }}>
               👑 Clinic Owner
             </span>
           </div>
-          <div style={{ background: "#ffffff", padding: "6px 14px", borderRadius: "8px", border: "1px solid #bae6fd", display: "flex", alignItems: "center", gap: "8px" }}>
-            <DollarSign size={15} color="#0284c7" />
-            <span style={{ fontSize: "0.85rem", color: "#0f172a" }}>
-              My Channelling Fee: <strong style={{ color: "#0284c7" }}>{money(myFee)}</strong>
+          <div style={{ background: "rgba(255, 255, 255, 0.9)", padding: "6px 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--line-brand)", display: "flex", alignItems: "center", gap: "8px" }}>
+            <DollarSign size={15} color="var(--accent-sky)" />
+            <span style={{ fontSize: "0.85rem", color: "var(--ink-800)" }}>
+              My Channelling Fee: <strong style={{ color: "var(--accent-sky)" }}>{money(myFee)}</strong>
             </span>
             <button
               type="button"
@@ -134,40 +134,42 @@ export const DoctorDashboard = () => {
       </div>
 
       <div style={{
-        background: "linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%)",
-        border: "1px solid #bbf7d0",
-        borderRadius: "12px",
-        padding: "16px 20px",
+        background: "linear-gradient(135deg, rgba(236, 253, 245, 0.7) 0%, rgba(224, 242, 254, 0.7) 100%)",
+        border: "1px solid var(--success-border)",
+        borderRadius: "var(--radius-lg)",
+        padding: "20px 24px",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
         flexWrap: "wrap",
-        gap: "14px"
+        gap: "16px",
+        boxShadow: "var(--shadow-sm)",
+        backdropFilter: "blur(8px)"
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "#15803d", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", fontWeight: 700 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div style={{ width: "48px", height: "48px", borderRadius: "12px", background: "linear-gradient(135deg, var(--success), var(--accent-emerald))", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", fontWeight: 700, boxShadow: "0 4px 12px rgba(5, 150, 105, 0.2)" }}>
             🩺
           </div>
           <div>
-            <div style={{ fontWeight: 700, color: "#14532d", fontSize: "0.98rem" }}>
+            <div style={{ fontWeight: 800, color: "var(--ink-900)", fontSize: "1.05rem", fontFamily: "var(--font-heading)" }}>
               Clinic Owner Compensation Model
             </div>
-            <div style={{ color: "#334155", fontSize: "0.85rem" }}>
+            <div style={{ color: "var(--ink-700)", fontSize: "0.85rem", marginTop: "2px" }}>
               Compensated via patient appointment fees ({money(myFee)} / visit). Exempt from employee shift payroll.
             </div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: "18px", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: "0.74rem", color: "#64748b", textTransform: "uppercase", fontWeight: 600 }}>Consultation Fees Collected</div>
-            <div style={{ fontSize: "1.18rem", fontWeight: 800, color: "#15803d" }}>
+            <div style={{ fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.03em" }}>Consultation Fees Collected</div>
+            <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--success)", fontFamily: "var(--font-heading)" }}>
               {money(earnings.consultationFeesCollected)}
             </div>
           </div>
           {earnings.outstandingFees > 0 && (
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: "0.74rem", color: "#64748b", textTransform: "uppercase", fontWeight: 600 }}>Pending Collection</div>
-              <div style={{ fontSize: "1.18rem", fontWeight: 800, color: "#ea580c" }}>
+              <div style={{ fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.03em" }}>Pending Collection</div>
+              <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--warning)", fontFamily: "var(--font-heading)" }}>
                 {money(earnings.outstandingFees)}
               </div>
             </div>
