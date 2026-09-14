@@ -137,7 +137,7 @@ export const BillingWorkspacePanel = () => {
     if (modal.type !== "payroll" || !selectedStaffId) return;
     const selectedStaff = staff.find((item) => item._id === selectedStaffId);
     if (!selectedStaff) return;
-    const defaultShiftRate = selectedStaff.baseSalary ? Number((Number(selectedStaff.baseSalary) / 26).toFixed(2)) : 0;
+    const defaultShiftRate = selectedStaff.shiftRate || (selectedStaff.baseSalary ? Number((Number(selectedStaff.baseSalary) / 26).toFixed(2)) : 0);
     setValue("shiftRate", defaultShiftRate, { shouldValidate: true });
     setValue("allowances", selectedStaff.allowances || 0, { shouldValidate: true });
     setValue("deductions", selectedStaff.deductions || 0, { shouldValidate: true });

@@ -214,9 +214,9 @@ export const StaffManagementPanel = () => {
             <div><span>Department</span><strong>{modal.staff.department}</strong></div>
             <div><span>Employment Date</span><strong>{formatDate(modal.staff.employmentDate)}</strong></div>
             <div><span>Status</span><StatusBadge status={modal.staff.status} /></div>
-            <div><span>Base Salary</span><strong>{money(modal.staff.baseSalary)}</strong></div>
-            <div><span>Allowances</span><strong>{money(modal.staff.allowances)}</strong></div>
-            <div><span>Deductions</span><strong>{money(modal.staff.deductions)}</strong></div>
+            <div><span>Rate / Completed Shift</span><strong>{money(modal.staff.shiftRate || (modal.staff.baseSalary ? Number(modal.staff.baseSalary) / 26 : 0))}</strong></div>
+            <div><span>Fixed Allowances</span><strong>{money(modal.staff.allowances)}</strong></div>
+            <div><span>Fixed Deductions</span><strong>{money(modal.staff.deductions)}</strong></div>
           </div>
         ) : null}
       </Modal>

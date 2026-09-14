@@ -35,6 +35,7 @@ export const e1StaffActions = [
         { value: "lab_assistant", label: "Lab Assistant" }
       ] },
       { name: "employmentDate", label: "Employment date", type: "date", required: true },
+      { name: "shiftRate", label: "Rate per completed shift", type: "number", required: true, placeholder: "3500.00" },
       { name: "password", label: "Password", type: "password", required: true, placeholder: "Admin@12345" }
     ]
   },
@@ -162,7 +163,7 @@ export const e4Actions = [
   { label: "Create Payroll", method: "post", path: "/e4/billing/payroll", fields: [
     { name: "staffId", label: "Staff ID", required: true },
     { name: "month", label: "Month YYYY-MM", required: true, placeholder: "2026-09" },
-    { name: "baseSalary", label: "Base salary", type: "number", required: true, placeholder: "95000.00" },
+    { name: "shiftRate", label: "Rate per completed shift", type: "number", required: true, placeholder: "3500.00" },
     { name: "allowances", label: "Allowances", type: "number", defaultValue: "0", placeholder: "5000.00" },
     { name: "deductions", label: "Deductions", type: "number", defaultValue: "0", placeholder: "1500.00" }
   ] }

@@ -299,11 +299,16 @@ for (const s of staffAccountDefs) {
       employmentDate: s.employmentDate,
       emergencyContact: s.emergencyContact,
       baseSalary: s.baseSalary,
+      shiftRate: Number((s.baseSalary / 26).toFixed(2)),
       allowances: s.allowances,
       deductions: s.deductions
     });
   } else {
     staff.userId = user._id;
+    staff.baseSalary = s.baseSalary;
+    staff.shiftRate = Number((s.baseSalary / 26).toFixed(2));
+    staff.allowances = s.allowances;
+    staff.deductions = s.deductions;
     await staff.save();
   }
   staffProfileMap.set(s.employeeId, staff);
@@ -1375,7 +1380,7 @@ for (const empId of payrollStaffList) {
     },
     status: { $ne: "cancelled" }
   });
-  const shiftRate = Number((staff.baseSalary / 26).toFixed(2));
+  const shiftRate = Number((staff.shiftRate || staff.baseSalary / 26).toFixed(2));
   const payrollLines = staffAttendance.map((item) => {
     const start = item.shiftId?.startTime || item.checkInAt;
     const end = item.shiftId?.endTime || item.checkOutAt;

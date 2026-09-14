@@ -51,9 +51,9 @@ const baseSchema = z.object({
       today.setHours(23, 59, 59, 999);
       return !isNaN(selected.getTime()) && selected <= today;
     }, "Employment date must be in the past"),
-  baseSalary: requiredMoney("Base salary").min(0.01, "Base salary must be greater than 0"),
-  allowances: requiredMoney("Allowances"),
-  deductions: requiredMoney("Deductions"),
+  shiftRate: requiredMoney("Rate per completed shift").min(0.01, "Shift payment rate must be greater than 0"),
+  allowances: requiredMoney("Fixed allowances"),
+  deductions: requiredMoney("Fixed deductions"),
   password: z.string().optional()
 });
 
@@ -82,7 +82,7 @@ const toFormValues = (staff) => ({
   department: staff?.department || "General",
   role: staff?.role || "",
   employmentDate: staff?.employmentDate ? new Date(staff.employmentDate).toISOString().slice(0, 10) : "",
-  baseSalary: staff?.baseSalary ?? 0,
+  shiftRate: staff?.shiftRate ?? (staff?.baseSalary ? Number((Number(staff.baseSalary) / 26).toFixed(2)) : 0),
   allowances: staff?.allowances ?? 0,
   deductions: staff?.deductions ?? 0,
   password: ""
@@ -196,12 +196,15 @@ export const StaffFormModal = ({ open, mode = "create", staff, existingStaff = [
           />
         </div>
 
-        <div className="form-section-title">Salary Information</div>
+        <div className="form-section-title">Shift-Based Payroll Setup</div>
         <div className="form-grid-3">
-          <FormInput label="Base Salary" placeholder="95000.00" type="number" min="0" step="0.01" error={errors.baseSalary?.message} {...register("baseSalary")} />
-          <FormInput label="Allowances" placeholder="5000.00" type="number" min="0" step="0.01" error={errors.allowances?.message} {...register("allowances")} />
-          <FormInput label="Deductions" placeholder="1500.00" type="number" min="0" step="0.01" error={errors.deductions?.message} {...register("deductions")} />
+          <FormInput label="Rate Per Completed Shift (Rs.)" placeholder="3500.00" type="number" min="0" step="0.01" error={errors.shiftRate?.message} {...register("shiftRate")} />
+          <FormInput label="Fixed Allowances (Rs.)" placeholder="5000.00" type="number" min="0" step="0.01" error={errors.allowances?.message} {...register("allowances")} />
+          <FormInput label="Fixed Deductions (Rs.)" placeholder="1500.00" type="number" min="0" step="0.01" error={errors.deductions?.message} {...register("deductions")} />
         </div>
+        <p className="section-description" style={{ margin: "-4px 0 14px" }}>
+          Payroll uses completed shift attendance: payable shifts x shift rate + fixed allowances - fixed deductions.
+        </p>
 
         {!isEdit ? (
           <>

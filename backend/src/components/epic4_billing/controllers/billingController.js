@@ -52,7 +52,7 @@ const buildShiftPayroll = async ({ staffId, month, shiftRate, allowances = 0, de
     .populate("shiftId", "startTime endTime location")
     .sort({ workDate: 1, checkInAt: 1 });
 
-  const defaultShiftRate = staff.baseSalary && staff.baseSalary > 0 ? staff.baseSalary / 26 : 0;
+  const defaultShiftRate = staff.shiftRate && staff.shiftRate > 0 ? staff.shiftRate : staff.baseSalary && staff.baseSalary > 0 ? staff.baseSalary / 26 : 0;
   const payableShiftRate = Number(shiftRate ?? defaultShiftRate);
   if (!payableShiftRate || payableShiftRate <= 0) {
     throw new AppError("Shift payment rate is required on the payroll form or staff profile", 400, { shiftRate: "Shift payment rate is required" });

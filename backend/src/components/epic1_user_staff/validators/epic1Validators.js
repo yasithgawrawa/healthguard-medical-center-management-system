@@ -28,7 +28,8 @@ export const createStaffSchema = z.object({
       return date <= endOfToday;
     }, "Employment date must be in the past"),
     emergencyContact: z.string().trim().optional().default(""),
-    baseSalary: moneySchema("Base salary").optional().default(0),
+    baseSalary: moneySchema("Gross monthly reference").optional().default(0),
+    shiftRate: moneySchema("Shift payment rate").min(0.01, "Shift payment rate must be greater than 0"),
     allowances: moneySchema("Allowances").optional().default(0),
     deductions: moneySchema("Deductions").optional().default(0),
     password: passwordSchema
@@ -51,7 +52,8 @@ export const updateStaffSchema = z.object({
     }, "Employment date must be in the past").optional(),
     status: z.enum(["active", "inactive"]).optional(),
     emergencyContact: z.string().trim().optional(),
-    baseSalary: moneySchema("Base salary").optional(),
+    baseSalary: moneySchema("Gross monthly reference").optional(),
+    shiftRate: moneySchema("Shift payment rate").optional(),
     allowances: moneySchema("Allowances").optional(),
     deductions: moneySchema("Deductions").optional()
   })

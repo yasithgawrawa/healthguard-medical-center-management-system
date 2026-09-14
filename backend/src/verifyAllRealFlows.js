@@ -290,20 +290,26 @@ try {
   // --------------------------------------------------------------------------
   const staffToPay = await Staff.findOne({ employeeId: "HG-NUR-001" });
   const attendanceCount = await Attendance.countDocuments({ staffId: staffToPay._id, status: "checked_out" });
-  const calculatedDays = attendanceCount > 0 ? attendanceCount : 20;
-  const calculatedNet = Math.round((staffToPay.baseSalary / 26) * calculatedDays + staffToPay.allowances - staffToPay.deductions);
+  const payableShifts = attendanceCount > 0 ? attendanceCount : 20;
+  const shiftRate = staffToPay.shiftRate || staffToPay.baseSalary / 26;
+  const grossShiftPay = Math.round(shiftRate * payableShifts);
+  const calculatedNet = Math.round(grossShiftPay + staffToPay.allowances - staffToPay.deductions);
 
   const payrollRecord = await Payroll.create({
     staffId: staffToPay._id,
     month: "2026-10",
-    baseSalary: staffToPay.baseSalary,
-    attendanceDays: calculatedDays,
+    payBasis: "shift",
+    baseSalary: grossShiftPay,
+    shiftRate,
+    scheduledShifts: payableShifts,
+    payableShifts,
+    attendanceDays: payableShifts,
     allowances: staffToPay.allowances,
     deductions: staffToPay.deductions,
     netSalary: calculatedNet,
     status: "draft"
   });
-  recordStep("9. E4 Payroll", "Monthly Salary Calculated from Attendance", payrollRecord.netSalary > 0, `Net Pay: Rs. ${payrollRecord.netSalary.toFixed(2)} (Attendance: ${payrollRecord.attendanceDays} days)`);
+  recordStep("9. E4 Payroll", "Shift Payroll Calculated from Attendance", payrollRecord.netSalary > 0, `Net Pay: Rs. ${payrollRecord.netSalary.toFixed(2)} (${payrollRecord.payableShifts} completed shifts)`);
 
   // Manager review, approval & payment
   payrollRecord.status = "reviewed";

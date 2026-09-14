@@ -14,6 +14,12 @@ const ROLE_CODE_MAP = {
   lab_assistant: "LAB"
 };
 
+const resolveShiftPay = (body) => {
+  const shiftRate = Number(body.shiftRate ?? (body.baseSalary ? Number(body.baseSalary) / 26 : 0));
+  const baseSalary = Number(body.baseSalary ?? (shiftRate ? shiftRate * 26 : 0));
+  return { shiftRate, baseSalary };
+};
+
 export const createStaff = async (req, res) => {
   const existingUser = await User.findOne({ email: req.body.email }).select("_id");
   if (existingUser) throw new AppError("Email already exists", 409, { email: "Email already exists" });
@@ -42,6 +48,7 @@ export const createStaff = async (req, res) => {
   }
 
   const passwordHash = await bcrypt.hash(req.body.password, 12);
+  const { shiftRate, baseSalary } = resolveShiftPay(req.body);
   const user = await User.create({
     firstName: req.body.firstName,
     lastName: req.body.lastName,
@@ -59,7 +66,8 @@ export const createStaff = async (req, res) => {
     role: req.body.role,
     employmentDate: req.body.employmentDate,
     emergencyContact: req.body.emergencyContact,
-    baseSalary: req.body.baseSalary,
+    baseSalary,
+    shiftRate,
     allowances: req.body.allowances,
     deductions: req.body.deductions
   });
@@ -79,10 +87,16 @@ export const updateStaff = async (req, res) => {
   const staff = await Staff.findById(req.params.id);
   if (!staff) throw new AppError("Staff not found", 404);
 
-  const staffUpdates = ["department", "role", "status", "employmentDate", "emergencyContact", "baseSalary", "allowances", "deductions"].reduce((acc, key) => {
+  const staffUpdates = ["department", "role", "status", "employmentDate", "emergencyContact", "baseSalary", "shiftRate", "allowances", "deductions"].reduce((acc, key) => {
     if (req.body[key] !== undefined) acc[key] = req.body[key];
     return acc;
   }, {});
+  if (req.body.shiftRate !== undefined && req.body.baseSalary === undefined) {
+    staffUpdates.baseSalary = Number(req.body.shiftRate) * 26;
+  }
+  if (req.body.baseSalary !== undefined && req.body.shiftRate === undefined) {
+    staffUpdates.shiftRate = Number(req.body.baseSalary) / 26;
+  }
   Object.assign(staff, staffUpdates);
   await staff.save();
 

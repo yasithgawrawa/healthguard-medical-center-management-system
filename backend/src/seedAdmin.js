@@ -95,13 +95,14 @@ for (const [firstName, lastName, email, phone, role, employeeId, department, emp
     staff.employmentDate = new Date(employmentDate);
     staff.emergencyContact = "+94112555999";
     staff.baseSalary = salary.baseSalary;
+    staff.shiftRate = Number((salary.baseSalary / 26).toFixed(2));
     staff.allowances = salary.allowances;
     staff.deductions = salary.deductions;
     await staff.save();
   } else {
     staff = await Staff.findOneAndUpdate(
       { employeeId },
-      { userId: user._id, employeeId, department, role, status: "active", employmentDate: new Date(employmentDate), emergencyContact: "+94112555999", ...salary },
+      { userId: user._id, employeeId, department, role, status: "active", employmentDate: new Date(employmentDate), emergencyContact: "+94112555999", ...salary, shiftRate: Number((salary.baseSalary / 26).toFixed(2)) },
       { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
     );
   }
@@ -318,9 +319,10 @@ await Payment.findOneAndUpdate(
 for (const employeeId of ["HG-NUR-001", "HG-PHA-001", "HG-CAS-001"]) {
   const staff = staffByEmployeeId.get(employeeId);
   const salary = salaryByEmployeeId[employeeId];
+  const shiftRate = Number((salary.baseSalary / 26).toFixed(2));
   await Payroll.findOneAndUpdate(
     { staffId: staff._id, month },
-    { staffId: staff._id, month, baseSalary: salary.baseSalary, attendanceDays: 20, allowances: salary.allowances, deductions: salary.deductions, netSalary: Math.max((salary.baseSalary / 26) * 20 + salary.allowances - salary.deductions, 0), status: "reviewed", reviewedBy: userByEmail.get("manager@healthguard.local")._id },
+    { staffId: staff._id, month, payBasis: "shift", baseSalary: shiftRate * 20, shiftRate, scheduledShifts: 20, payableShifts: 20, attendanceDays: 20, allowances: salary.allowances, deductions: salary.deductions, netSalary: Math.max(shiftRate * 20 + salary.allowances - salary.deductions, 0), status: "reviewed", reviewedBy: userByEmail.get("manager@healthguard.local")._id },
     { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
   );
 }
