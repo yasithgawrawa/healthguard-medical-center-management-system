@@ -2455,7 +2455,7 @@ main {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 20px;
 }
 
@@ -2523,8 +2523,8 @@ main {
 }
 
 .dashboard-card-top {
-  display: flex;
   align-items: center;
+  display: flex;
   justify-content: space-between;
   margin-bottom: 12px;
 }
@@ -3029,7 +3029,7 @@ main {
   }
 
   .dashboard-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .patient-record-grid {

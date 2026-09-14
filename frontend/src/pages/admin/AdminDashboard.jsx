@@ -1,36 +1,9 @@
-import { CalendarPlus, CheckCircle2, Lock, Shield, UserPlus, Users } from "lucide-react";
-import { useEffect, useState } from "react";
+import { CalendarPlus, Shield, UserPlus, Users } from "lucide-react";
 import { StaffManagementPanel } from "../../components/epic1_user_staff/StaffManagementPanel.jsx";
 import { WorkforceManagementPanel } from "../../components/epic1_user_staff/WorkforceManagementPanel.jsx";
-import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
 import { DashboardQuickActions } from "../../components/shared/DashboardQuickActions.jsx";
-import { e1Api } from "../../services/e1Api.js";
 
 export const AdminDashboard = () => {
-  const [metrics, setMetrics] = useState({
-    activeStaffCount: 0,
-    roleCount: 0,
-    todayAttendanceCount: 0
-  });
-
-  useEffect(() => {
-    Promise.all([
-      e1Api.listStaff().catch(() => []),
-      e1Api.listAttendance().catch(() => [])
-    ]).then(([staffList, attendanceList]) => {
-      const today = new Date().toISOString().slice(0, 10);
-      const activeStaff = (staffList || []).filter((s) => s.status === "active");
-      const distinctRoles = new Set((staffList || []).map((s) => s.role).filter(Boolean));
-      const todayCheckIns = (attendanceList || []).filter((a) => (a.checkInTime || "").slice(0, 10) === today);
-
-      setMetrics({
-        activeStaffCount: activeStaff.length,
-        roleCount: distinctRoles.size,
-        todayAttendanceCount: todayCheckIns.length
-      });
-    });
-  }, []);
-
   return (
     <div id="overview" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       <div className="dashboard-header-banner">
@@ -42,47 +15,6 @@ export const AdminDashboard = () => {
           <div className="live-dot" />
           <span>System Online</span>
         </div>
-      </div>
-
-      <div className="dashboard-grid">
-        <DashboardCard
-          title="Active Medical Staff"
-          value={`${metrics.activeStaffCount} Staff`}
-          detail="Doctors, nurses, pharmacists & staff"
-          icon={Users}
-          change="Profiles Synced"
-          href="#staff-directory"
-          actionLabel="Manage staff"
-        />
-        <DashboardCard
-          title="Configured Roles"
-          value={`${metrics.roleCount} RBAC Roles`}
-          detail="Role-based access permissions"
-          icon={Shield}
-          change="Access Enforced"
-          href="#staff-directory"
-          actionLabel="Review roles"
-        />
-        <DashboardCard
-          title="Today's Check-ins"
-          value={`${metrics.todayAttendanceCount} Attended`}
-          detail="Geofence-verified clinic arrivals"
-          icon={CheckCircle2}
-          change="Geo-Verified"
-          href="#manager-workforce"
-          command={{ workspace: "workforce", tab: "attendance", date: new Date().toISOString().slice(0, 10), role: "", search: "" }}
-          actionLabel="Open attendance"
-          priority={metrics.todayAttendanceCount > 0 ? "medium" : "normal"}
-        />
-        <DashboardCard
-          title="Access Security"
-          value="100% Protected"
-          detail="Bcrypt hashing & JWT authentication"
-          icon={Lock}
-          change="Audited Safe"
-          href="#staff-directory"
-          actionLabel="Audit users"
-        />
       </div>
 
       <DashboardQuickActions
