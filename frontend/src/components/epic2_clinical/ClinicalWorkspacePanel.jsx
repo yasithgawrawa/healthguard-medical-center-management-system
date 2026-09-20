@@ -168,8 +168,8 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
   const [status, setStatus] = useState("");
   const [statusGroup, setStatusGroup] = useState([]);
   const [priorityFilter, setPriorityFilter] = useState("");
-  const [queueTab, setQueueTab] = useState("all");
-  const [dateScope, setDateScope] = useState("all");
+  const [queueTab, setQueueTab] = useState(mode === "nurse" ? "active" : "all");
+  const [dateScope, setDateScope] = useState(mode === "nurse" ? "today" : "all");
   const [modal, setModal] = useState({ type: null, record: null });
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
@@ -229,8 +229,6 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
     ? consultationSchema
     : modal.type === "lab-request"
     ? labRequestSchema
-    : modal.type === "status"
-    ? z.object({ status: z.string().min(1) })
     : modal.type === "lab-update"
     ? labUpdateSchema
     : z.object({});
@@ -408,6 +406,14 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
         clinicalNotes: existing.clinicalNotes || "",
         finalized: existing.finalized !== undefined ? existing.finalized : true
       });
+    } else if (type === "vitals") {
+      const existing = record.vitals || {};
+      reset({
+        temperature: existing.temperature ?? "",
+        bloodPressure: existing.bloodPressure || "",
+        heartRate: existing.heartRate ?? "",
+        spo2: existing.spo2 ?? ""
+      });
     } else {
       reset({});
     }
@@ -440,6 +446,21 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
           message: error.response?.data?.message || "Failed to start consultation"
         });
       }
+    }
+  };
+
+  const checkInPatient = async (appointment) => {
+    try {
+      if (isFutureLocalDate(appointment.appointmentDate)) {
+        setToast({ type: "error", message: "Patients can only be checked in on or after their appointment date." });
+        return;
+      }
+      await clinicalApi.updateAppointmentStatus(appointment._id, "checked_in");
+      setToast({ type: "success", message: `${patientName(appointment)} checked in successfully` });
+      await load();
+    } catch (error) {
+      await load();
+      setToast({ type: "error", message: error.response?.data?.message || "Unable to check in patient" });
     }
   };
 
@@ -509,7 +530,10 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
         if (itemDate !== todayStr) return false;
       }
 
-      if (queueTab === "waiting" && item.status !== "checked_in") return false;
+      if (queueTab === "active" && !["booked", "checked_in"].includes(item.status)) return false;
+      if (queueTab === "booked" && item.status !== "booked") return false;
+      if (queueTab === "waiting" && (item.status !== "checked_in" || (mode === "nurse" && item.vitals))) return false;
+      if (queueTab === "vitals_recorded" && !item.vitals) return false;
       if (queueTab === "in_consultation" && item.status !== "in_consultation") return false;
       if (queueTab === "completed" && item.status !== "completed") return false;
 
@@ -523,7 +547,6 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
     setBusy(true);
     try {
       const record = modal.record;
-      if (modal.type === "status") await clinicalApi.updateAppointmentStatus(record._id, values.status);
       if (modal.type === "vitals") {
         await clinicalApi.recordVitals({
           appointmentId: record._id,
@@ -580,6 +603,9 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
       }
       if (modal.type === "lab-update") {
         successMessage = "Laboratory result and parameters saved successfully";
+      }
+      if (modal.type === "vitals") {
+        successMessage = "Vital signs saved successfully";
       }
       setToast({ type: "success", message: successMessage });
       setModal({ type: null, record: null });
@@ -784,50 +810,31 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
       header: "Actions",
       render: (item) => {
         if (mode === "nurse") {
+          const canCheckIn = item.status === "booked" && !isFutureLocalDate(item.appointmentDate);
+          const canRecordVitals = item.status === "checked_in";
           return (
             <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", whiteSpace: "nowrap" }}>
-              <button
-                type="button"
-                style={{
-                  height: "30px",
-                  padding: "0 10px",
-                  fontSize: "0.8rem",
-                  fontWeight: 600,
-                  color: "#334155",
-                  background: "#ffffff",
-                  border: "1px solid #cbd5e1",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "4px",
-                  whiteSpace: "nowrap"
-                }}
-                onClick={() => openModal("status", item)}
-              >
-                Status
-              </button>
-              <button
-                type="button"
-                style={{
-                  height: "30px",
-                  padding: "0 10px",
-                  fontSize: "0.8rem",
-                  fontWeight: 600,
-                  color: "#334155",
-                  background: "#ffffff",
-                  border: "1px solid #cbd5e1",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "4px",
-                  whiteSpace: "nowrap"
-                }}
-                onClick={() => openModal("vitals", item)}
-              >
-                Vitals
-              </button>
+              {item.status === "booked" ? (
+                <button
+                  type="button"
+                  className="button-primary compact-action-button"
+                  onClick={() => checkInPatient(item)}
+                  disabled={!canCheckIn}
+                  title={canCheckIn ? "Mark patient as arrived" : "Future appointments cannot be checked in yet"}
+                >
+                  <UserCheck size={12} /> Check In
+                </button>
+              ) : null}
+              {canRecordVitals ? (
+                <button
+                  type="button"
+                  className="button-secondary compact-action-button"
+                  onClick={() => openModal("vitals", item)}
+                >
+                  <Thermometer size={12} /> {item.vitals ? "Update Vitals" : "Record Vitals"}
+                </button>
+              ) : null}
+              {item.status !== "booked" && !canRecordVitals ? <span style={{ color: "#94a3b8", fontSize: "0.78rem" }}>No action required</span> : null}
             </div>
           );
         }
@@ -948,7 +955,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
           <div style={{ flex: 1, minWidth: "260px" }}>
             <SearchBar value={search} onChange={setSearch} placeholder={mode === "lab" ? "Search lab test, doctor, or status..." : "Search patient name, phone, slot, diagnosis..."} />
           </div>
-          {mode !== "lab" ? (
+          {mode !== "lab" && mode !== "nurse" ? (
             <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
               <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#64748b" }}>Date:</span>
               <button
@@ -977,47 +984,82 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
               <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginRight: "4px" }}>
                 Queue View:
               </span>
-              <button
-                type="button"
-                className={queueTab === "all" ? "button-primary" : "button-secondary"}
-                style={{ padding: "5px 12px", fontSize: "0.82rem" }}
-                onClick={() => { setQueueTab("all"); setStatus(""); }}
-              >
-                All Scheduled ({appointments.length})
-              </button>
+              {mode === "nurse" ? (
+                <>
+                  <button
+                    type="button"
+                    className={queueTab === "active" ? "button-primary" : "button-secondary"}
+                    style={{ padding: "5px 12px", fontSize: "0.82rem" }}
+                    onClick={() => { setQueueTab("active"); setStatus(""); }}
+                  >
+                    Active Triage ({appointments.filter((a) => isTodayLocalDate(a.appointmentDate) && ["booked", "checked_in"].includes(a.status)).length})
+                  </button>
+                  <button
+                    type="button"
+                    className={queueTab === "booked" ? "button-primary" : "button-secondary"}
+                    style={{ padding: "5px 12px", fontSize: "0.82rem" }}
+                    onClick={() => { setQueueTab("booked"); setStatus(""); }}
+                  >
+                    Awaiting Arrival ({appointments.filter((a) => isTodayLocalDate(a.appointmentDate) && a.status === "booked").length})
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className={queueTab === "all" ? "button-primary" : "button-secondary"}
+                  style={{ padding: "5px 12px", fontSize: "0.82rem" }}
+                  onClick={() => { setQueueTab("all"); setStatus(""); }}
+                >
+                  All Scheduled ({appointments.length})
+                </button>
+              )}
               <button
                 type="button"
                 className={queueTab === "waiting" ? "button-primary" : "button-secondary"}
                 style={{ padding: "5px 12px", fontSize: "0.82rem" }}
                 onClick={() => { setQueueTab("waiting"); setStatus(""); }}
               >
-                Waiting Room ({appointments.filter((a) => a.status === "checked_in").length})
+                {mode === "nurse" ? "Needs Vitals" : "Waiting Room"} ({appointments.filter((a) => a.status === "checked_in" && (mode !== "nurse" || (isTodayLocalDate(a.appointmentDate) && !a.vitals))).length})
               </button>
-              <button
-                type="button"
-                className={queueTab === "in_consultation" ? "button-primary" : "button-secondary"}
-                style={{ padding: "5px 12px", fontSize: "0.82rem" }}
-                onClick={() => { setQueueTab("in_consultation"); setStatus(""); }}
-              >
-                In Consultation ({appointments.filter((a) => a.status === "in_consultation").length})
-              </button>
-              <button
-                type="button"
-                className={queueTab === "completed" ? "button-primary" : "button-secondary"}
-                style={{ padding: "5px 12px", fontSize: "0.82rem" }}
-                onClick={() => { setQueueTab("completed"); setStatus(""); }}
-              >
-                Completed ({appointments.filter((a) => a.status === "completed").length})
-              </button>
+              {mode === "nurse" ? (
+                <button
+                  type="button"
+                  className={queueTab === "vitals_recorded" ? "button-primary" : "button-secondary"}
+                  style={{ padding: "5px 12px", fontSize: "0.82rem" }}
+                  onClick={() => { setQueueTab("vitals_recorded"); setStatus(""); }}
+                >
+                  Vitals Recorded ({appointments.filter((a) => isTodayLocalDate(a.appointmentDate) && a.vitals).length})
+                </button>
+              ) : null}
+              {mode !== "nurse" ? (
+                <>
+                  <button
+                    type="button"
+                    className={queueTab === "in_consultation" ? "button-primary" : "button-secondary"}
+                    style={{ padding: "5px 12px", fontSize: "0.82rem" }}
+                    onClick={() => { setQueueTab("in_consultation"); setStatus(""); }}
+                  >
+                    In Consultation ({appointments.filter((a) => a.status === "in_consultation").length})
+                  </button>
+                  <button
+                    type="button"
+                    className={queueTab === "completed" ? "button-primary" : "button-secondary"}
+                    style={{ padding: "5px 12px", fontSize: "0.82rem" }}
+                    onClick={() => { setQueueTab("completed"); setStatus(""); }}
+                  >
+                    Completed ({appointments.filter((a) => a.status === "completed").length})
+                  </button>
+                </>
+              ) : null}
             </div>
-            <div style={{ minWidth: "150px" }}>
+            {mode !== "nurse" ? <div style={{ minWidth: "150px" }}>
               <FilterSelect
                 label="Filter Status"
                 value={status}
                 onChange={(val) => { setStatus(val); if (val) setQueueTab("custom"); }}
                 options={["booked", "checked_in", "in_consultation", "completed", "cancelled"]}
               />
-            </div>
+            </div> : null}
           </div>
         ) : (
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", flexWrap: "wrap" }}>
@@ -1056,8 +1098,6 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
             ? "Clinical Consultation & Diagnosis"
             : modal.type === "vitals"
             ? "Record Vital Signs"
-            : modal.type === "status"
-            ? "Update Appointment Status"
             : modal.type === "lab-request"
             ? "Order Laboratory Investigation"
             : modal.type === "lab-update"
@@ -1068,12 +1108,6 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
         onClose={() => setModal({ type: null, record: null })}
       >
         <form onSubmit={handleSubmit(submit)}>
-          {modal.type === "status" ? (
-            <FormSelect label="Status" error={errors.status?.message} {...register("status")}>
-              <option value="">Select status</option>
-              {["checked_in", "in_consultation", "completed", "cancelled"].map((item) => <option value={item} key={item}>{item.replace(/_/g, " ")}</option>)}
-            </FormSelect>
-          ) : null}
           {modal.type === "vitals" ? (
             <div className="form-grid">
               <FormInput label="Temperature" placeholder="37.2" type="number" step="0.1" error={errors.temperature?.message} {...register("temperature")} />

@@ -178,6 +178,9 @@ export const cancelAppointment = async (req, res) => {
 export const updateAppointmentStatus = async (req, res) => {
   const appointment = await Appointment.findById(req.params.id);
   if (!appointment) throw new AppError("Appointment not found", 404);
+  if (req.user.role === ROLES.NURSE && (appointment.status !== "booked" || req.body.status !== "checked_in")) {
+    throw new AppError("Nurses can only check in booked patients", 403);
+  }
   if (appointment.status === "cancelled" || appointment.status === "completed") {
     throw new AppError("Finalized appointments cannot change status", 409);
   }
@@ -192,6 +195,9 @@ export const updateAppointmentStatus = async (req, res) => {
 export const recordVitals = async (req, res) => {
   const appointment = await Appointment.findById(req.body.appointmentId);
   if (!appointment) throw new AppError("Appointment not found", 404);
+  if (req.user.role === ROLES.NURSE && appointment.status !== "checked_in") {
+    throw new AppError("Nurses can only record vitals for checked-in patients", 403);
+  }
   const vitals = await Vitals.findOneAndUpdate(
     { appointmentId: req.body.appointmentId },
     { ...req.body, patientId: req.body.patientId || appointment.patientId, recordedBy: req.user._id },

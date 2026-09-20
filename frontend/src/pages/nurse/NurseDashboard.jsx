@@ -1,35 +1,31 @@
-import { Activity, HeartPulse, Stethoscope, Thermometer, UserCheck } from "lucide-react";
+import { Activity, Thermometer, UserCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ClinicalWorkspacePanel } from "../../components/epic2_clinical/ClinicalWorkspacePanel.jsx";
 import { StaffSelfServicePanel } from "../../components/epic1_user_staff/StaffSelfServicePanel.jsx";
 import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
-import { DashboardQuickActions } from "../../components/shared/DashboardQuickActions.jsx";
 import { clinicalApi } from "../../services/clinicalApi.js";
-import { e1Api } from "../../services/e1Api.js";
 
 export const NurseDashboard = () => {
   const [metrics, setMetrics] = useState({
     awaitingArrival: 0,
     inTriage: 0,
-    vitalsDone: 0,
-    activeDoctors: 0
+    vitalsDone: 0
   });
 
   useEffect(() => {
-    Promise.all([
-      clinicalApi.listAppointments().catch(() => []),
-      e1Api.listStaff().catch(() => [])
-    ]).then(([appointments, staffList]) => {
-      const booked = (appointments || []).filter((a) => a.status === "booked");
-      const checkedIn = (appointments || []).filter((a) => a.status === "checked_in");
-      const vitalsCompleted = (appointments || []).filter((a) => ["in_consultation", "completed"].includes(a.status) || a.vitals);
-      const doctors = (staffList || []).filter((s) => s.role === "doctor" && s.status === "active");
+    clinicalApi.listAppointments().catch(() => []).then((appointments) => {
+      const today = new Date().toLocaleDateString("en-CA");
+      const todayAppointments = (appointments || []).filter((appointment) => (
+        new Date(appointment.appointmentDate).toLocaleDateString("en-CA") === today
+      ));
+      const booked = todayAppointments.filter((a) => a.status === "booked");
+      const checkedIn = todayAppointments.filter((a) => a.status === "checked_in" && !a.vitals);
+      const vitalsCompleted = todayAppointments.filter((a) => a.vitals);
 
       setMetrics({
         awaitingArrival: booked.length,
         inTriage: checkedIn.length,
-        vitalsDone: vitalsCompleted.length,
-        activeDoctors: doctors.length
+        vitalsDone: vitalsCompleted.length
       });
     });
   }, []);
@@ -55,7 +51,7 @@ export const NurseDashboard = () => {
           icon={Activity}
           change="Arrival Queue"
           href="#patient-check-in-vitals"
-          command={{ workspace: "clinical", mode: "nurse", queueTab: "all", dateScope: "today", status: "booked", priority: "", search: "" }}
+          command={{ workspace: "clinical", mode: "nurse", queueTab: "booked", dateScope: "today", status: "", priority: "", search: "" }}
           actionLabel="Open check-in queue"
           priority={metrics.awaitingArrival > 0 ? "medium" : "normal"}
         />
@@ -73,32 +69,14 @@ export const NurseDashboard = () => {
         <DashboardCard
           title="Vitals Recorded"
           value={`${metrics.vitalsDone} Handed Off`}
-          detail="Temperature, BP, Pulse & SpO2 recorded"
+          detail="Today's patients with recorded vital signs"
           icon={Thermometer}
           change="Baseline Logged"
           href="#patient-check-in-vitals"
-          command={{ workspace: "clinical", mode: "nurse", queueTab: "in_consultation", dateScope: "today", status: "", priority: "", search: "" }}
-          actionLabel="Review handoffs"
-        />
-        <DashboardCard
-          title="Active Doctors On Duty"
-          value={`${metrics.activeDoctors} Available`}
-          detail="OPD consultation room physicians"
-          icon={Stethoscope}
-          change="Clinicians Active"
-          href="#patient-check-in-vitals"
-          command={{ workspace: "clinical", mode: "nurse", queueTab: "all", dateScope: "today", status: "", priority: "", search: "" }}
-          actionLabel="Check clinic queue"
+          command={{ workspace: "clinical", mode: "nurse", queueTab: "vitals_recorded", dateScope: "today", status: "", priority: "", search: "" }}
+          actionLabel="Review recorded vitals"
         />
       </div>
-
-      <DashboardQuickActions
-        actions={[
-          { label: "Check In Patient", detail: "Mark appointment arrival", icon: UserCheck, href: "#patient-check-in-vitals" },
-          { label: "Record Vitals", detail: "Capture vital signs", icon: Thermometer, href: "#patient-check-in-vitals" },
-          { label: "Monitor Queue", detail: "Review appointment status", icon: Activity, href: "#patient-check-in-vitals" }
-        ]}
-      />
 
       <ClinicalWorkspacePanel mode="nurse" />
       <StaffSelfServicePanel />
