@@ -221,7 +221,19 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
 
   const [isCustomTest, setIsCustomTest] = useState(false);
 
-  const schema = modal.type === "vitals" ? vitalsSchema : modal.type === "consultation" ? consultationSchema : modal.type === "lab-request" ? labRequestSchema : labUpdateSchema;
+  const dynamicResolver = (data, context, options) => {
+    const activeSchema = modal.type === "vitals"
+      ? vitalsSchema
+      : modal.type === "consultation"
+      ? consultationSchema
+      : modal.type === "lab-request"
+      ? labRequestSchema
+      : modal.type === "status"
+      ? z.object({ status: z.string().min(1) })
+      : labUpdateSchema;
+    return zodResolver(activeSchema)(data, context, options);
+  };
+
   const {
     register,
     handleSubmit,
@@ -229,7 +241,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
     setValue,
     watch,
     formState: { errors }
-  } = useForm({ resolver: zodResolver(schema), mode: "onChange" });
+  } = useForm({ resolver: dynamicResolver, mode: "onChange" });
 
   const selectedTestName = watch("testName");
   const selectedPriority = watch("priority");
