@@ -51,6 +51,21 @@ import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
 import { MEDICINE_CATEGORIES } from "./medicineCategories.js";
 
+const MEDICINE_UNITS = [
+  "tablet",
+  "capsule",
+  "bottle",
+  "syrup",
+  "vial",
+  "ampoule",
+  "sachet",
+  "tube",
+  "inhaler",
+  "drop",
+  "cream",
+  "ointment"
+];
+
 const dateOnly = (value) => (value ? new Date(value).toISOString().slice(0, 10) : "-");
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
@@ -1144,7 +1159,15 @@ export const InventoryWorkspacePanel = () => {
                 <option value={cat} key={cat}>{cat}</option>
               ))}
             </FormSelect>
-            <FormInput label="Unit of Measurement" placeholder="tablet, capsule, bottle, syrup" error={errors.unit?.message} {...register("unit")} />
+            <FormSelect label="Unit of Measurement" error={errors.unit?.message} {...register("unit")}>
+              <option value="">Select Unit</option>
+              {modal.record?.unit && !MEDICINE_UNITS.includes(modal.record.unit) ? (
+                <option value={modal.record.unit}>{modal.record.unit}</option>
+              ) : null}
+              {MEDICINE_UNITS.map((unit) => (
+                <option value={unit} key={unit}>{unit.charAt(0).toUpperCase() + unit.slice(1)}</option>
+              ))}
+            </FormSelect>
             <FormSelect label="Status" error={errors.status?.message} {...register("status")}>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
