@@ -12,6 +12,15 @@ const formatDate = (value) => {
   }).format(new Date(value));
 };
 
+// Format just the date portion of an appointment using the slotLabel for the time.
+// This avoids timezone display issues (stored UTC != local display time).
+const formatAppointmentDate = (appointmentDate, slotLabel) => {
+  if (!appointmentDate) return "Not set";
+  const dateOnly = new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(appointmentDate));
+  return slotLabel ? `${dateOnly} — ${slotLabel}` : dateOnly;
+};
+
+
 const emptyText = {
   todayAppointments: "No appointments scheduled for today.",
   upcomingAppointments: "No upcoming appointments.",
@@ -130,7 +139,7 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
   const renderAppointment = (item) => (
     <>
       <div className="patient-record-main">
-        <strong>{formatDate(item.appointmentDate)}</strong>
+        <strong>{formatAppointmentDate(item.appointmentDate, item.slotLabel)}</strong>
         <span>{item.doctorId ? `Dr. ${item.doctorId.firstName} ${item.doctorId.lastName}` : "Doctor pending"}</span>
       </div>
       <div className="patient-record-meta">

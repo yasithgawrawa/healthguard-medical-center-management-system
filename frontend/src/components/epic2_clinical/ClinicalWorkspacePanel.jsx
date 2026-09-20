@@ -115,6 +115,11 @@ const doctorName = (item) => {
 };
 
 const formatDateTime = (value) => (value ? new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "-");
+const formatAppointmentDate = (appointmentDate, slotLabel) => {
+  if (!appointmentDate) return "Not set";
+  const dateOnly = new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(appointmentDate));
+  return slotLabel ? `${dateOnly} — ${slotLabel}` : dateOnly;
+};
 const localDateKey = (value) => {
   const date = value ? new Date(value) : new Date();
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -614,7 +619,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                 </span>
               ) : (
                 <span style={{ fontWeight: 600, fontSize: "0.82rem", color: "#334155" }}>
-                  {formatDateTime(item.appointmentDate)}
+                  {formatAppointmentDate(item.appointmentDate, item.slotLabel)}
                 </span>
               )}
             </div>
@@ -1078,7 +1083,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
                       {patientName(modal.record)}
                     </strong>
                     <span style={{ fontSize: "0.82rem", color: "#64748b" }}>
-                      ({formatDateTime(modal.record.appointmentDate)})
+                      {customerLabel(modal.record)} — <strong>{formatAppointmentDate(modal.record.appointmentDate, modal.record.slotLabel)}</strong>
                     </span>
                   </div>
                   <span

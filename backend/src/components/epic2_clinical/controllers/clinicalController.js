@@ -32,12 +32,15 @@ export const createAppointment = async (req, res) => {
     throw new AppError("Active doctor not found", 404, { doctorId: "Select an active doctor" });
   }
 
-  // Validate that the requested appointmentDate falls on a valid clinic slot (9:00–16:00 UTC, on-the-hour)
+  // Validate that the requested appointmentDate falls on a valid clinic slot.
+  // Slots are stored as IST times (+05:30): clinic hours 9-16 IST = 3:30-10:30 UTC.
+  // We check the IST hour by offsetting by 330 minutes (5h30m).
   const requestedDate = new Date(payload.appointmentDate);
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // UTC+5:30 in milliseconds
+  const istHour = Math.floor(((requestedDate.getTime() + IST_OFFSET_MS) % 86400000) / 3600000);
+  const istMinutes = Math.floor(((requestedDate.getTime() + IST_OFFSET_MS) % 3600000) / 60000);
   const validSlotHours = [9, 10, 11, 12, 13, 14, 15, 16];
-  const requestedHour = requestedDate.getUTCHours();
-  const requestedMinutes = requestedDate.getUTCMinutes();
-  if (!validSlotHours.includes(requestedHour) || requestedMinutes !== 0 || requestedDate.getUTCSeconds() !== 0) {
+  if (!validSlotHours.includes(istHour) || istMinutes !== 0) {
     throw new AppError("Invalid appointment slot. Please select a valid time slot from the available options.", 400, { appointmentDate: "Invalid slot selected" });
   }
 
@@ -84,20 +87,21 @@ export const listAppointmentSlots = async (req, res) => {
   const doctor = await User.findOne({ _id: doctorId, role: ROLES.DOCTOR, status: "active" });
   if (!doctor) throw new AppError("Active doctor not found", 404, { doctorId: "Select an active doctor" });
 
-  // Build slot timestamps as explicit UTC ISO strings using the date string directly.
-  // This avoids server timezone offsets that would corrupt stored appointmentDate values.
-  const slotHours = [9, 10, 11, 12, 13, 14, 15, 16]; // 9:00 AM to 4:00 PM (8 slots)
+  // Build slot timestamps using IST offset (+05:30) so clinic hours 9-16 are stored correctly.
+  // e.g. "09:00 IST" = "2026-09-21T03:30:00.000Z" in UTC — correctly displays as 9 AM locally.
+  const IST_OFFSET = "+05:30";
+  const slotHours = [9, 10, 11, 12, 13, 14, 15, 16];
 
   const slotISOs = slotHours.map((hour) =>
-    `${date}T${String(hour).padStart(2, "0")}:00:00.000Z`
+    `${date}T${String(hour).padStart(2, "00")}:00:00.000${IST_OFFSET}`
   );
 
-  // Find already-booked slots for this doctor on this date
-  const startOfDay = new Date(`${date}T00:00:00.000Z`);
-  const endOfDay = new Date(`${date}T23:59:59.999Z`);
+  // Query window: full IST day — midnight IST to 23:59 IST (expressed in UTC)
+  const startOfDayIST = new Date(`${date}T00:00:00.000${IST_OFFSET}`);
+  const endOfDayIST = new Date(`${date}T23:59:59.999${IST_OFFSET}`);
   const booked = await Appointment.find({
     doctorId,
-    appointmentDate: { $gte: startOfDay, $lte: endOfDay },
+    appointmentDate: { $gte: startOfDayIST, $lte: endOfDayIST },
     status: { $ne: "cancelled" }
   }).select("appointmentDate");
 
@@ -110,8 +114,8 @@ export const listAppointmentSlots = async (req, res) => {
     const label = `${hour < 12 ? "Morning" : "Afternoon"} ${String(hour).padStart(2, "0")}:00`;
     return {
       label,
-      startsAt: iso,
-      available: startsAt > now && !bookedISOs.has(iso)
+      startsAt: startsAt.toISOString(), // canonical UTC ISO for storage
+      available: startsAt > now && !bookedISOs.has(startsAt.toISOString())
     };
   });
 
