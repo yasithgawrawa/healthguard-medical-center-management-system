@@ -22,7 +22,19 @@ import { FormSelect } from "../shared/forms/FormSelect.jsx";
 
 const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
 const getInvoiceClient = (item) => customerLabel(item);
-const staffName = (staff) => [staff?.userId?.firstName, staff?.userId?.lastName].filter(Boolean).join(" ") || staff?.employeeId || "Staff";
+// Resolves a staff name from multiple possible shapes the API may return:
+// 1. Populated: { userId: { firstName, lastName } }
+// 2. Flat merged: { firstName, lastName } (userId fields hoisted)
+// 3. Fallback: employeeId string
+const staffName = (staff) => {
+  if (!staff) return "Unknown";
+  const u = staff.userId || {};
+  const fromNested = [u.firstName, u.lastName].filter(Boolean).join(" ");
+  if (fromNested) return fromNested;
+  const fromFlat = [staff.firstName, staff.lastName].filter(Boolean).join(" ");
+  if (fromFlat) return fromFlat;
+  return staff.employeeId || "—";
+};
 const saveBlob = (blob, filename) => {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -72,11 +84,13 @@ export const BillingWorkspacePanel = () => {
 
   const schema = useMemo(() => {
     if (modal.type === "payment") {
-      const maxBal = modal.record?.outstandingAmount ? Number(modal.record.outstandingAmount) : 10000000;
+      const exactBal = modal.record?.outstandingAmount ? Number(modal.record.outstandingAmount) : 0;
       return z.object({
         amount: z.coerce.number({ invalid_type_error: "Amount is required" })
-          .min(0.01, "Amount must be greater than 0")
-          .max(maxBal, `Amount cannot exceed outstanding balance of Rs. ${maxBal.toFixed(2)}`),
+          .refine(
+            (val) => Math.abs(val - exactBal) <= 0.01,
+            { message: `Full payment of Rs. ${exactBal.toFixed(2)} required. Partial payments are not permitted.` }
+          ),
         method: z.string().min(1, "Payment method is required")
       });
     }
@@ -426,7 +440,11 @@ export const BillingWorkspacePanel = () => {
         <DataTable
           rows={payroll}
           columns={[
-            { key: "staff", header: "Staff", render: (item) => staffName(item.staffId) },
+            { key: "staff", header: "Staff", render: (item) => {
+              // item.staffId is the populated Staff doc; cross-reference staff state as fallback
+              const resolvedStaff = typeof item.staffId === "object" ? item.staffId : staff.find((s) => s._id === item.staffId);
+              return staffName(resolvedStaff) || staffName(staff.find((s) => s._id === (item.staffId?._id || item.staffId)));
+            } },
             { key: "month", header: "Month" },
             { key: "payableShifts", header: "Payable Shifts", render: (item) => item.payableShifts ?? item.attendanceDays },
             { key: "totalShiftHours", header: "Shift Hours", render: (item) => Number(item.totalShiftHours || 0).toFixed(2) },
@@ -480,24 +498,38 @@ export const BillingWorkspacePanel = () => {
               {modal.record ? (
                 <div style={{ background: "#f8fafc", padding: "12px 14px", borderRadius: "8px", border: "1px solid #e2e8f0", marginBottom: "16px" }}>
                   <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#1e3a8a", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                    Patient Visit Charges Breakdown (To be paid at once):
+                    Patient Visit Charges Breakdown (Full Settlement Required):
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                     {modal.record.items?.map((item, idx) => (
                       <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", color: "#334155" }}>
-                        <span>• {item.description} (x{item.quantity})</span>
+                        <span>&bull; {item.description} (x{item.quantity})</span>
                         <strong>{money(item.lineTotal)}</strong>
                       </div>
                     ))}
                     <div style={{ borderTop: "1px dashed #cbd5e1", marginTop: "4px", paddingTop: "8px", display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: "0.92rem", color: "#0f172a" }}>
-                      <span>Consolidated Total Due:</span>
+                      <span>Total Amount Due:</span>
                       <span style={{ color: "#16a34a" }}>{money(modal.record.outstandingAmount)}</span>
                     </div>
                   </div>
                 </div>
               ) : null}
+              {/* Policy notice */}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "8px", padding: "10px 12px", marginBottom: "12px", fontSize: "0.82rem", color: "#1e40af" }}>
+                <span style={{ fontSize: "1rem", lineHeight: 1 }}>ℹ️</span>
+                <span>Health Guard billing policy requires <strong>full invoice settlement in a single transaction</strong>. The amount is automatically set to the full outstanding balance and cannot be changed.</span>
+              </div>
               <div className="form-grid">
-                <FormInput label="Amount" placeholder="1500.00" type="number" min="0.01" step="0.01" error={errors.amount?.message} {...register("amount")} />
+                <FormInput
+                  label="Amount (Rs.) — Full Settlement"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  error={errors.amount?.message}
+                  readOnly
+                  style={{ background: "#f1f5f9", cursor: "not-allowed", fontWeight: 600 }}
+                  {...register("amount")}
+                />
                 <FormSelect label="Method" error={errors.method?.message} {...register("method")}>
                   <option value="cash">Cash</option>
                   <option value="card">Card</option>

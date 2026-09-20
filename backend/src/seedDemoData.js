@@ -778,7 +778,7 @@ await Payment.create({
   verifiedBy: cashier._id
 });
 
-// Invoice 2 — Nethmi's follow-up (consultation only, partially paid)
+// Invoice 2 — Nethmi's follow-up (consultation only, unpaid)
 const invoice2 = await Invoice.create({
   patientId: patients[1]._id,
   appointmentId: appointments[1]._id,
@@ -786,19 +786,10 @@ const invoice2 = await Invoice.create({
     { description: "OPD Consultation – Dr. Amara Perera", quantity: 1, unitPrice: 2500, lineTotal: 2500 }
   ],
   subtotal: 2500,
-  paidAmount: 1500,
-  outstandingAmount: 1000,
-  status: "partially_paid",
+  paidAmount: 0,
+  outstandingAmount: 2500,
+  status: "issued",
   createdBy: cashier._id
-});
-
-await Payment.create({
-  invoiceId: invoice2._id,
-  amount: 1500,
-  method: "card",
-  status: "verified",
-  recordedBy: cashier._id,
-  verifiedBy: cashier._id
 });
 
 // Invoice 3 — Anjali's consultation visit (fully paid)

@@ -446,9 +446,13 @@ export function downloadPayslipPDF(payroll) {
   const WHITE = [255, 255, 255];
   const GRAY_BG = [248, 250, 252];
 
-  const staffUser = payroll?.staffId?.userId;
-  const staffName = typeof staffUser === "object" ? fullName(staffUser) : "Staff Member";
-  const staffEmail = typeof staffUser === "object" ? (staffUser?.email || "") : "";
+  const staffDoc = payroll?.staffId;
+  const staffUser = staffDoc?.userId;
+  // userId may come back as a populated object or as a raw ObjectId string — handle both
+  const staffName = typeof staffUser === "object" && staffUser !== null
+    ? fullName(staffUser)
+    : (staffDoc?.employeeId ? `Employee ${staffDoc.employeeId}` : "Staff Member");
+  const staffEmail = typeof staffUser === "object" && staffUser !== null ? (staffUser?.email || "") : "";
   const employeeId = payroll?.staffId?.employeeId || "—";
   const month = payroll?.month || "—";
   const payStatus = payroll?.status || "draft";

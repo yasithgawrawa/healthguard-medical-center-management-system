@@ -32,6 +32,25 @@ export const createAppointment = async (req, res) => {
     throw new AppError("Active doctor not found", 404, { doctorId: "Select an active doctor" });
   }
 
+  // Validate that the requested appointmentDate falls on a valid clinic slot (9:00–16:00 UTC, on-the-hour)
+  const requestedDate = new Date(payload.appointmentDate);
+  const validSlotHours = [9, 10, 11, 12, 13, 14, 15, 16];
+  const requestedHour = requestedDate.getUTCHours();
+  const requestedMinutes = requestedDate.getUTCMinutes();
+  if (!validSlotHours.includes(requestedHour) || requestedMinutes !== 0 || requestedDate.getUTCSeconds() !== 0) {
+    throw new AppError("Invalid appointment slot. Please select a valid time slot from the available options.", 400, { appointmentDate: "Invalid slot selected" });
+  }
+
+  // Guard against double-booking: re-check availability at submission time
+  const slashClash = await Appointment.findOne({
+    doctorId: payload.doctorId,
+    appointmentDate: requestedDate,
+    status: { $ne: "cancelled" }
+  });
+  if (slashClash) {
+    throw new AppError("This slot has just been booked by someone else. Please select a different time.", 409, { appointmentDate: "Slot no longer available" });
+  }
+
   const appointment = await Appointment.create(payload);
 
   // Automatically initialize patient visit invoice with doctor consultation fee
@@ -65,27 +84,34 @@ export const listAppointmentSlots = async (req, res) => {
   const doctor = await User.findOne({ _id: doctorId, role: ROLES.DOCTOR, status: "active" });
   if (!doctor) throw new AppError("Active doctor not found", 404, { doctorId: "Select an active doctor" });
 
-  const day = new Date(date);
-  day.setHours(0, 0, 0, 0);
-  const nextDay = new Date(day);
-  nextDay.setDate(day.getDate() + 1);
+  // Build slot timestamps as explicit UTC ISO strings using the date string directly.
+  // This avoids server timezone offsets that would corrupt stored appointmentDate values.
+  const slotHours = [9, 10, 11, 12, 13, 14, 15, 16]; // 9:00 AM to 4:00 PM (8 slots)
 
+  const slotISOs = slotHours.map((hour) =>
+    `${date}T${String(hour).padStart(2, "0")}:00:00.000Z`
+  );
+
+  // Find already-booked slots for this doctor on this date
+  const startOfDay = new Date(`${date}T00:00:00.000Z`);
+  const endOfDay = new Date(`${date}T23:59:59.999Z`);
   const booked = await Appointment.find({
     doctorId,
-    appointmentDate: { $gte: day, $lt: nextDay },
+    appointmentDate: { $gte: startOfDay, $lte: endOfDay },
     status: { $ne: "cancelled" }
-  }).select("appointmentDate slotLabel");
+  }).select("appointmentDate");
 
-  const bookedTimes = new Set(booked.map((item) => item.appointmentDate.toISOString()));
-  const slots = Array.from({ length: 8 }, (_, index) => {
-    const hour = 9 + index;
-    const startsAt = new Date(day);
-    startsAt.setHours(hour, 0, 0, 0);
+  const bookedISOs = new Set(booked.map((item) => new Date(item.appointmentDate).toISOString()));
+  const now = new Date();
+
+  const slots = slotISOs.map((iso, index) => {
+    const startsAt = new Date(iso);
+    const hour = slotHours[index];
     const label = `${hour < 12 ? "Morning" : "Afternoon"} ${String(hour).padStart(2, "0")}:00`;
     return {
       label,
-      startsAt,
-      available: startsAt > new Date() && !bookedTimes.has(startsAt.toISOString())
+      startsAt: iso,
+      available: startsAt > now && !bookedISOs.has(iso)
     };
   });
 

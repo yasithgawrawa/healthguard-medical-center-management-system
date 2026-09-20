@@ -25,7 +25,7 @@ import { Payroll } from "./components/epic4_billing/models/Payroll.js";
 
 await connectDatabase();
 
-const defaultPassword = process.env.SEED_ADMIN_PASSWORD || "Admin@12345";
+const defaultPassword = process.env.SEED_ADMIN_PASSWORD || "Pass@12345";
 const passwordHash = await bcrypt.hash(defaultPassword, 12);
 const now = new Date();
 const month = now.toISOString().slice(0, 7);
@@ -38,14 +38,14 @@ const atTime = (dayOffset, hour, minute = 0) => {
 };
 
 const staffUsers = [
-  ["System", "Admin", process.env.SEED_ADMIN_EMAIL || "admin@healthguard.local", "+94112555000", ROLES.ADMIN, "HG-ADM-001", "Administration", "2021-01-04"],
-  ["Kavinda", "Jayawardena", "manager@healthguard.local", "+94112555001", ROLES.MANAGER, "HG-MGR-001", "Operations", "2021-02-15"],
-  ["Amara", "Perera", "doctor@healthguard.local", "+94771234501", ROLES.DOCTOR, "HG-DOC-001", "OPD", "2020-08-10"],
-  ["Ishara", "Silva", "nurse@healthguard.local", "+94771234503", ROLES.NURSE, "HG-NUR-001", "Triage", "2022-03-12"],
-  ["Sanduni", "Rathnayake", "nurse2@healthguard.local", "+94771234504", ROLES.NURSE, "HG-NUR-002", "Ward", "2023-01-18"],
-  ["Dinesh", "Gunasekara", "pharmacist@healthguard.local", "+94771234505", ROLES.PHARMACIST, "HG-PHA-001", "Pharmacy", "2021-09-01"],
-  ["Malsha", "Wijesinghe", "cashier@healthguard.local", "+94771234506", ROLES.CASHIER, "HG-CAS-001", "Billing", "2022-11-07"],
-  ["Tharindu", "Abeysekara", "lab@healthguard.local", "+94771234507", ROLES.LAB_ASSISTANT, "HG-LAB-001", "Laboratory", "2022-06-21"]
+  ["System", "Admin", process.env.SEED_ADMIN_EMAIL || "admin@healthguard.com", "+94112555000", ROLES.ADMIN, "HG-ADM-001", "Administration", "2021-01-04"],
+  ["Kavinda", "Jayawardena", "manager@healthguard.com", "+94112555001", ROLES.MANAGER, "HG-MGR-001", "Operations", "2021-02-15"],
+  ["Amara", "Perera", "doctor@healthguard.com", "+94771234501", ROLES.DOCTOR, "HG-DOC-001", "OPD", "2020-08-10"],
+  ["Ishara", "Silva", "nurse@healthguard.com", "+94771234503", ROLES.NURSE, "HG-NUR-001", "Triage", "2022-03-12"],
+  ["Sanduni", "Rathnayake", "nurse2@healthguard.com", "+94771234504", ROLES.NURSE, "HG-NUR-002", "Ward", "2023-01-18"],
+  ["Dinesh", "Gunasekara", "pharmacist@healthguard.com", "+94771234505", ROLES.PHARMACIST, "HG-PHA-001", "Pharmacy", "2021-09-01"],
+  ["Malsha", "Wijesinghe", "cashier@healthguard.com", "+94771234506", ROLES.CASHIER, "HG-CAS-001", "Billing", "2022-11-07"],
+  ["Tharindu", "Abeysekara", "lab@healthguard.com", "+94771234507", ROLES.LAB_ASSISTANT, "HG-LAB-001", "Laboratory", "2022-06-21"]
 ];
 
 const salaryByEmployeeId = {
@@ -121,7 +121,7 @@ await CenterLocation.findOneAndUpdate(
     latitude: 6.9147,
     longitude: 79.878,
     radiusMeters: 1000,
-    updatedBy: userByEmail.get(process.env.SEED_ADMIN_EMAIL || "admin@healthguard.local")._id
+    updatedBy: userByEmail.get(process.env.SEED_ADMIN_EMAIL || "admin@healthguard.com")._id
   },
   { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
 );
@@ -172,11 +172,11 @@ await LeaveRequest.findOneAndUpdate(
 );
 
 const patients = patientUsers.map(([, , email]) => userByEmail.get(email));
-const doctor1 = userByEmail.get("doctor@healthguard.local");
-const nurse = userByEmail.get("nurse@healthguard.local");
-const labUser = userByEmail.get("lab@healthguard.local");
-const cashier = userByEmail.get("cashier@healthguard.local");
-const pharmacist = userByEmail.get("pharmacist@healthguard.local");
+const doctor1 = userByEmail.get("doctor@healthguard.com");
+const nurse = userByEmail.get("nurse@healthguard.com");
+const labUser = userByEmail.get("lab@healthguard.com");
+const cashier = userByEmail.get("cashier@healthguard.com");
+const pharmacist = userByEmail.get("pharmacist@healthguard.com");
 
 const appointmentSeeds = [
   [patients[0], doctor1, 0, 9, "Morning 09:00", "Fever and body aches", "checked_in"],
@@ -302,17 +302,17 @@ const invoice = await Invoice.findOneAndUpdate(
       { description: "Fasting Blood Sugar", quantity: 1, unitPrice: 650, lineTotal: 650 }
     ],
     subtotal: 2150,
-    paidAmount: 1500,
-    outstandingAmount: 650,
-    status: "partially_paid",
+    paidAmount: 2150,
+    outstandingAmount: 0,
+    status: "paid",
     createdBy: cashier._id
   },
   { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
 );
 
 await Payment.findOneAndUpdate(
-  { invoiceId: invoice._id, amount: 1500 },
-  { invoiceId: invoice._id, amount: 1500, method: "cash", status: "verified", recordedBy: cashier._id, verifiedBy: cashier._id },
+  { invoiceId: invoice._id, amount: 2150 },
+  { invoiceId: invoice._id, amount: 2150, method: "cash", status: "verified", recordedBy: cashier._id, verifiedBy: cashier._id },
   { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
 );
 
@@ -322,14 +322,14 @@ for (const employeeId of ["HG-NUR-001", "HG-PHA-001", "HG-CAS-001"]) {
   const shiftRate = Number((salary.baseSalary / 26).toFixed(2));
   await Payroll.findOneAndUpdate(
     { staffId: staff._id, month },
-    { staffId: staff._id, month, payBasis: "shift", baseSalary: shiftRate * 20, shiftRate, scheduledShifts: 20, payableShifts: 20, attendanceDays: 20, allowances: salary.allowances, deductions: salary.deductions, netSalary: Math.max(shiftRate * 20 + salary.allowances - salary.deductions, 0), status: "reviewed", reviewedBy: userByEmail.get("manager@healthguard.local")._id },
+    { staffId: staff._id, month, payBasis: "shift", baseSalary: shiftRate * 20, shiftRate, scheduledShifts: 20, payableShifts: 20, attendanceDays: 20, allowances: salary.allowances, deductions: salary.deductions, netSalary: Math.max(shiftRate * 20 + salary.allowances - salary.deductions, 0), status: "reviewed", reviewedBy: userByEmail.get("manager@healthguard.com")._id },
     { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
   );
 }
 
 console.log("Sri Lankan Health Guard demo seed complete.");
 console.log(`Default password for seeded users: ${defaultPassword}`);
-console.log("Demo logins: admin@healthguard.local, manager@healthguard.local, doctor@healthguard.local, nurse@healthguard.local, pharmacist@healthguard.local, cashier@healthguard.local, lab@healthguard.local");
+console.log("Demo logins: admin@healthguard.com, manager@healthguard.com, doctor@healthguard.com, nurse@healthguard.com, pharmacist@healthguard.com, cashier@healthguard.com, lab@healthguard.com");
 
 await mongoose.connection.close();
 process.exit(0);

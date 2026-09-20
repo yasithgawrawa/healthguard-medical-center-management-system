@@ -14,7 +14,8 @@ import { AppError } from "../../../shared/utils/AppError.js";
 const recalculateInvoice = (invoice) => {
   invoice.paidAmount = Math.min(invoice.paidAmount, invoice.subtotal);
   invoice.outstandingAmount = Math.max(invoice.subtotal - invoice.paidAmount, 0);
-  invoice.status = invoice.outstandingAmount === 0 ? "paid" : invoice.paidAmount > 0 ? "partially_paid" : "issued";
+  // Partial payments are not permitted — status is strictly issued → paid
+  invoice.status = invoice.outstandingAmount === 0 ? "paid" : "issued";
 };
 
 const roundMoney = (value) => Number(Number(value || 0).toFixed(2));
@@ -135,16 +136,24 @@ export const recordPayment = async (req, res) => {
   const invoice = await Invoice.findById(req.body.invoiceId);
   if (!invoice) throw new AppError("Invoice not found", 404);
   if (invoice.status === "cancelled" || invoice.outstandingAmount <= 0) throw new AppError("Invoice is not payable", 409);
-  if (req.body.amount > invoice.outstandingAmount) throw new AppError("Payment exceeds outstanding balance", 400);
 
-  const payment = await Payment.create({ ...req.body, recordedBy: req.user._id });
-  invoice.paidAmount += req.body.amount;
+  // Partial payments are not permitted — enforce full settlement in a single transaction
+  const requestedAmount = roundMoney(req.body.amount);
+  const outstanding = roundMoney(invoice.outstandingAmount);
+  if (Math.abs(requestedAmount - outstanding) > 0.01) {
+    throw new AppError(
+      `Full payment required. Outstanding balance is Rs. ${outstanding.toFixed(2)}. Partial payments are not permitted.`,
+      400
+    );
+  }
+
+  const payment = await Payment.create({ ...req.body, amount: outstanding, recordedBy: req.user._id });
+  invoice.paidAmount += outstanding;
   recalculateInvoice(invoice);
   await invoice.save();
 
-  if (invoice.status === "paid") {
-    await PharmacySale.updateMany({ invoiceId: invoice._id }, { paymentStatus: "paid" });
-  }
+  // Mark all related pharmacy sales as paid
+  await PharmacySale.updateMany({ invoiceId: invoice._id }, { paymentStatus: "paid" });
 
   return successResponse(res, "Payment recorded successfully", { payment, invoice }, 201);
 };
@@ -301,7 +310,7 @@ export const consolidatePatientInvoices = async (req, res) => {
 
   const unpaidInvoices = await Invoice.find({
     patientId,
-    status: { $in: ["issued", "partially_paid", "draft"] }
+    status: { $in: ["issued", "draft"] }
   }).sort({ createdAt: 1 });
 
   if (unpaidInvoices.length <= 1) {
@@ -397,8 +406,7 @@ export const getDoctorEarnings = async (req, res) => {
     });
     const fee = consultItem ? Number(consultItem.lineTotal || 0) : Number(inv?.subtotal || 0);
     const isPaid = inv?.status === "paid";
-    const isPartial = inv?.status === "partially_paid";
-    const paid = isPaid ? fee : isPartial ? Math.min(Number(inv.paidAmount || 0), fee) : 0;
+    const paid = isPaid ? fee : 0;
     const due = Math.max(fee - paid, 0);
 
     if (fee > 0) {

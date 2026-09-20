@@ -80,11 +80,19 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
       .finally(() => setLoadingSlots(false));
   }, [form.doctorId, form.appointmentDay]);
 
-  const availableSlots = useMemo(() => slots.filter((slot) => slot.available), [slots]);
-
   const setField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
     setFieldErrors((current) => ({ ...current, [field]: "" }));
+  };
+
+  const selectSlot = (slot) => {
+    if (!slot.available) return;
+    setForm((current) => ({
+      ...current,
+      appointmentDate: slot.startsAt,
+      slotLabel: slot.label
+    }));
+    setFieldErrors((current) => ({ ...current, appointmentDate: "" }));
   };
 
   const validate = () => {
@@ -133,16 +141,27 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
     return fullName.startsWith("Dr.") ? fullName : `Dr. ${fullName}`;
   };
 
-  const selectedSlot = slots.find((s) => s.startsAt === form.appointmentDate);
   const reasonLength = form.reason.length;
   const reasonOverLimit = reasonLength > REASON_MAX;
+
+  // Format the slot hour for display e.g. "09:00" → "9:00 AM", "14:00" → "2:00 PM"
+  const formatSlotTime = (label) => {
+    // label is like "Morning 09:00" or "Afternoon 14:00" — extract the hour part
+    const parts = label.split(" ");
+    const timePart = parts[parts.length - 1]; // "09:00"
+    const [hourStr] = timePart.split(":");
+    const hour = parseInt(hourStr, 10);
+    const ampm = hour < 12 ? "AM" : "PM";
+    const displayHour = hour > 12 ? hour - 12 : hour;
+    return `${displayHour}:00 ${ampm}`;
+  };
 
   return (
     <section className="operation-panel" id="book-appointment">
       <div className="operation-header">
         <div>
           <h2>Book An Appointment</h2>
-          <p>Select a doctor, appointment time, slot and reason. The booking is saved under your patient account.</p>
+          <p>Select a doctor, pick a date, then choose from the available time slots.</p>
         </div>
         <CalendarCheck size={24} color="var(--brand-600)" />
       </div>
@@ -221,42 +240,124 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
             />
             {fieldErrors.appointmentDay ? <small>{fieldErrors.appointmentDay}</small> : null}
           </label>
+
+          {/* Slot picker grid */}
+          {form.doctorId && form.appointmentDay ? (
+            <div style={{ marginTop: "4px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-primary, #1a202c)" }}>
+                  Available Time Slots
+                </span>
+                {loadingSlots ? (
+                  <span style={{ fontSize: "0.78rem", color: "var(--text-secondary, #5a6577)" }}>Loading slots...</span>
+                ) : (
+                  <span style={{ fontSize: "0.78rem", color: "var(--text-secondary, #5a6577)" }}>
+                    {slots.filter(s => s.available).length} of {slots.length} available
+                  </span>
+                )}
+              </div>
+
+              {loadingSlots ? (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px" }}>
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} style={{
+                      height: "52px",
+                      borderRadius: "8px",
+                      background: "#f1f5f9",
+                      border: "1px solid #e2e8f0",
+                      animation: "pulse 1.5s ease-in-out infinite"
+                    }} />
+                  ))}
+                </div>
+              ) : slots.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "20px", color: "var(--text-secondary, #5a6577)", fontSize: "0.85rem", background: "#f8fafc", borderRadius: "8px", border: "1px dashed #e2e8f0" }}>
+                  No slots available for this date
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px" }}>
+                  {slots.map((slot) => {
+                    const isSelected = form.appointmentDate === slot.startsAt;
+                    const isAvailable = slot.available;
+                    return (
+                      <button
+                        key={slot.startsAt}
+                        type="button"
+                        disabled={!isAvailable || submitting}
+                        onClick={() => selectSlot(slot)}
+                        title={isAvailable ? `Book ${slot.label}` : "This slot is already booked"}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "2px",
+                          padding: "8px 4px",
+                          borderRadius: "8px",
+                          border: isSelected
+                            ? "2px solid var(--brand-600, #4f46e5)"
+                            : isAvailable
+                              ? "1px solid #d1d5db"
+                              : "1px solid #e5e7eb",
+                          background: isSelected
+                            ? "var(--brand-600, #4f46e5)"
+                            : isAvailable
+                              ? "#ffffff"
+                              : "#f3f4f6",
+                          color: isSelected
+                            ? "#ffffff"
+                            : isAvailable
+                              ? "var(--text-primary, #1a202c)"
+                              : "#9ca3af",
+                          cursor: isAvailable ? "pointer" : "not-allowed",
+                          fontSize: "0.8rem",
+                          fontWeight: isSelected ? 700 : isAvailable ? 500 : 400,
+                          transition: "all 0.15s ease",
+                          boxShadow: isSelected ? "0 2px 8px rgba(79,70,229,0.3)" : isAvailable ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
+                          position: "relative",
+                          overflow: "hidden"
+                        }}
+                      >
+                        <Clock size={12} style={{ opacity: isAvailable ? 1 : 0.4 }} />
+                        <span style={{ fontSize: "0.82rem", fontWeight: isSelected ? 700 : 600, lineHeight: 1.2 }}>
+                          {formatSlotTime(slot.label)}
+                        </span>
+                        {!isAvailable ? (
+                          <span style={{ fontSize: "0.65rem", color: "#9ca3af", lineHeight: 1 }}>Booked</span>
+                        ) : isSelected ? (
+                          <span style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.85)", lineHeight: 1 }}>Selected ✓</span>
+                        ) : (
+                          <span style={{ fontSize: "0.65rem", color: "#6b7280", lineHeight: 1 }}>Available</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Selected slot confirmation */}
+              {form.appointmentDate && form.slotLabel ? (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: "6px",
+                  fontSize: "0.84rem", color: "var(--brand-600)", marginTop: "10px",
+                  fontWeight: 500, background: "#eef2ff", borderRadius: "6px",
+                  padding: "6px 10px", border: "1px solid #c7d2fe"
+                }}>
+                  <CheckCircle2 size={14} />
+                  <span>
+                    <strong>{form.slotLabel}</strong> — {new Date(form.appointmentDay).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", year: "numeric" })}
+                  </span>
+                </div>
+              ) : null}
+
+              {fieldErrors.appointmentDate ? (
+                <small style={{ color: "var(--danger, #e53e3e)", display: "block", marginTop: "4px" }}>{fieldErrors.appointmentDate}</small>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <div className="operation-form-card">
           <h3>Visit Reason</h3>
-          <label className={`form-field${fieldErrors.appointmentDate ? " has-error" : ""}`}>
-            <span>Available Slot {availableSlots.length > 0 ? <span style={{ fontWeight: 400, fontSize: "0.8rem", color: "var(--text-secondary, #5a6577)" }}>({availableSlots.length} available)</span> : null}</span>
-            <select
-              value={form.appointmentDate}
-              onChange={(event) => {
-                const slot = slots.find((item) => item.startsAt === event.target.value);
-                setField("appointmentDate", event.target.value);
-                setField("slotLabel", slot?.label || "");
-              }}
-              required
-              disabled={submitting || loadingSlots || !availableSlots.length}
-              aria-invalid={Boolean(fieldErrors.appointmentDate)}
-            >
-              <option value="">
-                {loadingSlots ? "Loading slots..." : availableSlots.length === 0 && form.appointmentDay ? "No slots available for this date" : "Select available slot"}
-              </option>
-              {availableSlots.map((slot) => (
-                <option value={slot.startsAt} key={slot.startsAt}>
-                  {slot.label}
-                </option>
-              ))}
-            </select>
-            {fieldErrors.appointmentDate ? <small>{fieldErrors.appointmentDate}</small> : null}
-          </label>
-
-          {/* Selected slot preview */}
-          {selectedSlot ? (
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "var(--brand-600)", margin: "0 0 6px", fontWeight: 500 }}>
-              <Clock size={14} />
-              <span>{selectedSlot.label} — {new Date(form.appointmentDay).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", year: "numeric" })}</span>
-            </div>
-          ) : null}
 
           <label className={`form-field${fieldErrors.reason ? " has-error" : ""}`}>
             <span>Reason</span>
@@ -282,6 +383,24 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
               </small>
             </div>
           </label>
+
+          {/* Booking summary before submit */}
+          {form.appointmentDate && form.slotLabel && selectedDoctor ? (
+            <div style={{
+              background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "8px",
+              padding: "12px 14px", marginBottom: "8px", display: "flex", flexDirection: "column", gap: "6px"
+            }}>
+              <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#166534", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                Booking Summary
+              </div>
+              <div style={{ fontSize: "0.84rem", color: "#166534", display: "flex", flexDirection: "column", gap: "3px" }}>
+                <span>👨‍⚕️ {doctorDisplayName(selectedDoctor)}</span>
+                <span>📅 {new Date(form.appointmentDay).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</span>
+                <span>⏰ {form.slotLabel}</span>
+                <span>💰 Consultation Fee: <strong>{money(selectedDoctor.consultationFee)}</strong></span>
+              </div>
+            </div>
+          ) : null}
 
           <button className="submit-button" type="submit" disabled={submitting || loading}>
             {submitting ? <RefreshCw className="spin-animation" size={16} /> : <Send size={16} />}

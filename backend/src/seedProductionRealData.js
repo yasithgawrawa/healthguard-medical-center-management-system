@@ -1270,7 +1270,7 @@ const invoice1 = await Invoice.create({
   createdBy: cashierUser._id
 });
 
-// 3. Partially Paid Invoice for Fathima Razeek (Consultation + Urgent ECG)
+// 3. Unpaid Invoice for Fathima Razeek (Consultation + Urgent ECG)
 const invoice3 = await Invoice.create({
   patientId: appt3.patientId,
   appointmentId: appt3._id,
@@ -1279,21 +1279,12 @@ const invoice3 = await Invoice.create({
     { description: "ECG 12-Lead Investigation", quantity: 1, unitPrice: 1200, lineTotal: 1200 }
   ],
   subtotal: 2700,
-  paidAmount: 1500,
-  outstandingAmount: 1200,
-  status: "partially_paid",
+  paidAmount: 0,
+  outstandingAmount: 2700,
+  status: "issued",
   createdBy: cashierUser._id
 });
-
-const payment3 = await Payment.create({
-  invoiceId: invoice3._id,
-  amount: 1500,
-  method: "cash",
-  status: "verified",
-  recordedBy: cashierUser._id,
-  verifiedBy: cashierUser._id
-});
-console.log("   ✓ Invoices seeded: Paid (Card), Unpaid (Issued), and Partially Paid (Cash).");
+console.log("   ✓ Invoices seeded: Paid (Card), Unpaid (Issued), and Unpaid (Issued).");
 
 // ============================================================================
 const invoice6 = await Invoice.create({
@@ -1304,22 +1295,13 @@ const invoice6 = await Invoice.create({
     { description: "Respiratory medication dispense", quantity: 1, unitPrice: respiratorySale.total, lineTotal: respiratorySale.total }
   ],
   subtotal: 2470,
-  paidAmount: 1000,
-  outstandingAmount: 1470,
-  status: "partially_paid",
+  paidAmount: 0,
+  outstandingAmount: 2470,
+  status: "issued",
   createdBy: cashierUser._id
 });
 respiratorySale.invoiceId = invoice6._id;
 await respiratorySale.save();
-
-await Payment.create({
-  invoiceId: invoice6._id,
-  amount: 1000,
-  method: "cash",
-  status: "verified",
-  recordedBy: cashierUser._id,
-  verifiedBy: cashierUser._id
-});
 
 const invoice7 = await Invoice.create({
   patientId: appt7.patientId,
