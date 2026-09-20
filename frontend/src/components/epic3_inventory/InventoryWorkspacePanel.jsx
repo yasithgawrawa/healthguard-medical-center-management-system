@@ -1467,26 +1467,6 @@ export const InventoryWorkspacePanel = () => {
                     ))}
                   </FormSelect>
 
-                  <FormSelect
-                    label="Doctor Prescription Source"
-                    value={posPrescriptionId}
-                    onChange={(e) => {
-                      setPosPrescriptionId(e.target.value);
-                      const selectedRx = prescriptions.find((r) => r._id === e.target.value);
-                      if (selectedRx && selectedRx.patientId?._id) {
-                        setPosPatientId(selectedRx.patientId._id);
-                      }
-                    }}
-                  >
-                    <option value="">Handwritten Prescription (Paper Slip)</option>
-                    {prescriptions
-                      .filter((r) => !posPatientId || (r.patientId?._id || r.patientId) === posPatientId)
-                      .map((r) => (
-                        <option value={r._id} key={r._id}>
-                          E-Prescription: Dr. {r.doctorId?.lastName || "Doctor"} - {r.items?.map((i) => i.medicineName).join(", ")}
-                        </option>
-                      ))}
-                  </FormSelect>
                 </div>
 
                 {!posPrescriptionId && posPatientId ? (
