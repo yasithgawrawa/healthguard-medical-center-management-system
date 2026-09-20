@@ -22,7 +22,7 @@ import {
   UserCheck,
   Zap
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { clinicalApi } from "../../services/clinicalApi.js";
@@ -221,18 +221,21 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
 
   const [isCustomTest, setIsCustomTest] = useState(false);
 
-  const dynamicResolver = (data, context, options) => {
-    const activeSchema = modal.type === "vitals"
-      ? vitalsSchema
-      : modal.type === "consultation"
-      ? consultationSchema
-      : modal.type === "lab-request"
-      ? labRequestSchema
-      : modal.type === "status"
-      ? z.object({ status: z.string().min(1) })
-      : labUpdateSchema;
-    return zodResolver(activeSchema)(data, context, options);
-  };
+  const dynamicResolver = useCallback(
+    (data, context, options) => {
+      const activeSchema = modal.type === "vitals"
+        ? vitalsSchema
+        : modal.type === "consultation"
+        ? consultationSchema
+        : modal.type === "lab-request"
+        ? labRequestSchema
+        : modal.type === "status"
+        ? z.object({ status: z.string().min(1) })
+        : labUpdateSchema;
+      return zodResolver(activeSchema)(data, context, options);
+    },
+    [modal.type]
+  );
 
   const {
     register,
