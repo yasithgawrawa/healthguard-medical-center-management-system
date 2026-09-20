@@ -22,7 +22,7 @@ import {
   UserCheck,
   Zap
 } from "lucide-react";
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { clinicalApi } from "../../services/clinicalApi.js";
@@ -38,7 +38,7 @@ import { FormTextarea } from "../shared/forms/FormTextarea.jsx";
 import { bloodPressurePattern, optionalVitalsNumber } from "../../utils/validationSchemas.js";
 import { printLabReportPDF } from "../../utils/invoicePrintTemplate.js";
 import { DASHBOARD_COMMAND_EVENT } from "../../utils/dashboardCommands.js";
-import { patientLabel } from "../../utils/personLabels.js";
+import { customerLabel, patientLabel } from "../../utils/personLabels.js";
 
 const patientName = (item) => {
   const patient = item?.patientId || {};
@@ -221,20 +221,25 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
 
   const [isCustomTest, setIsCustomTest] = useState(false);
 
+  const activeSchemaRef = useRef(z.object({}));
+
+  activeSchemaRef.current = modal.type === "vitals"
+    ? vitalsSchema
+    : modal.type === "consultation"
+    ? consultationSchema
+    : modal.type === "lab-request"
+    ? labRequestSchema
+    : modal.type === "status"
+    ? z.object({ status: z.string().min(1) })
+    : modal.type === "lab-update"
+    ? labUpdateSchema
+    : z.object({});
+
   const dynamicResolver = useCallback(
     (data, context, options) => {
-      const activeSchema = modal.type === "vitals"
-        ? vitalsSchema
-        : modal.type === "consultation"
-        ? consultationSchema
-        : modal.type === "lab-request"
-        ? labRequestSchema
-        : modal.type === "status"
-        ? z.object({ status: z.string().min(1) })
-        : labUpdateSchema;
-      return zodResolver(activeSchema)(data, context, options);
+      return zodResolver(activeSchemaRef.current)(data, context, options);
     },
-    [modal.type]
+    []
   );
 
   const {

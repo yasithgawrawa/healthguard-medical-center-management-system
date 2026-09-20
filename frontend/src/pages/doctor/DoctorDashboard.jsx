@@ -42,12 +42,15 @@ export const DoctorDashboard = () => {
       clinicalApi.listDoctors().catch(() => []),
       billingApi.doctorEarnings().catch(() => null)
     ]).then(([appointments, labRequests, doctors, earningsData]) => {
+      const apptList = Array.isArray(appointments) ? appointments : [];
+      const labList = Array.isArray(labRequests) ? labRequests : [];
+      const docList = Array.isArray(doctors) ? doctors : [];
       const today = new Date().toISOString().slice(0, 10);
-      const todayAppts = (appointments || []).filter((a) => (a.appointmentDate || "").slice(0, 10) === today);
-      const waiting = (appointments || []).filter((a) => a.status === "checked_in");
-      const completed = (appointments || []).filter((a) => a.status === "completed");
+      const todayAppts = apptList.filter((a) => (a.appointmentDate || "").slice(0, 10) === today);
+      const waiting = apptList.filter((a) => a.status === "checked_in");
+      const completed = apptList.filter((a) => a.status === "completed");
 
-      const me = doctors.find((d) => d._id === user?._id || d.email === user?.email);
+      const me = docList.find((d) => d._id === user?._id || d.email === user?.email);
       if (me?.consultationFee) {
         setMyFee(me.consultationFee);
         setNewFeeInput(me.consultationFee);
@@ -59,9 +62,9 @@ export const DoctorDashboard = () => {
 
       setMetrics({
         waitingCount: waiting.length,
-        todayApptCount: todayAppts.length || appointments.filter((a) => ["booked", "checked_in"].includes(a.status)).length,
+        todayApptCount: todayAppts.length || apptList.filter((a) => ["booked", "checked_in"].includes(a.status)).length,
         completedCount: completed.length,
-        labOrderCount: (labRequests || []).length
+        labOrderCount: labList.length
       });
     });
   };

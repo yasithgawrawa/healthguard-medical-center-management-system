@@ -31,10 +31,21 @@ const isAllowedVercelPreview = (origin) => {
   }
 };
 
+const isAllowedLocalDevelopment = (origin) => {
+  try {
+    const { hostname, port, protocol } = new URL(origin);
+    return (hostname === "localhost" || hostname === "127.0.0.1") &&
+      protocol === "http:" &&
+      /^51[0-9]{2}$/.test(port);
+  } catch {
+    return false;
+  }
+};
+
 app.use(helmet());
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.has(origin) || isAllowedVercelPreview(origin)) {
+    if (!origin || allowedOrigins.has(origin) || isAllowedVercelPreview(origin) || isAllowedLocalDevelopment(origin)) {
       return callback(null, true);
     }
     return callback(new Error("Origin not allowed by CORS"));

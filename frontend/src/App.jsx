@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./components/shared/ProtectedRoute.jsx";
+import { ErrorBoundary } from "./components/shared/ErrorBoundary.jsx";
 import { DashboardLayout } from "./layouts/DashboardLayout.jsx";
 import { PublicLayout } from "./layouts/PublicLayout.jsx";
 import { AdminDashboard } from "./pages/admin/AdminDashboard.jsx";
@@ -29,23 +30,26 @@ const protectedRoutes = [
 
 export default function App() {
   return (
-    <Routes>
-      <Route element={<PublicLayout />}>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/unauthorized" element={<UnauthorizedPage />} />
-      </Route>
-
-      {protectedRoutes.map(([path, roles, element]) => (
-        <Route key={path} element={<ProtectedRoute allowedRoles={roles} />}>
-          <Route element={<DashboardLayout />}>
-            <Route path={path} element={element} />
-          </Route>
+    <ErrorBoundary>
+      <Routes>
+        <Route element={<PublicLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/unauthorized" element={<UnauthorizedPage />} />
         </Route>
-      ))}
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {protectedRoutes.map(([path, roles, element]) => (
+          <Route key={path} element={<ProtectedRoute allowedRoles={roles} />}>
+            <Route element={<DashboardLayout />}>
+              <Route path={path} element={<ErrorBoundary>{element}</ErrorBoundary>} />
+            </Route>
+          </Route>
+        ))}
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </ErrorBoundary>
   );
 }
+
