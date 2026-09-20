@@ -189,6 +189,12 @@ export const createPayroll = async (req, res) => {
     allowances: req.body.allowances,
     deductions: req.body.deductions
   });
+  if (calculated.payableShifts === 0) {
+    throw new AppError("Payroll cannot be created without at least one completed, checked-out shift", 409);
+  }
+  if (calculated.deductions > calculated.baseSalary + calculated.allowances) {
+    throw new AppError("Deductions cannot exceed gross shift pay plus allowances", 400, { deductions: "Deductions are too high" });
+  }
   const payroll = await Payroll.create({
     staffId: req.body.staffId,
     month: req.body.month,
@@ -237,6 +243,12 @@ export const updatePayrollStatus = async (req, res) => {
   if (!payroll) throw new AppError("Payroll not found", 404);
   const allowed = { draft: "reviewed", reviewed: "approved", approved: "paid" };
   if (allowed[payroll.status] !== req.body.status) throw new AppError("Invalid payroll state transition", 409);
+  if (["reviewed", "approved"].includes(req.body.status) && ![ROLES.MANAGER, ROLES.ADMIN].includes(req.user.role)) {
+    throw new AppError("Only a manager or admin can review and approve payroll", 403);
+  }
+  if (req.body.status === "paid" && ![ROLES.CASHIER, ROLES.ADMIN].includes(req.user.role)) {
+    throw new AppError("Only a cashier or admin can mark payroll as paid", 403);
+  }
   payroll.status = req.body.status;
   if (req.body.status === "reviewed") payroll.reviewedBy = req.user._id;
   if (req.body.status === "approved") payroll.approvedBy = req.user._id;

@@ -2,6 +2,11 @@ import { z } from "zod";
 import { moneySchema, phoneSchema, quantitySchema } from "../../../shared/validators/fieldSchemas.js";
 import { idParamSchema, objectIdSchema } from "../../../shared/validators/commonSchemas.js";
 
+const payrollMonthSchema = z.string()
+  .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Month must be YYYY-MM")
+  .refine((month) => month <= new Date().toISOString().slice(0, 7), "Future payroll months are not allowed")
+  .refine((month) => Number(month.slice(0, 4)) >= new Date().getFullYear() - 5, "Payroll month is too old");
+
 export const invoiceSchema = z.object({
   body: z.object({
     patientId: objectIdSchema.optional(),
@@ -35,7 +40,7 @@ export const paymentStatusSchema = z.object({
 export const payrollSchema = z.object({
   body: z.object({
     staffId: objectIdSchema,
-    month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Month must be YYYY-MM"),
+    month: payrollMonthSchema,
     baseSalary: moneySchema("Gross shift pay").optional(),
     shiftRate: moneySchema("Shift rate").optional(),
     allowances: moneySchema("Allowances").optional().default(0),
@@ -46,7 +51,7 @@ export const payrollSchema = z.object({
 export const payrollPreviewSchema = z.object({
   body: z.object({
     staffId: objectIdSchema,
-    month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Month must be YYYY-MM"),
+    month: payrollMonthSchema,
     shiftRate: moneySchema("Shift rate").optional(),
     allowances: moneySchema("Allowances").optional().default(0),
     deductions: moneySchema("Deductions").optional().default(0)

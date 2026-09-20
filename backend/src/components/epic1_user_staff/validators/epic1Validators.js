@@ -74,25 +74,42 @@ export const shiftSchema = z.object({
   }).refine((data) => data.endTime > data.startTime, {
     path: ["endTime"],
     message: "End time must be after start time"
+  }).refine((data) => data.startTime >= new Date(Date.now() - 5 * 60 * 1000), {
+    path: ["startTime"],
+    message: "Shift start time cannot be in the past"
   })
 });
 
 export const bulkShiftSchema = z.object({
   body: z.object({
-    staffIds: z.array(objectIdSchema).min(1, "Select at least one staff member").max(50, "Too many staff members selected"),
+    staffIds: z.array(objectIdSchema).min(1, "Select at least one staff member").max(50, "Too many staff members selected")
+      .refine((ids) => new Set(ids).size === ids.length, "Duplicate staff members are not allowed"),
     startDate: z.coerce.date(),
     endDate: z.coerce.date(),
     startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Start time must be HH:mm"),
     endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "End time must be HH:mm"),
-    weekdays: z.array(z.coerce.number().int().min(0).max(6)).min(1, "Select at least one weekday").max(7),
+    weekdays: z.array(z.coerce.number().int().min(0).max(6)).min(1, "Select at least one weekday").max(7)
+      .refine((days) => new Set(days).size === days.length, "Duplicate weekdays are not allowed"),
     location: z.string().trim().max(120).optional(),
     notes: z.string().trim().max(250).optional().default("")
   }).refine((data) => data.endDate >= data.startDate, {
     path: ["endDate"],
     message: "End date must be on or after start date"
+  }).refine((data) => data.startDate >= new Date(new Date().setHours(0, 0, 0, 0)), {
+    path: ["startDate"],
+    message: "Roster start date cannot be in the past"
+  }).refine((data) => (data.endDate - data.startDate) / 86400000 <= 92, {
+    path: ["endDate"],
+    message: "Roster range cannot exceed 93 days"
   }).refine((data) => data.endTime > data.startTime, {
     path: ["endTime"],
     message: "End time must be after start time"
+  }).refine((data) => {
+    const days = Math.floor((data.endDate - data.startDate) / 86400000) + 1;
+    return days * data.staffIds.length <= 1500;
+  }, {
+    path: ["staffIds"],
+    message: "Roster is too large; reduce the date range or selected staff"
   })
 });
 
