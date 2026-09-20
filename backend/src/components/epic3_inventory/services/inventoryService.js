@@ -270,6 +270,7 @@ export const inventoryService = {
 
       processedItems.push({
         batch,
+        medicineName: medicine.name,
         itemRecord: {
           medicineId: medicine._id,
           batchId: batch._id,
@@ -300,9 +301,9 @@ export const inventoryService = {
       try {
         const latestAppt = await Appointment.findOne({ patientId }).sort({ appointmentDate: -1 });
         if (latestAppt) {
-          const rxItems = processedItems.map(({ itemRecord, batch }) => {
+          const rxItems = processedItems.map(({ itemRecord, batch, medicineName }) => {
             return {
-              medicineName: itemRecord.medicineId?.name || `Medicine (${batch?.batchNumber || "Dispensed"})`,
+              medicineName: medicineName || `Medicine (${batch?.batchNumber || "Dispensed"})`,
               dosage: `${itemRecord.quantity} unit(s)`,
               frequency: "As directed on handwritten prescription",
               duration: "Dispensed course",
@@ -326,8 +327,8 @@ export const inventoryService = {
 
     let createdInvoiceId = undefined;
     try {
-      const invoiceItems = processedItems.map(({ itemRecord, batch }) => ({
-        description: `Dispensed Medicine: ${itemRecord.medicineId?.name || "Medication"} (${batch?.batchNumber || "Dispensed"})`,
+      const invoiceItems = processedItems.map(({ itemRecord, batch, medicineName }) => ({
+        description: `Dispensed Medicine: ${medicineName || "Medication"} (${batch?.batchNumber || "Dispensed"})`,
         quantity: itemRecord.quantity,
         unitPrice: itemRecord.unitPrice,
         lineTotal: itemRecord.lineTotal
@@ -337,40 +338,19 @@ export const inventoryService = {
 
       if (patientId) {
         const latestAppt = await Appointment.findOne({ patientId }).sort({ appointmentDate: -1 });
-
-        // Check if there is an active open visit invoice for this patient / appointment
-        let existingInvoice = null;
-        if (latestAppt?._id) {
-          existingInvoice = await Invoice.findOne({ appointmentId: latestAppt._id, status: { $in: ["issued", "partially_paid", "draft"] } });
-        }
-        if (!existingInvoice) {
-          existingInvoice = await Invoice.findOne({ patientId, status: { $in: ["issued", "partially_paid", "draft"] } }).sort({ createdAt: -1 });
-        }
-
-        if (existingInvoice && !isPaid) {
-          // Consolidate medicines into the patient's existing visit bill so they can pay all at once
-          existingInvoice.items.push(...invoiceItems);
-          existingInvoice.subtotal = existingInvoice.items.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
-          existingInvoice.outstandingAmount = Math.max(0, existingInvoice.subtotal - (existingInvoice.paidAmount || 0));
-          if (!existingInvoice.appointmentId && latestAppt?._id) {
-            existingInvoice.appointmentId = latestAppt._id;
-          }
-          await existingInvoice.save();
-          createdInvoiceId = existingInvoice._id;
-        } else {
-          // Otherwise create a new invoice
-          const newInvoice = await Invoice.create({
-            patientId,
-            appointmentId: latestAppt?._id || undefined,
-            items: invoiceItems,
-            subtotal: grandTotal,
-            paidAmount: isPaid ? grandTotal : 0,
-            outstandingAmount: isPaid ? 0 : grandTotal,
-            status: isPaid ? "paid" : "issued",
-            createdBy: soldById
-          });
-          createdInvoiceId = newInvoice._id;
-        }
+        // Pharmacy charges are always collected as a separate payment from visit services.
+        const newInvoice = await Invoice.create({
+          patientId,
+          appointmentId: latestAppt?._id || undefined,
+          invoiceType: "pharmacy",
+          items: invoiceItems,
+          subtotal: grandTotal,
+          paidAmount: isPaid ? grandTotal : 0,
+          outstandingAmount: isPaid ? 0 : grandTotal,
+          status: isPaid ? "paid" : "issued",
+          createdBy: soldById
+        });
+        createdInvoiceId = newInvoice._id;
       } else {
         // UNREGISTERED / WALK-IN CUSTOMER:
         // Automatically create an invoice for the Cashier desk to collect payment
@@ -378,6 +358,7 @@ export const inventoryService = {
         const newInvoice = await Invoice.create({
           customerName: walkInDisplayName,
           customerPhone,
+          invoiceType: "pharmacy",
           items: invoiceItems,
           subtotal: grandTotal,
           paidAmount: isPaid ? grandTotal : 0,

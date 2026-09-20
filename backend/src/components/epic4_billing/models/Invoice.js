@@ -16,6 +16,7 @@ const invoiceSchema = new mongoose.Schema(
     customerName: { type: String, trim: true },
     customerPhone: { type: String, trim: true },
     appointmentId: { type: mongoose.Schema.Types.ObjectId, ref: "Appointment" },
+    invoiceType: { type: String, enum: ["visit", "pharmacy", "manual"], default: "visit", index: true },
     items: { type: [invoiceItemSchema], validate: [(items) => items.length > 0, "At least one item is required"] },
     subtotal: { type: Number, required: true, min: 0 },
     paidAmount: { type: Number, default: 0, min: 0 },

@@ -462,7 +462,7 @@ export const InventoryWorkspacePanel = () => {
           quantity: item.quantity
         }))
       });
-      setToast({ type: "success", message: `Medicines dispensed (${sale.saleNumber})! Order forwarded to Cashier desk for payment collection.` });
+      setToast({ type: "success", message: `Medicines dispensed (${sale.saleNumber}). A separate pharmacy bill was sent to the Cashier desk.` });
       setModal({ type: null, record: null });
       await loadData();
       // Open Bill modal immediately for printing/downloading
@@ -1412,7 +1412,7 @@ export const InventoryWorkspacePanel = () => {
       <Modal
         open={modal.type === "pos"}
         title="Pharmacy Dispensary & Medicine Counter"
-        subtitle="Dispense prescribed medicines from active inventory. Orders are automatically forwarded to the Cashier desk for payment collection."
+        subtitle="Dispense prescribed medicines from active inventory. Each order creates a separate pharmacy bill for Cashier payment collection."
         onClose={() => setModal({ type: null, record: null })}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>

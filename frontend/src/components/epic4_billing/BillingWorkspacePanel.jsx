@@ -334,7 +334,7 @@ export const BillingWorkspacePanel = () => {
               { key: "phone", header: "Phone", render: (item) => item.customerPhone || item.patientId?.phone || "-" },
               {
                 key: "details",
-                header: "Visit Services & Charges",
+                header: "Invoice Charges",
                 render: (item) => {
                   const hasDoctor = item.items?.some((i) => i.description?.toLowerCase().includes("consultation") || i.description?.toLowerCase().includes("channelling"));
                   const hasLab = item.items?.some((i) => i.description?.toLowerCase().includes("lab") || i.description?.toLowerCase().includes("investigation"));
@@ -389,7 +389,7 @@ export const BillingWorkspacePanel = () => {
                             reset({ amount: item.outstandingAmount || "", method: "cash" });
                             setModal({ type: "payment", record: item });
                           }}
-                          title="Collect total visit charges at once"
+                          title={item.invoiceType === "pharmacy" ? "Collect this pharmacy payment separately" : "Collect this invoice in full"}
                         >
                           <CreditCard size={13} style={{ display: "inline", marginRight: "3px" }} />
                           Collect

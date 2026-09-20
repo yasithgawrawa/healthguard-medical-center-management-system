@@ -116,6 +116,7 @@ export const createInvoice = async (req, res) => {
     customerName: req.body.customerName || (req.body.patientId ? undefined : "Walk-in Customer"),
     customerPhone: req.body.customerPhone,
     appointmentId: req.body.appointmentId,
+    invoiceType: "manual",
     items,
     subtotal,
     outstandingAmount: subtotal,
@@ -310,6 +311,7 @@ export const consolidatePatientInvoices = async (req, res) => {
 
   const unpaidInvoices = await Invoice.find({
     patientId,
+    invoiceType: { $ne: "pharmacy" },
     status: { $in: ["issued", "draft"] }
   }).sort({ createdAt: 1 });
 
@@ -387,7 +389,7 @@ export const getDoctorEarnings = async (req, res) => {
     .sort({ appointmentDate: -1 });
 
   const apptIds = appointments.map((a) => a._id);
-  const invoices = await Invoice.find({ appointmentId: { $in: apptIds } });
+  const invoices = await Invoice.find({ appointmentId: { $in: apptIds }, invoiceType: { $in: ["visit", null] } });
 
   const invoiceByApptId = new Map();
   invoices.forEach((inv) => {

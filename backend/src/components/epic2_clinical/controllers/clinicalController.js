@@ -63,6 +63,7 @@ export const createAppointment = async (req, res) => {
     await Invoice.create({
       patientId: appointment.patientId,
       appointmentId: appointment._id,
+      invoiceType: "visit",
       items: [{
         description: `Doctor Consultation & Channelling (${docName} - ${appointment.slotLabel || "Standard"})`,
         quantity: 1,
@@ -275,9 +276,9 @@ export const createLabRequest = async (req, res) => {
         ? (catalogItem.urgentPrice || Math.round(catalogItem.price * 1.4))
         : catalogItem.price;
     }
-    let visitInvoice = await Invoice.findOne({ appointmentId: appointment._id, status: { $ne: "cancelled" } });
+    let visitInvoice = await Invoice.findOne({ appointmentId: appointment._id, invoiceType: { $in: ["visit", null] }, status: { $ne: "cancelled" } });
     if (!visitInvoice) {
-      visitInvoice = await Invoice.findOne({ patientId: appointment.patientId, status: { $in: ["issued", "partially_paid", "draft"] } }).sort({ createdAt: -1 });
+      visitInvoice = await Invoice.findOne({ patientId: appointment.patientId, invoiceType: { $in: ["visit", null] }, status: { $in: ["issued", "partially_paid", "draft"] } }).sort({ createdAt: -1 });
     }
     const labItem = {
       description: `Lab Investigation: ${labRequest.testName} (${labRequest.priority || "routine"})`,
@@ -294,6 +295,7 @@ export const createLabRequest = async (req, res) => {
       await Invoice.create({
         patientId: appointment.patientId,
         appointmentId: appointment._id,
+        invoiceType: "visit",
         items: [labItem],
         subtotal: testFee,
         paidAmount: 0,
