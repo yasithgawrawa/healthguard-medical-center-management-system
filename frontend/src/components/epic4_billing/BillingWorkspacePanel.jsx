@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle, CreditCard, DollarSign, Download, Printer, Receipt } from "lucide-react";
+import { CheckCircle, CreditCard, DollarSign, Download, Printer } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -281,9 +281,8 @@ export const BillingWorkspacePanel = () => {
     <section className="e1-panel" id="billing-payments">
       <Toast toast={toast} onClose={() => setToast(null)} />
       <div className="e1-panel-header">
-        <div><h2>Billing, Payments & Payroll</h2><p>Create invoices, record payments, reconcile revenue and process attendance-based payroll.</p></div>
+        <div><h2>Billing, Payments & Payroll</h2><p>Collect automatically generated invoices, reconcile revenue and process attendance-based payroll.</p></div>
         <div className="inline-actions">
-          {isCashier ? <button className="button-primary" type="button" onClick={() => { reset({}); setModal({ type: "invoice", record: null }); }}><Receipt size={17} /> Create Invoice</button> : null}
           {canManagePayroll ? <button type="button" onClick={() => { setPayrollPreview(null); reset({ month: new Date().toISOString().slice(0, 7), shiftRate: 0, allowances: 0, deductions: 0 }); setModal({ type: "payroll", record: null }); }}><DollarSign size={17} /> Shift Payroll</button> : null}
         </div>
       </div>
