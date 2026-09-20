@@ -24,8 +24,13 @@ export const SHIFT_STATUSES = [
 export const roleLabel = (role) => STAFF_ROLES.find((item) => item.value === role)?.label || role;
 
 export const staffName = (staff) => {
-  const user = staff?.userId || {};
-  return [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unassigned Staff";
+  if (!staff) return "Unassigned Staff";
+  const u = staff.userId || {};
+  const fromNested = [u.firstName, u.lastName].filter(Boolean).join(" ");
+  if (fromNested) return fromNested;
+  const fromFlat = [staff.firstName, staff.lastName].filter(Boolean).join(" ");
+  if (fromFlat) return fromFlat;
+  return staff.employeeId ? `Employee ${staff.employeeId}` : "Unassigned Staff";
 };
 
 export const formatDate = (value) => {

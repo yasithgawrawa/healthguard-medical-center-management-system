@@ -166,13 +166,13 @@ export const listWorkforceStaff = async (req, res) => {
 };
 
 export const listShifts = async (req, res) => {
-  const shifts = await Shift.find().populate("staffId").sort({ startTime: -1 });
+  const shifts = await Shift.find().populate({ path: "staffId", populate: { path: "userId", select: "-passwordHash" } }).sort({ startTime: -1 });
   return successResponse(res, "Shift list loaded", shifts);
 };
 
 export const listMyShifts = async (req, res) => {
   const staff = await getCurrentActiveStaff(req.user._id);
-  const shifts = await Shift.find({ staffId: staff._id }).populate("staffId").sort({ startTime: -1 });
+  const shifts = await Shift.find({ staffId: staff._id }).populate({ path: "staffId", populate: { path: "userId", select: "-passwordHash" } }).sort({ startTime: -1 });
   return successResponse(res, "My shift schedule loaded", shifts);
 };
 
@@ -259,7 +259,7 @@ export const checkOutSelf = async (req, res) => {
 
 export const listAttendance = async (req, res) => {
   const attendance = await Attendance.find()
-    .populate("staffId")
+    .populate({ path: "staffId", populate: { path: "userId", select: "-passwordHash" } })
     .populate("shiftId", "startTime endTime location")
     .sort({ workDate: -1 });
   return successResponse(res, "Attendance list loaded", attendance);
@@ -268,7 +268,7 @@ export const listAttendance = async (req, res) => {
 export const listMyAttendance = async (req, res) => {
   const staff = await getCurrentActiveStaff(req.user._id);
   const attendance = await Attendance.find({ staffId: staff._id })
-    .populate("staffId")
+    .populate({ path: "staffId", populate: { path: "userId", select: "-passwordHash" } })
     .populate("shiftId", "startTime endTime location")
     .sort({ workDate: -1 });
   return successResponse(res, "My attendance history loaded", attendance);
@@ -287,13 +287,13 @@ export const createMyLeave = async (req, res) => {
 };
 
 export const listLeave = async (req, res) => {
-  const leaveRequests = await LeaveRequest.find().populate("staffId").sort({ createdAt: -1 });
+  const leaveRequests = await LeaveRequest.find().populate({ path: "staffId", populate: { path: "userId", select: "-passwordHash" } }).sort({ createdAt: -1 });
   return successResponse(res, "Leave request list loaded", leaveRequests);
 };
 
 export const listMyLeave = async (req, res) => {
   const staff = await getCurrentActiveStaff(req.user._id);
-  const leaveRequests = await LeaveRequest.find({ staffId: staff._id }).populate("staffId").sort({ createdAt: -1 });
+  const leaveRequests = await LeaveRequest.find({ staffId: staff._id }).populate({ path: "staffId", populate: { path: "userId", select: "-passwordHash" } }).sort({ createdAt: -1 });
   return successResponse(res, "My leave requests loaded", leaveRequests);
 };
 
