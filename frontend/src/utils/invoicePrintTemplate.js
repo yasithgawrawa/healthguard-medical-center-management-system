@@ -458,15 +458,12 @@ export function downloadPayslipPDF(payroll) {
   const payStatus = payroll?.status || "draft";
   const paidAt = payroll?.paidAt ? fmtDateTime(payroll.paidAt) : "Pending";
 
-  const grossShiftPay = Number(payroll?.baseSalary || 0);
-  const payableShifts = Number(payroll?.payableShifts ?? payroll?.attendanceDays ?? 0);
-  const scheduledShifts = Number(payroll?.scheduledShifts || 0);
-  const totalShiftHours = Number(payroll?.totalShiftHours || 0);
-  const shiftRate = Number(payroll?.shiftRate || (payableShifts ? grossShiftPay / payableShifts : 0));
+  const grossPay = Number(payroll?.baseSalary || 0);
+  const workingDays = Number(payroll?.payableShifts ?? payroll?.attendanceDays ?? 0);
+  const dailyPay = Number(payroll?.shiftRate || (workingDays ? grossPay / workingDays : 0));
   const allowances = Number(payroll?.allowances || 0);
   const deductions = Number(payroll?.deductions || 0);
   const netSalary = Number(payroll?.netSalary || 0);
-  const isDailyPayroll = payroll?.payBasis === "daily";
 
   let monthLabel = month;
   try {
@@ -525,9 +522,9 @@ export function downloadPayslipPDF(payroll) {
   // ─── Salary summary ───
   const colW = contentW / 4;
   const summaryItems = [
-    [isDailyPayroll ? "WORKING DAYS" : "PAYABLE SHIFTS", String(payableShifts), isDailyPayroll ? "manual entry" : (scheduledShifts ? `of ${scheduledShifts} scheduled` : "checked-out shifts")],
-    [isDailyPayroll ? "DAILY PAY" : "SHIFT RATE", rsStr(shiftRate), isDailyPayroll ? "per working day" : "per completed shift"],
-    [isDailyPayroll ? "GROSS PAY" : "SHIFT HOURS", isDailyPayroll ? rsStr(grossShiftPay) : totalShiftHours.toFixed(2), isDailyPayroll ? "before allowances" : "linked from E1 shifts"],
+    ["WORKING DAYS", String(workingDays), "manual entry"],
+    ["DAILY PAY", rsStr(dailyPay), "per working day"],
+    ["GROSS PAY", rsStr(grossPay), "before allowances"],
     ["PAY PERIOD", monthLabel, ""]
   ];
 
@@ -557,9 +554,9 @@ export function downloadPayslipPDF(payroll) {
   y += 15;
 
   const earningsRows = [
-    ["Gross Pay", `(${payableShifts} ${isDailyPayroll ? "days" : "shifts"} x ${rsStr(shiftRate)})`, rsStr(grossShiftPay)],
+    ["Gross Pay", `(${workingDays} days x ${rsStr(dailyPay)})`, rsStr(grossPay)],
     ["Allowances", "", rsStr(allowances)],
-    ["Gross Earnings", "", rsStr(grossShiftPay + allowances)]
+    ["Gross Earnings", "", rsStr(grossPay + allowances)]
   ];
 
   earningsRows.forEach((row, idx) => {
@@ -615,7 +612,7 @@ export function downloadPayslipPDF(payroll) {
   pdf.setFont("HelveticaBold", 10);
   pdf.text(margin + 16, pdf.td(y + 16), "NET SALARY");
   pdf.setFont("Helvetica", 8.5);
-  pdf.text(margin + 16, pdf.td(y + 28), `${monthLabel}  |  ${payableShifts} ${isDailyPayroll ? "working days" : "payable shifts"}  |  ${payStatus.toUpperCase()}`);
+  pdf.text(margin + 16, pdf.td(y + 28), `${monthLabel}  |  ${workingDays} working days  |  ${payStatus.toUpperCase()}`);
 
   pdf.setFont("HelveticaBold", 20);
   const netStr = rsStr(netSalary);
@@ -627,7 +624,7 @@ export function downloadPayslipPDF(payroll) {
   pdf.rect(margin, pdf.td(y + 28), contentW, 28, ...GRAY_BG);
   pdf.setColor(...MUTED);
   pdf.setFont("Helvetica", 7.5);
-  pdf.text(margin + 8, pdf.td(y + 11), `Calculation: Net Salary = ${isDailyPayroll ? "Working Days x Daily Pay" : "Payable Shifts x Shift Rate"} + Allowances - Deductions`);
+  pdf.text(margin + 8, pdf.td(y + 11), "Calculation: Net Salary = Working Days x Daily Pay + Allowances - Deductions");
   pdf.text(margin + 8, pdf.td(y + 22), "This payslip is computer-generated and does not require a physical signature.");
   y += 36;
 
@@ -751,15 +748,12 @@ export function printPayslipPDF(payroll) {
   const payStatus = payroll?.status || "draft";
   const paidAt = payroll?.paidAt ? fmtDateTime(payroll.paidAt) : "Pending";
 
-  const grossShiftPay = Number(payroll?.baseSalary || 0);
-  const payableShifts = Number(payroll?.payableShifts ?? payroll?.attendanceDays ?? 0);
-  const scheduledShifts = Number(payroll?.scheduledShifts || 0);
-  const totalShiftHours = Number(payroll?.totalShiftHours || 0);
-  const shiftRate = Number(payroll?.shiftRate || (payableShifts ? grossShiftPay / payableShifts : 0));
+  const grossPay = Number(payroll?.baseSalary || 0);
+  const workingDays = Number(payroll?.payableShifts ?? payroll?.attendanceDays ?? 0);
+  const dailyPay = Number(payroll?.shiftRate || (workingDays ? grossPay / workingDays : 0));
   const allowances = Number(payroll?.allowances || 0);
   const deductions = Number(payroll?.deductions || 0);
   const netSalary = Number(payroll?.netSalary || 0);
-  const isDailyPayroll = payroll?.payBasis === "daily";
 
   let monthLabel = month;
   try {
@@ -780,16 +774,16 @@ export function printPayslipPDF(payroll) {
       <div><div class="meta-label">Employee ID</div><div class="meta-value">${employeeId}</div></div>
       <div><div class="meta-label">Pay Period</div><div class="meta-value">${monthLabel}</div></div>
       <div><div class="meta-label">Payment Date</div><div class="meta-value">${paidAt}</div></div>
-      <div><div class="net-lbl">Net Salary</div><div style="font-size:9pt;opacity:.7;margin-top:3px">${monthLabel} | ${payableShifts} ${isDailyPayroll ? "working days" : "payable shifts"}${isDailyPayroll ? "" : ` | ${totalShiftHours.toFixed(2)} hours`}</div></div>
-      <div><div class="meta-label">${isDailyPayroll ? "Daily Pay" : "Shift Rate"}</div><div class="meta-value">${rsStr(shiftRate)}</div></div>
+      <div><div class="net-lbl">Net Salary</div><div style="font-size:9pt;opacity:.7;margin-top:3px">${monthLabel} | ${workingDays} working days</div></div>
+      <div><div class="meta-label">Daily Pay</div><div class="meta-value">${rsStr(dailyPay)}</div></div>
     </div>
     <div class="comp-grid">
       <div class="comp-card">
         <div class="comp-hdr">Earnings</div>
-        <div class="comp-row"><span>Gross Pay</span><span>${rsStr(grossShiftPay)}</span></div>
-        <div class="comp-row"><span>Earned (${payableShifts} ${isDailyPayroll ? "days" : "shifts"} x ${rsStr(shiftRate)})</span><span>${rsStr(grossShiftPay)}</span></div>
+        <div class="comp-row"><span>Gross Pay</span><span>${rsStr(grossPay)}</span></div>
+        <div class="comp-row"><span>Earned (${workingDays} days x ${rsStr(dailyPay)})</span><span>${rsStr(grossPay)}</span></div>
         <div class="comp-row"><span>Allowances</span><span>${rsStr(allowances)}</span></div>
-        <div class="comp-row sub"><span>Gross Earnings</span><span>${rsStr(grossShiftPay + allowances)}</span></div>
+        <div class="comp-row sub"><span>Gross Earnings</span><span>${rsStr(grossPay + allowances)}</span></div>
       </div>
       <div class="comp-card">
         <div class="comp-hdr d">Deductions</div>
@@ -799,11 +793,11 @@ export function printPayslipPDF(payroll) {
       </div>
     </div>
     <div class="net-box">
-      <div><div class="meta-label">${isDailyPayroll ? "Working Days" : "Payable Shifts"}</div><div class="meta-value">${payableShifts} <span style="font-weight:400;color:#64748b;font-size:9pt">${isDailyPayroll ? "manual entry" : (scheduledShifts ? `of ${scheduledShifts}` : "completed")}</span></div></div>
+      <div><div class="meta-label">Working Days</div><div class="meta-value">${workingDays} <span style="font-weight:400;color:#64748b;font-size:9pt">manual entry</span></div></div>
       <div class="net-val">${rsStr(netSalary)}</div>
     </div>
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 16px;margin-bottom:16px;font-size:8.5pt;color:#64748b">
-      <strong style="color:#1e293b">Calculation:</strong> Net = ${isDailyPayroll ? "Working Days x Daily Pay" : "Payable Shifts x Shift Rate"} + Allowances - Deductions. Computer generated, no signature required.
+      <strong style="color:#1e293b">Calculation:</strong> Net = Working Days x Daily Pay + Allowances - Deductions. Computer generated, no signature required.
     </div>
     <div class="footer">Health Guard Medical Center · Confidential Payslip · Generated: ${new Date().toLocaleString("en-LK")}</div>`;
 

@@ -41,11 +41,8 @@ export const payrollSchema = z.object({
   body: z.object({
     staffId: objectIdSchema,
     month: payrollMonthSchema,
-    payBasis: z.enum(["shift", "daily"]).optional(),
-    baseSalary: moneySchema("Gross shift pay").optional(),
-    shiftRate: moneySchema("Shift rate").optional(),
-    dailyPay: moneySchema("Daily pay").optional(),
-    workingDays: z.coerce.number({ invalid_type_error: "Working days are required" }).int("Working days must be a whole number").min(1, "Working days must be at least 1").max(31, "Working days cannot exceed 31").optional(),
+    dailyPay: moneySchema("Daily pay").min(0.01, "Daily pay must be greater than 0"),
+    workingDays: z.coerce.number({ invalid_type_error: "Working days are required" }).int("Working days must be a whole number").min(1, "Working days must be at least 1").max(31, "Working days cannot exceed 31"),
     allowances: moneySchema("Allowances").optional().default(0),
     deductions: moneySchema("Deductions").optional().default(0)
   })
@@ -55,10 +52,8 @@ export const payrollPreviewSchema = z.object({
   body: z.object({
     staffId: objectIdSchema,
     month: payrollMonthSchema,
-    payBasis: z.enum(["shift", "daily"]).optional(),
-    shiftRate: moneySchema("Shift rate").optional(),
-    dailyPay: moneySchema("Daily pay").optional(),
-    workingDays: z.coerce.number({ invalid_type_error: "Working days are required" }).int("Working days must be a whole number").min(1, "Working days must be at least 1").max(31, "Working days cannot exceed 31").optional(),
+    dailyPay: moneySchema("Daily pay").min(0.01, "Daily pay must be greater than 0"),
+    workingDays: z.coerce.number({ invalid_type_error: "Working days are required" }).int("Working days must be a whole number").min(1, "Working days must be at least 1").max(31, "Working days cannot exceed 31"),
     allowances: moneySchema("Allowances").optional().default(0),
     deductions: moneySchema("Deductions").optional().default(0)
   })

@@ -182,7 +182,6 @@ export const BillingWorkspacePanel = () => {
         const preview = await billingApi.previewPayroll({
           staffId: selectedStaffId,
           month: selectedPayrollMonth,
-          payBasis: "daily",
           dailyPay: selectedDailyPay,
           workingDays: selectedWorkingDays,
           allowances: selectedAllowances || 0,
@@ -230,7 +229,7 @@ export const BillingWorkspacePanel = () => {
         await billingApi.recordPayment({ invoiceId: modal.record._id, amount: values.amount, method: values.method });
       }
       if (modal.type === "payroll") {
-        await billingApi.createPayroll({ ...values, payBasis: "daily" });
+        await billingApi.createPayroll(values);
       }
       setToast({ type: "success", message: "Billing workflow saved" });
       setModal({ type: null, record: null });
@@ -259,10 +258,10 @@ export const BillingWorkspacePanel = () => {
     setBusy(true);
     try {
       await billingApi.updatePayrollStatus(item._id, status);
-      setToast({ type: "success", message: `Payroll ${status}` });
+      setToast({ type: "success", message: `Salary ${status}` });
       await load();
     } catch (error) {
-      setToast({ type: "error", message: error.response?.data?.message || "Unable to update payroll" });
+      setToast({ type: "error", message: error.response?.data?.message || "Unable to update salary" });
     } finally {
       setBusy(false);
     }
@@ -302,15 +301,20 @@ export const BillingWorkspacePanel = () => {
     <section className="e1-panel" id="billing-payments">
       <Toast toast={toast} onClose={() => setToast(null)} />
       <div className="e1-panel-header">
-        <div><h2>Billing, Payments & Payroll</h2><p>Collect invoices, reconcile revenue and create simple salary drafts from daily pay and working days.</p></div>
+        <div><h2>Billing, Payments & Salary</h2><p>Collect invoices, reconcile revenue and create simple salary drafts from daily pay and working days.</p></div>
         <div className="inline-actions">
           {canCreatePayroll ? <button type="button" onClick={() => { setPayrollPreview(null); setPayrollPreviewError(""); reset({ month: new Date().toISOString().slice(0, 7), dailyPay: 0, workingDays: 26, allowances: 0, deductions: 0 }); setModal({ type: "payroll", record: null }); }}><DollarSign size={17} /> Run Salary</button> : null}
         </div>
       </div>
 
       <div className="e1-tabbar">
-        {["invoices", "payments", "revenue", "payroll"].map((tab) => (
-          <button className={activeTab === tab ? "active" : ""} type="button" onClick={() => setActiveTab(tab)} key={tab}>{tab}</button>
+        {[
+          { key: "invoices", label: "invoices" },
+          { key: "payments", label: "payments" },
+          { key: "revenue", label: "revenue" },
+          { key: "payroll", label: "salary" }
+        ].map((tab) => (
+          <button className={activeTab === tab.key ? "active" : ""} type="button" onClick={() => setActiveTab(tab.key)} key={tab.key}>{tab.label}</button>
         ))}
       </div>
 
@@ -452,14 +456,14 @@ export const BillingWorkspacePanel = () => {
           <div><strong>{money(summary.invoiced)}</strong><span>total invoiced</span></div>
           <div><strong>{money(summary.collected)}</strong><span>payments collected</span></div>
           <div><strong>{money(summary.outstanding)}</strong><span>outstanding invoices</span></div>
-          <div><strong>{money(summary.payrollExpense)}</strong><span>payroll expense</span></div>
+          <div><strong>{money(summary.payrollExpense)}</strong><span>salary expense</span></div>
         </div>
       ) : null}
 
       {activeTab === "payroll" ? (
         <>
           <div className="manager-summary-grid" style={{ marginBottom: "12px" }}>
-            <div><strong>{payroll.filter((item) => item.status === "draft").length}</strong><span>draft payrolls</span></div>
+            <div><strong>{payroll.filter((item) => item.status === "draft").length}</strong><span>salary drafts</span></div>
             <div><strong>{payroll.filter((item) => item.status === "reviewed").length}</strong><span>awaiting approval</span></div>
             <div><strong>{payroll.filter((item) => item.status === "approved").length}</strong><span>awaiting payment</span></div>
             <div><strong>{payroll.filter((item) => item.status === "paid").length}</strong><span>paid payrolls</span></div>
@@ -496,7 +500,7 @@ export const BillingWorkspacePanel = () => {
               {((item.status === "draft" || item.status === "reviewed") && !isManager) || (item.status === "approved" && !isCashier) ? <span style={{ color: "#64748b", fontSize: "0.8rem" }}>Awaiting authorized action</span> : null}
             </div> : null }
           ]}
-          emptyText="No payroll records yet."
+          emptyText="No salary records yet."
         />
         </>
       ) : null}
@@ -592,7 +596,7 @@ export const BillingWorkspacePanel = () => {
                     const alreadyProcessed = Boolean(selectedPayrollMonth && payroll.some((entry) => (entry.staffId?._id || entry.staffId) === item._id && entry.month === selectedPayrollMonth));
                     return (
                       <option value={item._id} key={item._id} disabled={isExempt || alreadyProcessed}>
-                        {staffName(item)} - {item.employeeId} {isExempt ? "• Clinic Owner (Paid per Consultation • Exempt)" : alreadyProcessed ? "• Payroll already created" : `(${item.role})`}
+                        {staffName(item)} - {item.employeeId} {isExempt ? "• Clinic Owner (Paid per Consultation • Exempt)" : alreadyProcessed ? "• Salary already created" : `(${item.role})`}
                       </option>
                     );
                   })}
@@ -613,7 +617,7 @@ export const BillingWorkspacePanel = () => {
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", padding: "12px 14px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", flexWrap: "wrap" }}>
                   <strong style={{ color: "#0f172a" }}>Salary Preview</strong>
                   <span style={{ color: "#64748b", fontSize: "0.84rem" }}>
-                    {payrollPreviewLoading ? "Calculating..." : payrollPreview?.existingPayroll ? "Payroll already exists for this staff/month" : "Daily pay x working days"}
+                    {payrollPreviewLoading ? "Calculating..." : payrollPreview?.existingPayroll ? "Salary already exists for this staff/month" : "Daily pay x working days"}
                   </span>
                 </div>
                 {payrollPreview ? (
@@ -631,7 +635,7 @@ export const BillingWorkspacePanel = () => {
               </div>
             </>
           ) : null}
-          <div className="modal-actions"><button className="button-secondary" type="button" onClick={() => setModal({ type: null, record: null })} disabled={busy}>Cancel</button><button className="button-primary" type="submit" disabled={busy || (modal.type === "payroll" && (payrollPreviewLoading || !payrollPreview || payrollPreview.existingPayroll || payrollPreview.payableShifts === 0 || payrollDeductionsInvalid))}><CreditCard size={16} /> {busy ? "Saving..." : modal.type === "payroll" ? "Create Payroll Draft" : "Save"}</button></div>
+          <div className="modal-actions"><button className="button-secondary" type="button" onClick={() => setModal({ type: null, record: null })} disabled={busy}>Cancel</button><button className="button-primary" type="submit" disabled={busy || (modal.type === "payroll" && (payrollPreviewLoading || !payrollPreview || payrollPreview.existingPayroll || payrollPreview.payableShifts === 0 || payrollDeductionsInvalid))}><CreditCard size={16} /> {busy ? "Saving..." : modal.type === "payroll" ? "Create Salary Draft" : "Save"}</button></div>
         </form>
       </Modal>
     </section>

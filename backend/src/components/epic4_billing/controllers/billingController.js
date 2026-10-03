@@ -1,7 +1,5 @@
-import { Attendance } from "../../epic1_user_staff/models/Attendance.js";
 import { Staff } from "../../epic1_user_staff/models/Staff.js";
 import { User } from "../../epic1_user_staff/models/User.js";
-import { Shift } from "../../epic1_user_staff/models/Shift.js";
 import { Appointment } from "../../epic2_clinical/models/Appointment.js";
 import { PharmacySale } from "../../epic3_inventory/models/PharmacySale.js";
 import { Invoice } from "../models/Invoice.js";
@@ -19,86 +17,6 @@ const recalculateInvoice = (invoice) => {
 };
 
 const roundMoney = (value) => Number(Number(value || 0).toFixed(2));
-
-const shiftLabel = (shift) => {
-  if (!shift?.startTime || !shift?.endTime) return "Attendance shift";
-  const start = new Date(shift.startTime);
-  const end = new Date(shift.endTime);
-  return `${start.toLocaleTimeString("en-LK", { hour: "2-digit", minute: "2-digit" })} - ${end.toLocaleTimeString("en-LK", { hour: "2-digit", minute: "2-digit" })}`;
-};
-
-const hoursBetween = (start, end) => {
-  if (!start || !end) return 0;
-  const diff = new Date(end).getTime() - new Date(start).getTime();
-  return diff > 0 ? Number((diff / 3600000).toFixed(2)) : 0;
-};
-
-const buildShiftPayroll = async ({ staffId, month, shiftRate, allowances = 0, deductions = 0 }) => {
-  const staff = await Staff.findById(staffId).populate("userId", "firstName lastName email");
-  if (!staff) throw new AppError("Staff profile not found", 404);
-
-  if (staff.role === ROLES.DOCTOR || staff.payBasis === "exempt") {
-    throw new AppError("The doctor is the clinic owner, compensated per appointment consultation, and exempt from employee shift payroll.", 400);
-  }
-
-  const scheduledShifts = await Shift.countDocuments({
-    staffId,
-    startTime: {
-      $gte: new Date(`${month}-01T00:00:00.000Z`),
-      $lt: new Date(new Date(`${month}-01T00:00:00.000Z`).setUTCMonth(Number(month.slice(5, 7))))
-    },
-    status: { $ne: "cancelled" }
-  });
-
-  const attendance = await Attendance.find({
-    staffId,
-    workDate: { $regex: `^${month}` },
-    status: "checked_out"
-  })
-    .populate("shiftId", "startTime endTime location")
-    .sort({ workDate: 1, checkInAt: 1 });
-
-  const defaultShiftRate = staff.shiftRate && staff.shiftRate > 0 ? staff.shiftRate : staff.baseSalary && staff.baseSalary > 0 ? staff.baseSalary / 26 : 0;
-  const payableShiftRate = Number(shiftRate ?? defaultShiftRate);
-  if (!payableShiftRate || payableShiftRate <= 0) {
-    throw new AppError("Shift payment rate is required on the payroll form or staff profile", 400, { shiftRate: "Shift payment rate is required" });
-  }
-
-  const payrollLines = attendance.map((item) => {
-    const hours = item.shiftId
-      ? hoursBetween(item.shiftId.startTime, item.shiftId.endTime)
-      : hoursBetween(item.checkInAt, item.checkOutAt);
-    return {
-      attendanceId: item._id,
-      shiftId: item.shiftId?._id,
-      workDate: item.workDate,
-      shiftLabel: item.shiftId ? `${shiftLabel(item.shiftId)}${item.shiftId.location ? `, ${item.shiftId.location}` : ""}` : shiftLabel(null),
-      hours,
-      amount: roundMoney(payableShiftRate)
-    };
-  });
-
-  const payableShifts = payrollLines.length;
-  const totalShiftHours = Number(payrollLines.reduce((sum, line) => sum + Number(line.hours || 0), 0).toFixed(2));
-  const grossSalary = roundMoney(payableShifts * payableShiftRate);
-  const netSalary = Math.max(roundMoney(grossSalary + Number(allowances || 0) - Number(deductions || 0)), 0);
-
-  return {
-    staff,
-    month,
-    payBasis: "shift",
-    baseSalary: grossSalary,
-    shiftRate: roundMoney(payableShiftRate),
-    scheduledShifts,
-    payableShifts,
-    totalShiftHours,
-    attendanceDays: payableShifts,
-    payrollLines,
-    allowances: Number(allowances || 0),
-    deductions: Number(deductions || 0),
-    netSalary
-  };
-};
 
 const buildDailyPayroll = async ({ staffId, month, dailyPay, workingDays, allowances = 0, deductions = 0 }) => {
   const staff = await Staff.findById(staffId).populate("userId", "firstName lastName email");
@@ -123,14 +41,9 @@ const buildDailyPayroll = async ({ staffId, month, dailyPay, workingDays, allowa
   return {
     staff,
     month,
-    payBasis: "daily",
     baseSalary: grossSalary,
     shiftRate: roundMoney(payableDailyRate),
-    scheduledShifts: payableDays,
     payableShifts: payableDays,
-    totalShiftHours: 0,
-    attendanceDays: payableDays,
-    payrollLines: [],
     allowances: Number(allowances || 0),
     deductions: Number(deductions || 0),
     netSalary
@@ -216,28 +129,19 @@ export const updatePaymentStatus = async (req, res) => {
 export const createPayroll = async (req, res) => {
   const existingPayroll = await Payroll.findOne({ staffId: req.body.staffId, month: req.body.month });
   if (existingPayroll) {
-    throw new AppError(`Payroll has already been processed for this staff member in ${req.body.month}`, 409);
+    throw new AppError(`Salary has already been processed for this staff member in ${req.body.month}`, 409);
   }
 
-  const isDailyPayroll = req.body.payBasis === "daily" || req.body.dailyPay !== undefined || req.body.workingDays !== undefined;
-  const calculated = isDailyPayroll
-    ? await buildDailyPayroll({
-      staffId: req.body.staffId,
-      month: req.body.month,
-      dailyPay: req.body.dailyPay ?? req.body.shiftRate,
-      workingDays: req.body.workingDays,
-      allowances: req.body.allowances,
-      deductions: req.body.deductions
-    })
-    : await buildShiftPayroll({
-      staffId: req.body.staffId,
-      month: req.body.month,
-      shiftRate: req.body.shiftRate,
-      allowances: req.body.allowances,
-      deductions: req.body.deductions
-    });
+  const calculated = await buildDailyPayroll({
+    staffId: req.body.staffId,
+    month: req.body.month,
+    dailyPay: req.body.dailyPay,
+    workingDays: req.body.workingDays,
+    allowances: req.body.allowances,
+    deductions: req.body.deductions
+  });
   if (calculated.payableShifts === 0) {
-    throw new AppError(isDailyPayroll ? "Payroll cannot be created without at least one working day" : "Payroll cannot be created without at least one completed, checked-out shift", 409);
+    throw new AppError("Salary cannot be created without at least one working day", 409);
   }
   if (calculated.deductions > calculated.baseSalary + calculated.allowances) {
     throw new AppError("Deductions cannot exceed gross pay plus allowances", 400, { deductions: "Deductions are too high" });
@@ -245,41 +149,27 @@ export const createPayroll = async (req, res) => {
   const payroll = await Payroll.create({
     staffId: req.body.staffId,
     month: req.body.month,
-    payBasis: calculated.payBasis,
     baseSalary: calculated.baseSalary,
     shiftRate: calculated.shiftRate,
-    scheduledShifts: calculated.scheduledShifts,
     payableShifts: calculated.payableShifts,
-    totalShiftHours: calculated.totalShiftHours,
-    attendanceDays: calculated.attendanceDays,
-    payrollLines: calculated.payrollLines,
     allowances: calculated.allowances,
     deductions: calculated.deductions,
     netSalary: calculated.netSalary
   });
-  return successResponse(res, "Payroll calculated successfully", payroll, 201);
+  return successResponse(res, "Salary calculated successfully", payroll, 201);
 };
 
 export const previewPayroll = async (req, res) => {
   const existingPayroll = await Payroll.findOne({ staffId: req.body.staffId, month: req.body.month });
-  const isDailyPayroll = req.body.payBasis === "daily" || req.body.dailyPay !== undefined || req.body.workingDays !== undefined;
-  const calculated = isDailyPayroll
-    ? await buildDailyPayroll({
-      staffId: req.body.staffId,
-      month: req.body.month,
-      dailyPay: req.body.dailyPay ?? req.body.shiftRate,
-      workingDays: req.body.workingDays,
-      allowances: req.body.allowances,
-      deductions: req.body.deductions
-    })
-    : await buildShiftPayroll({
-      staffId: req.body.staffId,
-      month: req.body.month,
-      shiftRate: req.body.shiftRate,
-      allowances: req.body.allowances,
-      deductions: req.body.deductions
-    });
-  return successResponse(res, "Payroll preview loaded", { ...calculated, existingPayroll });
+  const calculated = await buildDailyPayroll({
+    staffId: req.body.staffId,
+    month: req.body.month,
+    dailyPay: req.body.dailyPay,
+    workingDays: req.body.workingDays,
+    allowances: req.body.allowances,
+    deductions: req.body.deductions
+  });
+  return successResponse(res, "Salary preview loaded", { ...calculated, existingPayroll });
 };
 
 export const listPayroll = async (req, res) => {
@@ -292,26 +182,26 @@ export const listPayroll = async (req, res) => {
   const payroll = await Payroll.find(filter)
     .populate({ path: "staffId", populate: { path: "userId", select: "firstName lastName email" } })
     .sort({ month: -1, createdAt: -1 });
-  return successResponse(res, "Payroll list loaded", payroll);
+  return successResponse(res, "Salary list loaded", payroll);
 };
 
 export const updatePayrollStatus = async (req, res) => {
   const payroll = await Payroll.findById(req.params.id);
-  if (!payroll) throw new AppError("Payroll not found", 404);
+  if (!payroll) throw new AppError("Salary record not found", 404);
   const allowed = { draft: "reviewed", reviewed: "approved", approved: "paid" };
-  if (allowed[payroll.status] !== req.body.status) throw new AppError("Invalid payroll state transition", 409);
+  if (allowed[payroll.status] !== req.body.status) throw new AppError("Invalid salary state transition", 409);
   if (["reviewed", "approved"].includes(req.body.status) && ![ROLES.MANAGER, ROLES.ADMIN].includes(req.user.role)) {
-    throw new AppError("Only a manager or admin can review and approve payroll", 403);
+    throw new AppError("Only a manager or admin can review and approve salary", 403);
   }
   if (req.body.status === "paid" && ![ROLES.CASHIER, ROLES.ADMIN].includes(req.user.role)) {
-    throw new AppError("Only a cashier or admin can mark payroll as paid", 403);
+    throw new AppError("Only a cashier or admin can mark salary as paid", 403);
   }
   payroll.status = req.body.status;
   if (req.body.status === "reviewed") payroll.reviewedBy = req.user._id;
   if (req.body.status === "approved") payroll.approvedBy = req.user._id;
   if (req.body.status === "paid") payroll.paidAt = new Date();
   await payroll.save();
-  return successResponse(res, "Payroll status updated", payroll);
+  return successResponse(res, "Salary status updated", payroll);
 };
 
 export const downloadInvoiceReceipt = async (req, res) => {
@@ -345,12 +235,11 @@ export const downloadInvoiceReceipt = async (req, res) => {
 export const downloadPayslip = async (req, res) => {
   const payroll = await Payroll.findById(req.params.id)
     .populate({ path: "staffId", populate: { path: "userId", select: "firstName lastName email" } });
-  if (!payroll) throw new AppError("Payroll not found", 404);
+  if (!payroll) throw new AppError("Salary record not found", 404);
   if (![ROLES.MANAGER, ROLES.ADMIN, ROLES.CASHIER].includes(req.user.role) && payroll.staffId?.userId?._id?.toString() !== req.user._id.toString()) {
     throw new AppError("You can only download your own payslip", 403);
   }
 
-  const isDailyPayroll = payroll.payBasis === "daily";
   const lines = [
     "Health Guard Medical Center",
     "Staff Payslip",
@@ -358,9 +247,9 @@ export const downloadPayslip = async (req, res) => {
     `Staff: ${nameFromUser(payroll.staffId?.userId)} (${payroll.staffId?.employeeId || "-"})`,
     `Status: ${payroll.status}`,
     "",
-    `Pay Basis: ${isDailyPayroll ? "daily" : (payroll.payBasis || "shift")}`,
-    `${isDailyPayroll ? "Working Days" : "Payable Shifts"}: ${payroll.payableShifts ?? payroll.attendanceDays}`,
-    `${isDailyPayroll ? "Daily Pay" : "Shift Rate"}: Rs. ${Number(payroll.shiftRate || 0).toFixed(2)}`,
+    "Pay Basis: daily",
+    `Working Days: ${payroll.payableShifts ?? payroll.attendanceDays}`,
+    `Daily Pay: Rs. ${Number(payroll.shiftRate || 0).toFixed(2)}`,
     `Gross Pay: Rs. ${payroll.baseSalary.toFixed(2)}`,
     `Allowances: Rs. ${payroll.allowances.toFixed(2)}`,
     `Deductions: Rs. ${payroll.deductions.toFixed(2)}`,
