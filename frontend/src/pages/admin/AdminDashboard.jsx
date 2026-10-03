@@ -22,7 +22,7 @@ export const AdminDashboard = () => {
           { label: "Add Staff", detail: "Create a login and staff profile", icon: UserPlus, href: "#staff-directory" },
           { label: "Manage Staff", detail: "Search, edit or deactivate staff", icon: Users, href: "#staff-directory" },
           { label: "Manage Roles", detail: "Change staff access level", icon: Shield, href: "#staff-directory" },
-          { label: "Clinic Attendance Point", detail: "Maintain the one check-in radius", icon: CalendarPlus, href: "#manager-workforce", command: { workspace: "workforce", tab: "shifts", date: "", role: "", search: "" } }
+          { label: "Review Attendance", detail: "Check daily staff attendance", icon: CalendarPlus, href: "#manager-workforce", command: { workspace: "workforce", tab: "attendance", date: "", role: "", search: "" } }
         ]}
       />
 

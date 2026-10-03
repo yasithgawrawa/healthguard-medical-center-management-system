@@ -1,3 +1,4 @@
+import { Attendance } from "../../epic1_user_staff/models/Attendance.js";
 import { Staff } from "../../epic1_user_staff/models/Staff.js";
 import { User } from "../../epic1_user_staff/models/User.js";
 import { Appointment } from "../../epic2_clinical/models/Appointment.js";
@@ -42,8 +43,8 @@ const buildDailyPayroll = async ({ staffId, month, dailyPay, workingDays, allowa
     staff,
     month,
     baseSalary: grossSalary,
-    shiftRate: roundMoney(payableDailyRate),
-    payableShifts: payableDays,
+    dailyPay: roundMoney(payableDailyRate),
+    workingDays: payableDays,
     allowances: Number(allowances || 0),
     deductions: Number(deductions || 0),
     netSalary
@@ -140,7 +141,7 @@ export const createPayroll = async (req, res) => {
     allowances: req.body.allowances,
     deductions: req.body.deductions
   });
-  if (calculated.payableShifts === 0) {
+  if (calculated.workingDays === 0) {
     throw new AppError("Salary cannot be created without at least one working day", 409);
   }
   if (calculated.deductions > calculated.baseSalary + calculated.allowances) {
@@ -150,8 +151,8 @@ export const createPayroll = async (req, res) => {
     staffId: req.body.staffId,
     month: req.body.month,
     baseSalary: calculated.baseSalary,
-    shiftRate: calculated.shiftRate,
-    payableShifts: calculated.payableShifts,
+    dailyPay: calculated.dailyPay,
+    workingDays: calculated.workingDays,
     allowances: calculated.allowances,
     deductions: calculated.deductions,
     netSalary: calculated.netSalary
@@ -170,6 +171,20 @@ export const previewPayroll = async (req, res) => {
     deductions: req.body.deductions
   });
   return successResponse(res, "Salary preview loaded", { ...calculated, existingPayroll });
+};
+
+export const getSalaryAttendanceDays = async (req, res) => {
+  const { staffId, month } = req.validatedQuery || req.query;
+  const staff = await Staff.findById(staffId);
+  if (!staff) throw new AppError("Staff profile not found", 404);
+
+  const workingDays = await Attendance.countDocuments({
+    staffId,
+    workDate: { $regex: `^${month}` },
+    status: "checked_out"
+  });
+
+  return successResponse(res, "Attendance working days loaded", { staffId, month, workingDays });
 };
 
 export const listPayroll = async (req, res) => {
@@ -248,8 +263,8 @@ export const downloadPayslip = async (req, res) => {
     `Status: ${payroll.status}`,
     "",
     "Pay Basis: daily",
-    `Working Days: ${payroll.payableShifts ?? payroll.attendanceDays}`,
-    `Daily Pay: Rs. ${Number(payroll.shiftRate || 0).toFixed(2)}`,
+    `Working Days: ${payroll.workingDays ?? payroll.payableShifts ?? payroll.attendanceDays}`,
+    `Daily Pay: Rs. ${Number(payroll.dailyPay ?? payroll.shiftRate ?? 0).toFixed(2)}`,
     `Gross Pay: Rs. ${payroll.baseSalary.toFixed(2)}`,
     `Allowances: Rs. ${payroll.allowances.toFixed(2)}`,
     `Deductions: Rs. ${payroll.deductions.toFixed(2)}`,

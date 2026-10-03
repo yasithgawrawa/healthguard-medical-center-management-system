@@ -65,9 +65,6 @@ router.patch(
 );
 
 router.post("/attendance/my/check-in", authorizeRoles(ROLES.DOCTOR, ROLES.NURSE, ROLES.PHARMACIST, ROLES.CASHIER, ROLES.LAB_ASSISTANT), validateRequest(z.object({ body: z.object({
-  latitude: z.coerce.number().min(-90).max(90),
-  longitude: z.coerce.number().min(-180).max(180),
-  accuracyMeters: z.coerce.number().min(0).optional(),
   notes: z.string().trim().max(250).optional().default("")
 }) })), asyncHandler(checkInSelf));
 router.patch("/attendance/my/check-out", authorizeRoles(ROLES.DOCTOR, ROLES.NURSE, ROLES.PHARMACIST, ROLES.CASHIER, ROLES.LAB_ASSISTANT), asyncHandler(checkOutSelf));

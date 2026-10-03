@@ -459,8 +459,8 @@ export function downloadPayslipPDF(payroll) {
   const paidAt = payroll?.paidAt ? fmtDateTime(payroll.paidAt) : "Pending";
 
   const grossPay = Number(payroll?.baseSalary || 0);
-  const workingDays = Number(payroll?.payableShifts ?? payroll?.attendanceDays ?? 0);
-  const dailyPay = Number(payroll?.shiftRate || (workingDays ? grossPay / workingDays : 0));
+  const workingDays = Number(payroll?.workingDays ?? payroll?.payableShifts ?? payroll?.attendanceDays ?? 0);
+  const dailyPay = Number(payroll?.dailyPay ?? payroll?.shiftRate ?? (workingDays ? grossPay / workingDays : 0));
   const allowances = Number(payroll?.allowances || 0);
   const deductions = Number(payroll?.deductions || 0);
   const netSalary = Number(payroll?.netSalary || 0);
@@ -749,8 +749,8 @@ export function printPayslipPDF(payroll) {
   const paidAt = payroll?.paidAt ? fmtDateTime(payroll.paidAt) : "Pending";
 
   const grossPay = Number(payroll?.baseSalary || 0);
-  const workingDays = Number(payroll?.payableShifts ?? payroll?.attendanceDays ?? 0);
-  const dailyPay = Number(payroll?.shiftRate || (workingDays ? grossPay / workingDays : 0));
+  const workingDays = Number(payroll?.workingDays ?? payroll?.payableShifts ?? payroll?.attendanceDays ?? 0);
+  const dailyPay = Number(payroll?.dailyPay ?? payroll?.shiftRate ?? (workingDays ? grossPay / workingDays : 0));
   const allowances = Number(payroll?.allowances || 0);
   const deductions = Number(payroll?.deductions || 0);
   const netSalary = Number(payroll?.netSalary || 0);

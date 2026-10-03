@@ -59,6 +59,13 @@ export const payrollPreviewSchema = z.object({
   })
 });
 
+export const salaryAttendanceDaysSchema = z.object({
+  query: z.object({
+    staffId: objectIdSchema,
+    month: payrollMonthSchema
+  })
+});
+
 export const payrollStatusSchema = z.object({
   params: idParamSchema.shape.params,
   body: z.object({ status: z.enum(["reviewed", "approved", "paid"]) })

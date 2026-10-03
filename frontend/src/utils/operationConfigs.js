@@ -35,7 +35,7 @@ export const e1StaffActions = [
         { value: "lab_assistant", label: "Lab Assistant" }
       ] },
       { name: "employmentDate", label: "Employment date", type: "date", required: true },
-      { name: "shiftRate", label: "Rate per completed shift", type: "number", required: true, placeholder: "3500.00" },
+      { name: "shiftRate", label: "Daily pay", type: "number", required: true, placeholder: "3500.00" },
       { name: "password", label: "Password", type: "password", required: true, placeholder: "Admin@12345" }
     ]
   },
@@ -48,12 +48,6 @@ export const e1StaffActions = [
 ];
 
 export const e1WorkforceActions = [
-  { label: "Create Shift", method: "post", path: "/e1/workforce/shifts", fields: [
-    { name: "staffId", label: "Staff ID", required: true },
-    { name: "startTime", label: "Start time", type: "datetime-local", required: true },
-    { name: "endTime", label: "End time", type: "datetime-local", required: true },
-    { name: "location", label: "Location", required: true, placeholder: "OPD Room 1" }
-  ] },
   { label: "Check In", method: "post", path: "/e1/workforce/attendance/check-in", fields: [
     { name: "staffId", label: "Staff ID", required: true },
     { name: "notes", label: "Notes", placeholder: "Checked in at Colombo center" }
@@ -160,10 +154,11 @@ export const e4Actions = [
       { value: "cash", label: "Cash" }, { value: "card", label: "Card" }, { value: "bank_transfer", label: "Bank transfer" }
     ] }
   ] },
-  { label: "Create Payroll", method: "post", path: "/e4/billing/payroll", fields: [
+  { label: "Create Salary", method: "post", path: "/e4/billing/payroll", fields: [
     { name: "staffId", label: "Staff ID", required: true },
     { name: "month", label: "Month YYYY-MM", required: true, placeholder: "2026-09" },
-    { name: "shiftRate", label: "Rate per completed shift", type: "number", required: true, placeholder: "3500.00" },
+    { name: "dailyPay", label: "Daily pay", type: "number", required: true, placeholder: "3500.00" },
+    { name: "workingDays", label: "Working days", type: "number", required: true, placeholder: "26" },
     { name: "allowances", label: "Allowances", type: "number", defaultValue: "0", placeholder: "5000.00" },
     { name: "deductions", label: "Deductions", type: "number", defaultValue: "0", placeholder: "1500.00" }
   ] }

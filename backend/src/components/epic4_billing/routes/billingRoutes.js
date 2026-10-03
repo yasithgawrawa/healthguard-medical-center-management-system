@@ -11,6 +11,7 @@ import {
   downloadInvoiceReceipt,
   downloadPayslip,
   getDoctorEarnings,
+  getSalaryAttendanceDays,
   listInvoices,
   listPayments,
   listPayroll,
@@ -20,7 +21,7 @@ import {
   updatePaymentStatus,
   updatePayrollStatus
 } from "../controllers/billingController.js";
-import { invoiceSchema, paymentSchema, paymentStatusSchema, payrollPreviewSchema, payrollSchema, payrollStatusSchema } from "../validators/billingValidators.js";
+import { invoiceSchema, paymentSchema, paymentStatusSchema, payrollPreviewSchema, payrollSchema, payrollStatusSchema, salaryAttendanceDaysSchema } from "../validators/billingValidators.js";
 
 const router = Router();
 router.use(authenticate);
@@ -36,6 +37,7 @@ router.get("/payments", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN
 router.patch("/payments/:id/status", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER), validateRequest(paymentStatusSchema), asyncHandler(updatePaymentStatus));
 router.post("/payroll/preview", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN), validateRequest(payrollPreviewSchema), asyncHandler(previewPayroll));
 router.post("/payroll", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN), validateRequest(payrollSchema), asyncHandler(createPayroll));
+router.get("/payroll/attendance-days", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN), validateRequest(salaryAttendanceDaysSchema), asyncHandler(getSalaryAttendanceDays));
 router.get("/payroll", authorizeRoles(ROLES.MANAGER, ROLES.ADMIN, ROLES.DOCTOR, ROLES.NURSE, ROLES.PHARMACIST, ROLES.CASHIER, ROLES.LAB_ASSISTANT), asyncHandler(listPayroll));
 router.get("/payroll/:id/payslip", authorizeRoles(ROLES.MANAGER, ROLES.ADMIN, ROLES.DOCTOR, ROLES.NURSE, ROLES.PHARMACIST, ROLES.CASHIER, ROLES.LAB_ASSISTANT), validateRequest(idParamSchema), asyncHandler(downloadPayslip));
 router.patch("/payroll/:id/status", authorizeRoles(ROLES.MANAGER, ROLES.ADMIN, ROLES.CASHIER), validateRequest(payrollStatusSchema), asyncHandler(updatePayrollStatus));

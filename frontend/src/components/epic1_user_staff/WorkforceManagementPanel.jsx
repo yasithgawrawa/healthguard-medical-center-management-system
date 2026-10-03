@@ -1,4 +1,4 @@
-import { CalendarPlus, ClipboardList, Clock, Plane, UserCheck } from "lucide-react";
+import { ClipboardList, Clock, Plane, UserCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardCard } from "../shared/DashboardCard.jsx";
 import { DataTable } from "../shared/DataTable.jsx";
@@ -10,9 +10,7 @@ import { StatusBadge } from "../shared/StatusBadge.jsx";
 import { Toast } from "../shared/Toast.jsx";
 import { e1Api } from "../../services/e1Api.js";
 import { DASHBOARD_COMMAND_EVENT } from "../../utils/dashboardCommands.js";
-import { CenterLocationPanel } from "./CenterLocationPanel.jsx";
 import { formatDate, formatTime, roleLabel, staffName } from "./e1Constants.js";
-import { ShiftFormModal } from "./ShiftFormModal.jsx";
 
 const PAGE_SIZE = 7;
 
@@ -22,34 +20,27 @@ const workedHours = (item) => {
   return `${Math.max(hours, 0).toFixed(1)}h`;
 };
 
-const shiftDate = (item) => (item.startTime ? new Date(item.startTime).toISOString().slice(0, 10) : "");
-const shiftWindow = (shift) => shift?.startTime ? `${formatTime(shift.startTime)} - ${formatTime(shift.endTime)}` : "-";
-
 export const WorkforceManagementPanel = () => {
-  const [activeTab, setActiveTab] = useState("shifts");
+  const [activeTab, setActiveTab] = useState("attendance");
   const [staff, setStaff] = useState([]);
-  const [shifts, setShifts] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [leave, setLeave] = useState([]);
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("");
   const [date, setDate] = useState("");
   const [page, setPage] = useState(1);
-  const [shiftOpen, setShiftOpen] = useState(false);
   const [reviewLeave, setReviewLeave] = useState(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
 
   const load = async () => {
     try {
-      const [staffData, shiftData, attendanceData, leaveData] = await Promise.all([
+      const [staffData, attendanceData, leaveData] = await Promise.all([
         e1Api.listWorkforceStaff(),
-        e1Api.listShifts(),
         e1Api.listAttendance(),
         e1Api.listLeave()
       ]);
       setStaff(Array.isArray(staffData) ? staffData : []);
-      setShifts(Array.isArray(shiftData) ? shiftData : []);
       setAttendance(Array.isArray(attendanceData) ? attendanceData : []);
       setLeave(Array.isArray(leaveData) ? leaveData : []);
     } catch (error) {
@@ -80,10 +71,8 @@ export const WorkforceManagementPanel = () => {
   }, [activeTab, search, role, date]);
 
   const today = new Date().toISOString().slice(0, 10);
-  const todayShifts = shifts.filter((item) => shiftDate(item) === today);
   const pendingLeave = leave.filter((item) => item.status === "pending");
 
-  const staffTodayIds = new Set(todayShifts.map((item) => item.staffId?._id || item.staffId));
   const presentIds = new Set(attendance.filter((item) => item.workDate === today && item.checkInAt).map((item) => item.staffId?._id || item.staffId));
   const onLeaveIds = new Set(
     leave
@@ -92,47 +81,18 @@ export const WorkforceManagementPanel = () => {
   );
 
   const filteredRows = useMemo(() => {
-    const source = activeTab === "shifts" ? shifts : activeTab === "attendance" ? attendance : leave;
+    const source = activeTab === "attendance" ? attendance : leave;
     const query = search.trim().toLowerCase();
     return source.filter((item) => {
       const person = item.staffId && typeof item.staffId === "object" ? item.staffId : null;
-      const text = [person?.employeeId, staffName(person), person?.role, person?.department, item.location, item.status, item.leaveType].join(" ").toLowerCase();
-      const itemDate = activeTab === "shifts" ? shiftDate(item) : activeTab === "attendance" ? item.workDate : item.startDate?.slice(0, 10);
+      const text = [person?.employeeId, staffName(person), person?.role, person?.department, item.status, item.leaveType].join(" ").toLowerCase();
+      const itemDate = activeTab === "attendance" ? item.workDate : item.startDate?.slice(0, 10);
       return (!query || text.includes(query)) && (!role || person?.role === role) && (!date || itemDate === date);
     });
-  }, [activeTab, shifts, attendance, leave, search, role, date]);
+  }, [activeTab, attendance, leave, search, role, date]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
   const rows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  const createShift = async (payload) => {
-    setBusy(true);
-    try {
-      await e1Api.createShift(payload);
-      setShiftOpen(false);
-      setToast({ type: "success", message: "Shift created successfully" });
-      await load();
-    } catch (error) {
-      setToast({ type: "error", message: error.response?.data?.message || "Unable to create shift" });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const createBulkShifts = async (payload) => {
-    setBusy(true);
-    try {
-      const result = await e1Api.createBulkShifts(payload);
-      setShiftOpen(false);
-      const skipped = result?.skipped?.length || 0;
-      setToast({ type: "success", message: `Created ${result?.createdCount || 0} shifts${skipped ? `, skipped ${skipped} overlap(s)` : ""}` });
-      await load();
-    } catch (error) {
-      setToast({ type: "error", message: error.response?.data?.message || "Unable to create roster" });
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const checkoutAttendance = async (item) => {
     setBusy(true);
@@ -161,20 +121,9 @@ export const WorkforceManagementPanel = () => {
     }
   };
 
-  const shiftColumns = [
-    { key: "employee", header: "Employee", render: (item) => staffName(item.staffId) },
-    { key: "role", header: "Role", render: (item) => roleLabel(item.staffId?.role) },
-    { key: "date", header: "Date", render: (item) => formatDate(item.startTime) },
-    { key: "start", header: "Start", render: (item) => formatTime(item.startTime) },
-    { key: "end", header: "End", render: (item) => formatTime(item.endTime) },
-    { key: "location", header: "Clinic" },
-    { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> }
-  ];
-
   const attendanceColumns = [
     { key: "date", header: "Date", render: (item) => formatDate(item.workDate) },
     { key: "employee", header: "Employee", render: (item) => staffName(item.staffId) },
-    { key: "shift", header: "Linked Shift", render: (item) => shiftWindow(item.shiftId) },
     { key: "checkIn", header: "Check In", render: (item) => formatTime(item.checkInAt) },
     { key: "checkOut", header: "Check Out", render: (item) => formatTime(item.checkOutAt) },
     { key: "hours", header: "Worked Hours", render: workedHours },
@@ -206,13 +155,13 @@ export const WorkforceManagementPanel = () => {
     }
   ];
 
-  const activeColumns = activeTab === "shifts" ? shiftColumns : activeTab === "attendance" ? attendanceColumns : leaveColumns;
+  const activeColumns = activeTab === "attendance" ? attendanceColumns : leaveColumns;
 
   return (
     <>
       <Toast toast={toast} onClose={() => setToast(null)} />
       <div className="dashboard-grid">
-        <DashboardCard title="Staff Today" value={staffTodayIds.size} detail="Scheduled for duty today" icon={Clock} change="Shift management" href="#manager-workforce" command={{ workspace: "workforce", tab: "shifts", date: today, role: "", search: "" }} actionLabel="Open shifts" priority={staffTodayIds.size ? "medium" : "normal"} />
+        <DashboardCard title="Active Staff" value={staff.length} detail="Available workforce profiles" icon={Clock} change="Simple attendance" href="#manager-workforce" command={{ workspace: "workforce", tab: "attendance", date: "", role: "", search: "" }} actionLabel="Open attendance" />
         <DashboardCard title="Present" value={presentIds.size} detail="Checked in today" icon={UserCheck} change="Attendance" href="#manager-workforce" command={{ workspace: "workforce", tab: "attendance", date: today, role: "", search: "" }} actionLabel="Review attendance" />
         <DashboardCard title="On Leave" value={onLeaveIds.size} detail="Approved current leave" icon={Plane} change="Leave calendar" href="#manager-workforce" command={{ workspace: "workforce", tab: "leave", date: "", role: "", search: "approved" }} actionLabel="Open leave calendar" />
         <DashboardCard title="Pending Leave Requests" value={pendingLeave.length} detail="Waiting for review" icon={ClipboardList} change="Approval queue" href="#manager-workforce" command={{ workspace: "workforce", tab: "leave", date: "", role: "", search: "pending" }} actionLabel={pendingLeave.length ? "Review requests" : "View leave"} priority={pendingLeave.length ? "high" : "normal"} />
@@ -222,7 +171,6 @@ export const WorkforceManagementPanel = () => {
         <div className="e1-tabbar">
           {[
             ["dashboard", "Dashboard"],
-            ["shifts", "Shift Management"],
             ["attendance", "Attendance"],
             ["leave", "Leave Requests"]
           ].map(([key, label]) => (
@@ -234,7 +182,7 @@ export const WorkforceManagementPanel = () => {
 
         {activeTab === "dashboard" ? (
           <div className="manager-summary-grid">
-            <div><strong>{todayShifts.length}</strong><span>scheduled shifts today</span></div>
+            <div><strong>{staff.length}</strong><span>active staff profiles</span></div>
             <div><strong>{attendance.filter((item) => item.status === "checked_in").length}</strong><span>currently checked in</span></div>
             <div><strong>{pendingLeave.length}</strong><span>leave requests need action</span></div>
           </div>
@@ -242,18 +190,10 @@ export const WorkforceManagementPanel = () => {
           <>
             <div className="e1-panel-header compact">
               <div>
-                <h2>{activeTab === "shifts" ? "Shift Schedule" : activeTab === "attendance" ? "Attendance History" : "Leave Requests"}</h2>
-                <p>{activeTab === "shifts" ? "Create and monitor staff duty schedules." : activeTab === "attendance" ? "Review staff attendance with search and filters." : "Approve or reject staff leave requests."}</p>
+                <h2>{activeTab === "attendance" ? "Attendance History" : "Leave Requests"}</h2>
+                <p>{activeTab === "attendance" ? "Review staff check-ins and check-outs with search and filters." : "Approve or reject staff leave requests."}</p>
               </div>
-              {activeTab === "shifts" ? (
-                <button className="button-primary" type="button" onClick={() => setShiftOpen(true)}>
-                  <CalendarPlus size={17} />
-                  <span>Create Shift</span>
-                </button>
-              ) : null}
             </div>
-
-            {activeTab === "shifts" ? <CenterLocationPanel onToast={setToast} /> : null}
 
             <div className="table-toolbar">
               <SearchBar value={search} onChange={setSearch} placeholder="Search employee, role or status" />
@@ -269,8 +209,6 @@ export const WorkforceManagementPanel = () => {
           </>
         )}
       </section>
-
-      <ShiftFormModal open={shiftOpen} staff={staff} busy={busy} onClose={() => setShiftOpen(false)} onSubmit={createShift} onBulkSubmit={createBulkShifts} />
 
       <Modal
         open={Boolean(reviewLeave)}

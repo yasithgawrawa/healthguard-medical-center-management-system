@@ -81,6 +81,7 @@ export const BillingWorkspacePanel = () => {
   const [payrollPreview, setPayrollPreview] = useState(null);
   const [payrollPreviewLoading, setPayrollPreviewLoading] = useState(false);
   const [payrollPreviewError, setPayrollPreviewError] = useState("");
+  const [attendanceDaysLoading, setAttendanceDaysLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
   const isManager = [ROLES.MANAGER, ROLES.ADMIN].includes(user?.role);
@@ -190,7 +191,7 @@ export const BillingWorkspacePanel = () => {
         setPayrollPreview(preview);
       } catch (error) {
         setPayrollPreview(null);
-        setPayrollPreviewError(error.response?.data?.message || "Unable to preview payroll");
+        setPayrollPreviewError(error.response?.data?.message || "Unable to preview salary");
       } finally {
         setPayrollPreviewLoading(false);
       }
@@ -275,6 +276,23 @@ export const BillingWorkspacePanel = () => {
       setToast({ type: "error", message: error.response?.data?.message || "Unable to download payslip" });
     } finally {
       setBusy(false);
+    }
+  };
+
+  const useAttendanceDays = async () => {
+    if (!selectedStaffId || !selectedPayrollMonth) {
+      setToast({ type: "error", message: "Select staff and month first" });
+      return;
+    }
+    setAttendanceDaysLoading(true);
+    try {
+      const result = await billingApi.salaryAttendanceDays({ staffId: selectedStaffId, month: selectedPayrollMonth });
+      setValue("workingDays", result.workingDays || 0, { shouldValidate: true, shouldDirty: true });
+      setToast({ type: "success", message: `Loaded ${result.workingDays || 0} attendance day(s)` });
+    } catch (error) {
+      setToast({ type: "error", message: error.response?.data?.message || "Unable to load attendance days" });
+    } finally {
+      setAttendanceDaysLoading(false);
     }
   };
 
@@ -487,8 +505,8 @@ export const BillingWorkspacePanel = () => {
               return staffName(resolvedStaff) || staffName(staff.find((s) => s._id === (item.staffId?._id || item.staffId)));
             } },
             { key: "month", header: "Month" },
-            { key: "payableShifts", header: "Working Days", render: (item) => item.payableShifts ?? item.attendanceDays },
-            { key: "shiftRate", header: "Daily Pay", render: (item) => money(item.shiftRate || 0) },
+            { key: "workingDays", header: "Working Days", render: (item) => item.workingDays ?? item.payableShifts ?? item.attendanceDays },
+            { key: "dailyPay", header: "Daily Pay", render: (item) => money(item.dailyPay ?? item.shiftRate ?? 0) },
             { key: "grossPay", header: "Gross Pay", render: (item) => money(item.baseSalary) },
             { key: "netSalary", header: "Net Salary", render: (item) => money(item.netSalary) },
             { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
@@ -606,7 +624,18 @@ export const BillingWorkspacePanel = () => {
               <div className="form-section-title">Salary Details</div>
               <div className="form-grid-3">
                 <FormInput label="Daily Pay (Rs.)" placeholder="3500.00" type="number" min="0" step="0.01" error={errors.dailyPay?.message} {...register("dailyPay")} />
-                <FormInput label="Working Days" placeholder="26" type="number" min="1" max="31" step="1" error={errors.workingDays?.message} {...register("workingDays")} />
+                <div>
+                  <FormInput label="Working Days" placeholder="26" type="number" min="1" max="31" step="1" error={errors.workingDays?.message} {...register("workingDays")} />
+                  <button
+                    className="table-link-button"
+                    type="button"
+                    onClick={useAttendanceDays}
+                    disabled={attendanceDaysLoading || !selectedStaffId || !selectedPayrollMonth}
+                    style={{ marginTop: "6px" }}
+                  >
+                    {attendanceDaysLoading ? "Loading attendance..." : "Use attendance days"}
+                  </button>
+                </div>
                 <FormInput label="Allowances (Rs.)" placeholder="5000.00" type="number" min="0" step="0.01" error={errors.allowances?.message} {...register("allowances")} />
               </div>
               <div className="form-grid">
@@ -622,8 +651,8 @@ export const BillingWorkspacePanel = () => {
                 </div>
                 {payrollPreview ? (
                   <div className="manager-summary-grid" style={{ margin: 0, padding: "12px" }}>
-                    <div><strong>{money(payrollPreview.shiftRate || 0)}</strong><span>daily pay</span></div>
-                    <div><strong>{payrollPreview.payableShifts || 0}</strong><span>working days</span></div>
+                    <div><strong>{money(payrollPreview.dailyPay ?? payrollPreview.shiftRate ?? 0)}</strong><span>daily pay</span></div>
+                    <div><strong>{payrollPreview.workingDays ?? payrollPreview.payableShifts ?? 0}</strong><span>working days</span></div>
                     <div><strong>{money(payrollPreview.baseSalary)}</strong><span>gross pay</span></div>
                     <div><strong>{money(payrollPreview.netSalary)}</strong><span>net salary</span></div>
                   </div>
@@ -635,7 +664,7 @@ export const BillingWorkspacePanel = () => {
               </div>
             </>
           ) : null}
-          <div className="modal-actions"><button className="button-secondary" type="button" onClick={() => setModal({ type: null, record: null })} disabled={busy}>Cancel</button><button className="button-primary" type="submit" disabled={busy || (modal.type === "payroll" && (payrollPreviewLoading || !payrollPreview || payrollPreview.existingPayroll || payrollPreview.payableShifts === 0 || payrollDeductionsInvalid))}><CreditCard size={16} /> {busy ? "Saving..." : modal.type === "payroll" ? "Create Salary Draft" : "Save"}</button></div>
+          <div className="modal-actions"><button className="button-secondary" type="button" onClick={() => setModal({ type: null, record: null })} disabled={busy}>Cancel</button><button className="button-primary" type="submit" disabled={busy || (modal.type === "payroll" && (payrollPreviewLoading || !payrollPreview || payrollPreview.existingPayroll || (payrollPreview.workingDays ?? payrollPreview.payableShifts ?? 0) === 0 || payrollDeductionsInvalid))}><CreditCard size={16} /> {busy ? "Saving..." : modal.type === "payroll" ? "Create Salary Draft" : "Save"}</button></div>
         </form>
       </Modal>
     </section>

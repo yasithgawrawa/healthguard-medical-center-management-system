@@ -158,7 +158,7 @@ export const DoctorDashboard = () => {
               Clinic Owner Compensation Model
             </div>
             <div style={{ color: "var(--ink-700)", fontSize: "0.85rem", marginTop: "2px" }}>
-              Compensated via patient appointment fees ({money(myFee)} / visit). Exempt from employee shift payroll.
+              Compensated via patient appointment fees ({money(myFee)} / visit). Exempt from employee salary processing.
             </div>
           </div>
         </div>

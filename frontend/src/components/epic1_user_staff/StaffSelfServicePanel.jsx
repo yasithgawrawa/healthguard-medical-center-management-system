@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Clock, Download, LogIn, LogOut, MapPin, Plane, Printer, X } from "lucide-react";
+import { CalendarDays, Clock, LogIn, LogOut, Plane, Printer, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useOutletContext } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -33,31 +33,6 @@ const workedHours = (item) => {
   return `${Math.max((new Date(item.checkOutAt) - new Date(item.checkInAt)) / 36e5, 0).toFixed(1)}h`;
 };
 
-const shiftDate = (item) => (item.startTime ? new Date(item.startTime).toISOString().slice(0, 10) : "");
-const shiftWindow = (shift) => shift?.startTime ? `${formatTime(shift.startTime)} - ${formatTime(shift.endTime)}` : "-";
-
-const saveBlob = (blob, filename) => {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
-};
-
-const getCurrentPosition = () =>
-  new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error("Location is not supported in this browser."));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
-      timeout: 12000,
-      maximumAge: 0
-    });
-  });
-
 export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
   const { user } = useAuth();
   const location = useLocation();
@@ -74,7 +49,6 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
   const [attendance, setAttendance] = useState([]);
   const [leave, setLeave] = useState([]);
   const [payroll, setPayroll] = useState([]);
-  const [shifts, setShifts] = useState([]);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
@@ -92,15 +66,13 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
 
   const load = async () => {
     try {
-      const [attendanceData, leaveData, shiftData, payrollData] = await Promise.all([
+      const [attendanceData, leaveData, payrollData] = await Promise.all([
         e1Api.listMyAttendance(),
         e1Api.listMyLeave(),
-        e1Api.listMyShifts(),
         billingApi.payroll()
       ]);
       setAttendance(Array.isArray(attendanceData) ? attendanceData : []);
       setLeave(Array.isArray(leaveData) ? leaveData : []);
-      setShifts(Array.isArray(shiftData) ? shiftData : []);
       setPayroll(Array.isArray(payrollData) ? payrollData : []);
     } catch (error) {
       setToast({ type: "error", message: error.response?.data?.message || "Unable to load staff self-service data" });
@@ -136,25 +108,12 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
     () => attendance.find((item) => item.workDate === today) || attendance.find((item) => item.status === "checked_in"),
     [attendance, today]
   );
-  const todayShift = useMemo(
-    () => shifts.find((item) => shiftDate(item) === today && item.status === "scheduled"),
-    [shifts, today]
-  );
-  const upcomingShifts = useMemo(
-    () => shifts.filter((item) => item.status === "scheduled" && shiftDate(item) >= today).slice(0, 4),
-    [shifts, today]
-  );
 
   const runAttendance = async (action) => {
     setBusy(true);
     try {
       if (action === "in") {
-        const position = await getCurrentPosition();
-        await e1Api.checkIn({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracyMeters: position.coords.accuracy
-        });
+        await e1Api.checkIn({});
         setToast({ type: "success", message: "Checked in successfully" });
       } else {
         await e1Api.checkOut();
@@ -162,7 +121,7 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
       }
       await load();
     } catch (error) {
-      setToast({ type: "error", message: error.response?.data?.errors?.location || error.response?.data?.message || error.message || "Unable to update attendance" });
+      setToast({ type: "error", message: error.response?.data?.message || error.message || "Unable to update attendance" });
     } finally {
       setBusy(false);
     }
@@ -183,17 +142,6 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
     }
   };
 
-  const downloadPayslip = async (item) => {
-    setBusy(true);
-    try {
-      saveBlob(await billingApi.downloadPayslip(item._id), `healthguard-payslip-${item.month}-${item._id}.txt`);
-    } catch (error) {
-      setToast({ type: "error", message: error.response?.data?.message || "Unable to download payslip" });
-    } finally {
-      setBusy(false);
-    }
-  };
-
   if (!isAttendanceActive) {
     return null;
   }
@@ -208,7 +156,7 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
             <h2>My Workforce</h2>
             <span className="badge badge-success" style={{ fontSize: "0.75rem", padding: "2px 8px" }}>Attendance & Leave</span>
           </div>
-          <p>Track today's attendance, upcoming shifts and your own leave requests. Check-in is accepted only at the Health Guard clinic.</p>
+          <p>Track today's attendance and your own leave requests with a simple check-in and check-out flow.</p>
         </div>
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <button className="button-secondary" type="button" onClick={() => setLeaveOpen(true)}>
@@ -230,9 +178,9 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
 
       <div className="staff-self-grid">
         <div className="staff-self-card">
-          <Clock size={22} />
-          <span>Today Shift</span>
-          <strong>{todayShift ? shiftWindow(todayShift) : "No shift today"}</strong>
+          <CalendarDays size={22} />
+          <span>Today</span>
+          <strong>{formatDate(today)}</strong>
         </div>
         <div className="staff-self-card">
           <Clock size={22} />
@@ -252,9 +200,9 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
       </div>
 
       <div className="staff-self-actions">
-        <button className="button-primary" type="button" onClick={() => runAttendance("in")} disabled={busy || todayAttendance?.status === "checked_in"}>
-          <MapPin size={17} />
-          <span>{busy ? "Checking..." : "Check In For Shift"}</span>
+        <button className="button-primary" type="button" onClick={() => runAttendance("in")} disabled={busy || Boolean(todayAttendance)}>
+          <LogIn size={17} />
+          <span>{busy ? "Checking..." : "Check In Today"}</span>
         </button>
         <button className="button-secondary" type="button" onClick={() => runAttendance("out")} disabled={busy || todayAttendance?.status !== "checked_in"}>
           <LogOut size={17} />
@@ -264,31 +212,16 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
 
       <div className="staff-self-tables">
         <div>
-          <h3>Upcoming Shifts</h3>
-          <DataTable
-            columns={[
-              { key: "date", header: "Date", render: (item) => formatDate(item.startTime) },
-              { key: "start", header: "Start", render: (item) => formatTime(item.startTime) },
-              { key: "end", header: "End", render: (item) => formatTime(item.endTime) },
-              { key: "location", header: "Clinic" },
-              { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> }
-            ]}
-            rows={upcomingShifts}
-            emptyText="No shifts scheduled."
-          />
-        </div>
-        <div>
           <h3>Attendance History</h3>
           <DataTable
             columns={[
               { key: "date", header: "Date", render: (item) => formatDate(item.workDate) },
-              { key: "shift", header: "Linked Shift", render: (item) => shiftWindow(item.shiftId) },
               { key: "checkIn", header: "Check In", render: (item) => formatTime(item.checkInAt) },
               { key: "checkOut", header: "Check Out", render: (item) => formatTime(item.checkOutAt) },
               { key: "hours", header: "Worked Hours", render: workedHours },
               { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> }
             ]}
-            rows={attendance.slice(0, 4)}
+            rows={attendance.slice(0, 6)}
             emptyText="No attendance history yet."
           />
         </div>
@@ -315,7 +248,7 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
             <h3 style={{ margin: 0, color: "#0369a1" }}>Clinic Owner & Appointment Compensation</h3>
           </div>
           <p style={{ margin: 0, color: "#0f172a", fontSize: "0.88rem", lineHeight: 1.5 }}>
-            As the clinic owner, you are compensated per completed appointment consultation fee and are exempt from standard employee shift payroll.
+            As the clinic owner, you are compensated per completed appointment consultation fee and are exempt from standard employee salary processing.
             Detailed consultation fee earnings and invoice breakdowns are tracked in real time on your <strong>Doctor Workspace</strong>.
           </p>
         </div>
@@ -325,8 +258,8 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
           <DataTable
             columns={[
               { key: "month", header: "Month" },
-              { key: "payableShifts", header: "Payable Shifts", render: (item) => item.payableShifts ?? item.attendanceDays },
-              { key: "shiftRate", header: "Rate / Shift", render: (item) => `Rs. ${Number(item.shiftRate || 0).toFixed(2)}` },
+              { key: "workingDays", header: "Working Days", render: (item) => item.workingDays ?? item.payableShifts ?? item.attendanceDays },
+              { key: "dailyPay", header: "Daily Pay", render: (item) => `Rs. ${Number(item.dailyPay ?? item.shiftRate ?? 0).toFixed(2)}` },
               { key: "netSalary", header: "Net Salary", render: (item) => `Rs. ${Number(item.netSalary || 0).toFixed(2)}` },
               { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
               { key: "actions", header: "Actions", render: (item) => (

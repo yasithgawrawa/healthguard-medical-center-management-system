@@ -1,4 +1,4 @@
-import { AlertTriangle, CalendarPlus, ClipboardCheck, ClipboardList, DollarSign, FlaskConical, Users } from "lucide-react";
+import { AlertTriangle, ClipboardCheck, ClipboardList, DollarSign, FlaskConical, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BillingWorkspacePanel } from "../../components/epic4_billing/BillingWorkspacePanel.jsx";
 import { InventoryWorkspacePanel } from "../../components/epic3_inventory/InventoryWorkspacePanel.jsx";
@@ -28,7 +28,7 @@ export const ManagerDashboard = () => {
       inventoryApi.alerts().catch(() => ({ lowStock: [], expiring: [] }))
     ]).then(([attendanceData, leaveData, summaryData, alertsData]) => {
       const today = new Date().toISOString().slice(0, 10);
-      const todayCheckIns = (attendanceData || []).filter((a) => (a.checkInTime || "").slice(0, 10) === today);
+      const todayCheckIns = (attendanceData || []).filter((a) => (a.workDate || (a.checkInAt || "").slice(0, 10)) === today);
       const pendingLeaves = (leaveData || []).filter((l) => l.status === "pending");
       const lowStockCount = alertsData?.lowStock?.length || 0;
       const expiringCount = alertsData?.expiring?.length || 0;
@@ -47,7 +47,7 @@ export const ManagerDashboard = () => {
       <div className="dashboard-header-banner">
         <div>
           <h1>Manager Overview</h1>
-          <p>Plan shifts, monitor attendance, review leave requests, adjust investigation pricing, and track clinic finances.</p>
+          <p>Monitor attendance, review leave requests, adjust investigation pricing, and track clinic finances.</p>
         </div>
         <div className="dashboard-live-indicator">
           <div className="live-dot" />
@@ -59,7 +59,7 @@ export const ManagerDashboard = () => {
         <DashboardCard
           title="Staff On Duty Today"
           value={`${metrics.onDutyStaff} Check-ins`}
-          detail="Verified check-ins at medical center"
+          detail="Staff checked in today"
           icon={Users}
           change="Workforce Active"
           href="#manager-workforce"
@@ -103,7 +103,6 @@ export const ManagerDashboard = () => {
       <DashboardQuickActions
         actions={[
           { label: "Lab Tariffs & Pricing", detail: "Adjust test prices & doctor fees", icon: FlaskConical, href: "#manager-tariffs" },
-          { label: "Create Shift", detail: "Schedule active staff", icon: CalendarPlus, href: "#manager-workforce" },
           { label: "Review Attendance", detail: "Search staff attendance records", icon: ClipboardCheck, href: "#manager-workforce" },
           { label: "Review Leave", detail: "Approve or reject requests", icon: ClipboardList, href: "#manager-workforce" },
           { label: "Finance Reports", detail: "Revenue, outstanding and payroll", icon: ClipboardCheck, href: "#billing-payments" }

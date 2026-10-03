@@ -20,67 +20,6 @@ const getCurrentActiveStaff = async (userId) => {
   return staff;
 };
 
-const toRadians = (value) => (value * Math.PI) / 180;
-
-const distanceInMeters = (from, to) => {
-  const earthRadiusMeters = 6371000;
-  const latDelta = toRadians(to.latitude - from.latitude);
-  const lonDelta = toRadians(to.longitude - from.longitude);
-  const a =
-    Math.sin(latDelta / 2) * Math.sin(latDelta / 2) +
-    Math.cos(toRadians(from.latitude)) *
-      Math.cos(toRadians(to.latitude)) *
-      Math.sin(lonDelta / 2) *
-      Math.sin(lonDelta / 2);
-  return earthRadiusMeters * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-};
-
-const dayRange = (date) => {
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(date);
-  end.setHours(23, 59, 59, 999);
-  return { start, end };
-};
-
-const getConfiguredCenterLocation = async () => {
-  const center = await CenterLocation.findOne({ key: "primary" });
-  if (!center) {
-    throw new AppError("Clinic attendance point is not configured", 403, {
-      location: "Ask an admin to set the Health Guard clinic attendance point first."
-    });
-  }
-  return center;
-};
-
-const findEligibleShift = async (staffId, now) => {
-  const currentShift = await Shift.findOne({
-    staffId,
-    status: "scheduled",
-    startTime: { $lte: now },
-    endTime: { $gte: now }
-  }).sort({ startTime: 1 });
-
-  if (currentShift) {
-    return currentShift;
-  }
-
-  const { start, end } = dayRange(now);
-  const todayShift = await Shift.findOne({
-    staffId,
-    status: "scheduled",
-    startTime: { $gte: start, $lte: end }
-  }).sort({ startTime: 1 });
-
-  if (!todayShift) {
-    throw new AppError("No shift is scheduled for you today", 403, {
-      shift: "Ask a manager or admin to create today's shift first."
-    });
-  }
-
-  return todayShift;
-};
-
 export const getCenterLocation = async (req, res) => {
   const center = await CenterLocation.findOne({ key: "primary" });
   return successResponse(res, "Clinic attendance point loaded", center);
@@ -186,6 +125,8 @@ export const checkIn = async (req, res) => {
   await assertActiveStaff(req.body.staffId);
   const now = new Date();
   const workDate = now.toISOString().slice(0, 10);
+  const existing = await Attendance.findOne({ staffId: req.body.staffId, workDate });
+  if (existing) throw new AppError("Attendance has already been recorded for this staff member today", 409);
   const attendance = await Attendance.create({
     staffId: req.body.staffId,
     workDate,
@@ -198,40 +139,13 @@ export const checkIn = async (req, res) => {
 export const checkInSelf = async (req, res) => {
   const staff = await getCurrentActiveStaff(req.user._id);
   const now = new Date();
-  const { latitude, longitude, accuracyMeters } = req.body;
-
-  if (latitude === undefined || longitude === undefined) {
-    throw new AppError("Current location is required for staff check-in", 400, {
-      location: "Allow browser location access and try again"
-    });
-  }
-
-  const shift = await findEligibleShift(staff._id, now);
-  const center = await getConfiguredCenterLocation();
-  const distance = distanceInMeters(
-    { latitude, longitude },
-    { latitude: center.latitude, longitude: center.longitude }
-  );
-  const allowedDistance = center.radiusMeters + Math.min(Number(accuracyMeters || 0), 50);
-
-  if (distance > allowedDistance) {
-    throw new AppError(`Check-in allowed only at ${center.name}`, 403, {
-      location: `You are ${Math.round(distance)}m away. Allowed radius is ${center.radiusMeters}m.`
-    });
-  }
-
   const workDate = now.toISOString().slice(0, 10);
+  const existing = await Attendance.findOne({ staffId: staff._id, workDate });
+  if (existing) throw new AppError("You have already checked in today", 409);
   const attendance = await Attendance.create({
     staffId: staff._id,
     workDate,
     checkInAt: now,
-    shiftId: shift._id,
-    checkInLocation: {
-      latitude,
-      longitude,
-      accuracyMeters,
-      distanceFromShiftMeters: Math.round(distance)
-    },
     notes: req.body.notes
   });
   return successResponse(res, "Attendance check-in recorded", attendance, 201);
@@ -260,7 +174,6 @@ export const checkOutSelf = async (req, res) => {
 export const listAttendance = async (req, res) => {
   const attendance = await Attendance.find()
     .populate({ path: "staffId", populate: { path: "userId", select: "-passwordHash" } })
-    .populate("shiftId", "startTime endTime location")
     .sort({ workDate: -1 });
   return successResponse(res, "Attendance list loaded", attendance);
 };
@@ -269,7 +182,6 @@ export const listMyAttendance = async (req, res) => {
   const staff = await getCurrentActiveStaff(req.user._id);
   const attendance = await Attendance.find({ staffId: staff._id })
     .populate({ path: "staffId", populate: { path: "userId", select: "-passwordHash" } })
-    .populate("shiftId", "startTime endTime location")
     .sort({ workDate: -1 });
   return successResponse(res, "My attendance history loaded", attendance);
 };
