@@ -90,6 +90,9 @@ const toFormValues = (staff) => ({
 
 export const StaffFormModal = ({ open, mode = "create", staff, existingStaff = [], serverErrors, onClose, onSubmit, busy }) => {
   const isEdit = mode === "edit";
+  const roleOptions = isEdit && staff?.role === "doctor"
+    ? STAFF_ROLES
+    : STAFF_ROLES.filter((role) => role.value !== "doctor");
   const {
     register,
     handleSubmit,
@@ -173,7 +176,7 @@ export const StaffFormModal = ({ open, mode = "create", staff, existingStaff = [
             })}
           >
             <option value="">Select role</option>
-            {STAFF_ROLES.map((role) => (
+            {roleOptions.map((role) => (
               <option value={role.value} key={role.value}>
                 {role.label}
               </option>

@@ -28,7 +28,6 @@ export const e1StaffActions = [
       { name: "role", label: "Role", type: "select", required: true, options: [
         { value: "admin", label: "Admin" },
         { value: "manager", label: "Manager" },
-        { value: "doctor", label: "Doctor" },
         { value: "nurse", label: "Nurse" },
         { value: "pharmacist", label: "Pharmacist" },
         { value: "cashier", label: "Cashier" },

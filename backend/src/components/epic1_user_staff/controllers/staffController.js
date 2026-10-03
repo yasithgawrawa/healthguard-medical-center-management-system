@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { User } from "../models/User.js";
 import { Staff } from "../models/Staff.js";
+import { ROLES } from "../../../shared/constants/roles.js";
 import { successResponse } from "../../../shared/utils/apiResponse.js";
 import { AppError } from "../../../shared/utils/AppError.js";
 
@@ -21,6 +22,10 @@ const resolveShiftPay = (body) => {
 };
 
 export const createStaff = async (req, res) => {
+  if (req.body.role === ROLES.DOCTOR) {
+    throw new AppError("Only one clinic doctor is supported. The doctor account already exists.", 409, { role: "Doctor creation is disabled" });
+  }
+
   const existingUser = await User.findOne({ email: req.body.email }).select("_id");
   if (existingUser) throw new AppError("Email already exists", 409, { email: "Email already exists" });
 
@@ -86,6 +91,9 @@ export const listStaff = async (req, res) => {
 export const updateStaff = async (req, res) => {
   const staff = await Staff.findById(req.params.id);
   if (!staff) throw new AppError("Staff not found", 404);
+  if (req.body.role === ROLES.DOCTOR && staff.role !== ROLES.DOCTOR) {
+    throw new AppError("Only one clinic doctor is supported. Existing staff cannot be changed into a doctor.", 409, { role: "Doctor role is not available" });
+  }
 
   const staffUpdates = ["department", "role", "status", "employmentDate", "emergencyContact", "baseSalary", "shiftRate", "allowances", "deductions"].reduce((acc, key) => {
     if (req.body[key] !== undefined) acc[key] = req.body[key];

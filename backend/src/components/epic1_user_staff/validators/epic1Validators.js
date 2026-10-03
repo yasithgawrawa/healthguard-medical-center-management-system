@@ -4,6 +4,7 @@ import { employeeIdSchema, moneySchema, nameSchema, phoneSchema, textNoNumbersSc
 import { idParamSchema, objectIdSchema } from "../../../shared/validators/commonSchemas.js";
 
 const staffRoleValues = ROLE_VALUES.filter((role) => role !== ROLES.PATIENT);
+const creatableStaffRoleValues = staffRoleValues.filter((role) => role !== ROLES.DOCTOR);
 const passwordSchema = z
   .string({ required_error: "Password is required" })
   .min(8, "Password must be at least 8 characters")
@@ -21,7 +22,7 @@ export const createStaffSchema = z.object({
     address: z.string().trim().optional().default(""),
     employeeId: employeeIdSchema.optional(),
     department: textNoNumbersSchema("Department", 80).optional().default("General"),
-    role: z.enum(staffRoleValues),
+    role: z.enum(creatableStaffRoleValues),
     employmentDate: z.coerce.date().refine((date) => {
       const endOfToday = new Date();
       endOfToday.setHours(23, 59, 59, 999);
