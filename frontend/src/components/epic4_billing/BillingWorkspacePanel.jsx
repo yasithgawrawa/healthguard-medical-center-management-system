@@ -152,11 +152,18 @@ export const BillingWorkspacePanel = () => {
         reset({});
         setModal({ type: "invoice", record: null });
       }
+      if (command.action === "createSalary" && canCreatePayroll) {
+        setActiveTab("payroll");
+        setPayrollPreview(null);
+        setPayrollPreviewError("");
+        reset({ month: new Date().toISOString().slice(0, 7), dailyPay: 0, workingDays: 26, allowances: 0, deductions: 0 });
+        setModal({ type: "payroll", record: null });
+      }
     };
 
     window.addEventListener(DASHBOARD_COMMAND_EVENT, handleDashboardCommand);
     return () => window.removeEventListener(DASHBOARD_COMMAND_EVENT, handleDashboardCommand);
-  }, [isCashier, reset]);
+  }, [canCreatePayroll, isCashier, reset]);
 
   useEffect(() => {
     if (modal.type !== "payroll" || !selectedStaffId) return;
@@ -231,8 +238,11 @@ export const BillingWorkspacePanel = () => {
       }
       if (modal.type === "payroll") {
         await billingApi.createPayroll(values);
+        setActiveTab("payroll");
+        setPayrollMonthFilter(values.month);
+        setPayrollStatusFilter("all");
       }
-      setToast({ type: "success", message: "Billing workflow saved" });
+      setToast({ type: "success", message: modal.type === "payroll" ? "Salary draft saved" : "Billing workflow saved" });
       setModal({ type: null, record: null });
       await load();
     } catch (error) {
@@ -321,7 +331,7 @@ export const BillingWorkspacePanel = () => {
       <div className="e1-panel-header">
         <div><h2>Billing, Payments & Salary</h2><p>Collect invoices, reconcile revenue and create simple salary drafts from daily pay and working days.</p></div>
         <div className="inline-actions">
-          {canCreatePayroll ? <button type="button" onClick={() => { setPayrollPreview(null); setPayrollPreviewError(""); reset({ month: new Date().toISOString().slice(0, 7), dailyPay: 0, workingDays: 26, allowances: 0, deductions: 0 }); setModal({ type: "payroll", record: null }); }}><DollarSign size={17} /> Run Salary</button> : null}
+          {canCreatePayroll ? <button type="button" onClick={() => { setActiveTab("payroll"); setPayrollPreview(null); setPayrollPreviewError(""); reset({ month: new Date().toISOString().slice(0, 7), dailyPay: 0, workingDays: 26, allowances: 0, deductions: 0 }); setModal({ type: "payroll", record: null }); }}><DollarSign size={17} /> Run Salary</button> : null}
         </div>
       </div>
 
