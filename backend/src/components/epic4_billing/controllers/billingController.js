@@ -100,6 +100,43 @@ const buildShiftPayroll = async ({ staffId, month, shiftRate, allowances = 0, de
   };
 };
 
+const buildDailyPayroll = async ({ staffId, month, dailyPay, workingDays, allowances = 0, deductions = 0 }) => {
+  const staff = await Staff.findById(staffId).populate("userId", "firstName lastName email");
+  if (!staff) throw new AppError("Staff profile not found", 404);
+
+  if (staff.role === ROLES.DOCTOR || staff.payBasis === "exempt") {
+    throw new AppError("The doctor is the clinic owner, compensated per appointment consultation, and exempt from employee salary payroll.", 400);
+  }
+
+  const payableDailyRate = Number(dailyPay);
+  const payableDays = Number(workingDays);
+  if (!payableDailyRate || payableDailyRate <= 0) {
+    throw new AppError("Daily pay is required", 400, { dailyPay: "Daily pay is required" });
+  }
+  if (!Number.isInteger(payableDays) || payableDays < 1 || payableDays > 31) {
+    throw new AppError("Working days must be between 1 and 31", 400, { workingDays: "Working days must be between 1 and 31" });
+  }
+
+  const grossSalary = roundMoney(payableDailyRate * payableDays);
+  const netSalary = Math.max(roundMoney(grossSalary + Number(allowances || 0) - Number(deductions || 0)), 0);
+
+  return {
+    staff,
+    month,
+    payBasis: "daily",
+    baseSalary: grossSalary,
+    shiftRate: roundMoney(payableDailyRate),
+    scheduledShifts: payableDays,
+    payableShifts: payableDays,
+    totalShiftHours: 0,
+    attendanceDays: payableDays,
+    payrollLines: [],
+    allowances: Number(allowances || 0),
+    deductions: Number(deductions || 0),
+    netSalary
+  };
+};
+
 export const createInvoice = async (req, res) => {
   if (req.body.appointmentId) {
     const appointment = await Appointment.findById(req.body.appointmentId);
@@ -182,18 +219,28 @@ export const createPayroll = async (req, res) => {
     throw new AppError(`Payroll has already been processed for this staff member in ${req.body.month}`, 409);
   }
 
-  const calculated = await buildShiftPayroll({
-    staffId: req.body.staffId,
-    month: req.body.month,
-    shiftRate: req.body.shiftRate,
-    allowances: req.body.allowances,
-    deductions: req.body.deductions
-  });
+  const isDailyPayroll = req.body.payBasis === "daily" || req.body.dailyPay !== undefined || req.body.workingDays !== undefined;
+  const calculated = isDailyPayroll
+    ? await buildDailyPayroll({
+      staffId: req.body.staffId,
+      month: req.body.month,
+      dailyPay: req.body.dailyPay ?? req.body.shiftRate,
+      workingDays: req.body.workingDays,
+      allowances: req.body.allowances,
+      deductions: req.body.deductions
+    })
+    : await buildShiftPayroll({
+      staffId: req.body.staffId,
+      month: req.body.month,
+      shiftRate: req.body.shiftRate,
+      allowances: req.body.allowances,
+      deductions: req.body.deductions
+    });
   if (calculated.payableShifts === 0) {
-    throw new AppError("Payroll cannot be created without at least one completed, checked-out shift", 409);
+    throw new AppError(isDailyPayroll ? "Payroll cannot be created without at least one working day" : "Payroll cannot be created without at least one completed, checked-out shift", 409);
   }
   if (calculated.deductions > calculated.baseSalary + calculated.allowances) {
-    throw new AppError("Deductions cannot exceed gross shift pay plus allowances", 400, { deductions: "Deductions are too high" });
+    throw new AppError("Deductions cannot exceed gross pay plus allowances", 400, { deductions: "Deductions are too high" });
   }
   const payroll = await Payroll.create({
     staffId: req.body.staffId,
@@ -215,14 +262,24 @@ export const createPayroll = async (req, res) => {
 
 export const previewPayroll = async (req, res) => {
   const existingPayroll = await Payroll.findOne({ staffId: req.body.staffId, month: req.body.month });
-  const calculated = await buildShiftPayroll({
-    staffId: req.body.staffId,
-    month: req.body.month,
-    shiftRate: req.body.shiftRate,
-    allowances: req.body.allowances,
-    deductions: req.body.deductions
-  });
-  return successResponse(res, "Shift-based payroll preview loaded", { ...calculated, existingPayroll });
+  const isDailyPayroll = req.body.payBasis === "daily" || req.body.dailyPay !== undefined || req.body.workingDays !== undefined;
+  const calculated = isDailyPayroll
+    ? await buildDailyPayroll({
+      staffId: req.body.staffId,
+      month: req.body.month,
+      dailyPay: req.body.dailyPay ?? req.body.shiftRate,
+      workingDays: req.body.workingDays,
+      allowances: req.body.allowances,
+      deductions: req.body.deductions
+    })
+    : await buildShiftPayroll({
+      staffId: req.body.staffId,
+      month: req.body.month,
+      shiftRate: req.body.shiftRate,
+      allowances: req.body.allowances,
+      deductions: req.body.deductions
+    });
+  return successResponse(res, "Payroll preview loaded", { ...calculated, existingPayroll });
 };
 
 export const listPayroll = async (req, res) => {
@@ -293,6 +350,7 @@ export const downloadPayslip = async (req, res) => {
     throw new AppError("You can only download your own payslip", 403);
   }
 
+  const isDailyPayroll = payroll.payBasis === "daily";
   const lines = [
     "Health Guard Medical Center",
     "Staff Payslip",
@@ -300,12 +358,10 @@ export const downloadPayslip = async (req, res) => {
     `Staff: ${nameFromUser(payroll.staffId?.userId)} (${payroll.staffId?.employeeId || "-"})`,
     `Status: ${payroll.status}`,
     "",
-    `Pay Basis: ${payroll.payBasis || "shift"}`,
-    `Payable Shifts: ${payroll.payableShifts ?? payroll.attendanceDays}`,
-    `Scheduled Shifts: ${payroll.scheduledShifts ?? "-"}`,
-    `Total Shift Hours: ${payroll.totalShiftHours ?? "-"}`,
-    `Shift Rate: Rs. ${Number(payroll.shiftRate || 0).toFixed(2)}`,
-    `Gross Shift Pay: Rs. ${payroll.baseSalary.toFixed(2)}`,
+    `Pay Basis: ${isDailyPayroll ? "daily" : (payroll.payBasis || "shift")}`,
+    `${isDailyPayroll ? "Working Days" : "Payable Shifts"}: ${payroll.payableShifts ?? payroll.attendanceDays}`,
+    `${isDailyPayroll ? "Daily Pay" : "Shift Rate"}: Rs. ${Number(payroll.shiftRate || 0).toFixed(2)}`,
+    `Gross Pay: Rs. ${payroll.baseSalary.toFixed(2)}`,
     `Allowances: Rs. ${payroll.allowances.toFixed(2)}`,
     `Deductions: Rs. ${payroll.deductions.toFixed(2)}`,
     `Net Salary: Rs. ${payroll.netSalary.toFixed(2)}`,

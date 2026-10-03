@@ -4,7 +4,7 @@ const payrollSchema = new mongoose.Schema(
   {
     staffId: { type: mongoose.Schema.Types.ObjectId, ref: "Staff", required: true, index: true },
     month: { type: String, required: true },
-    payBasis: { type: String, enum: ["shift"], default: "shift" },
+    payBasis: { type: String, enum: ["shift", "daily"], default: "shift" },
     baseSalary: { type: Number, required: true, min: 0 },
     shiftRate: { type: Number, default: 0, min: 0 },
     scheduledShifts: { type: Number, default: 0, min: 0 },

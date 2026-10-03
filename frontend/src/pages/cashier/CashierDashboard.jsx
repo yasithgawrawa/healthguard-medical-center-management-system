@@ -112,7 +112,7 @@ export const CashierDashboard = () => {
         actions={[
           { label: "Create Invoice", detail: "Add billable services", icon: Receipt, href: "#billing-payments" },
           { label: "Record Payment", detail: "Settle an invoice", icon: CreditCard, href: "#billing-payments" },
-          { label: "Review Revenue", detail: "Check recent invoices", icon: DollarSign, href: "#billing-payments" },
+          { label: "Run Salary", detail: "Create payroll draft", icon: DollarSign, href: "#billing-payments", command: { workspace: "billing", tab: "payroll" } },
           { label: "Verify Receipt", detail: "Confirm paid status", icon: FileCheck, href: "#billing-payments" }
         ]}
       />
