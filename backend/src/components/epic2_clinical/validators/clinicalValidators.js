@@ -15,7 +15,7 @@ export const appointmentSchema = z.object({
     doctorId: objectIdSchema,
     appointmentDate: z.coerce.date().refine((date) => date >= new Date(Date.now() - 86400000), "Appointment date cannot be in the past"),
     slotLabel: z.string().trim().min(2).max(40),
-    reason: z.string().trim().min(3).max(300)
+    reason: z.string().trim().min(5, "Reason must be at least 5 characters").max(300)
   })
 });
 

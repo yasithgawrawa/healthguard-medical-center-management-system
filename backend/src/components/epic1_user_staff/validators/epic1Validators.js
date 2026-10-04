@@ -13,6 +13,19 @@ const passwordSchema = z
   .regex(/[0-9]/, "Password must include at least one number")
   .regex(/[^A-Za-z0-9]/, "Password must include at least one special character (e.g. @, #, $, !)");
 
+const optionalDateOfBirthSchema = z.coerce.date().optional().refine((date) => {
+  if (!date) return true;
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  return date <= today;
+}, "Date of birth cannot be in the future").refine((date) => {
+  if (!date) return true;
+  const oldest = new Date();
+  oldest.setFullYear(oldest.getFullYear() - 120);
+  oldest.setHours(0, 0, 0, 0);
+  return date >= oldest;
+}, "Date of birth must be within the last 120 years");
+
 export const createStaffSchema = z.object({
   body: z.object({
     firstName: nameSchema("First name"),
@@ -67,7 +80,7 @@ export const quickPatientSchema = z.object({
     email: z.string().trim().email().toLowerCase().optional().or(z.literal("")),
     phone: phoneSchema,
     address: z.string().trim().max(250).optional().default(""),
-    dateOfBirth: z.coerce.date().optional(),
+    dateOfBirth: optionalDateOfBirthSchema,
     gender: z.enum(["female", "male", "other", "prefer_not_to_say"]).optional()
   })
 });

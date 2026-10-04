@@ -30,7 +30,7 @@ export const phoneSchema = z
   .refine((val) => {
     const cleaned = String(val || "").replace(/[\s\-().]/g, "");
     return /^(?:\+94|0)?[1-9]\d{8}$/.test(cleaned);
-  }, "Enter a valid Sri Lankan phone number");
+  }, "Enter a valid phone number, e.g. 0712175244");
 
 export const employeeIdSchema = z
   .string()
