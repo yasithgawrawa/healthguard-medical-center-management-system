@@ -3,6 +3,7 @@ import { Bell, CalendarCheck, CalendarClock, CreditCard, Download, FileText, His
 import { patientApi } from "../../services/patientApi.js";
 import { printInvoicePDF, printLabReportPDF } from "../../utils/invoicePrintTemplate.js";
 import { customerLabel, patientLabel } from "../../utils/personLabels.js";
+import { Modal } from "../shared/Modal.jsx";
 
 const formatDate = (value) => {
   if (!value) return "Not set";
@@ -40,7 +41,7 @@ const saveBlob = (blob, filename) => {
   URL.revokeObjectURL(url);
 };
 
-export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
+export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
   const [data, setData] = useState({
     appointments: [],
     labs: [],
@@ -51,6 +52,11 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");
   const [error, setError] = useState("");
+  const [rescheduleModal, setRescheduleModal] = useState({ open: false, appointment: null });
+  const [rescheduleDay, setRescheduleDay] = useState("");
+  const [rescheduleSlot, setRescheduleSlot] = useState(null);
+  const [rescheduleSlots, setRescheduleSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -81,6 +87,7 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
     try {
       await patientApi.cancelAppointment(id);
       await load();
+      onChanged?.();
     } catch (err) {
       setError(err.response?.data?.message || "Unable to cancel appointment");
     } finally {
@@ -89,6 +96,62 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
   };
 
   const canCancel = (item) => item.status === "booked" && new Date(item.appointmentDate) > new Date();
+
+  const openReschedule = (appointment) => {
+    setError("");
+    setRescheduleModal({ open: true, appointment });
+    setRescheduleDay(new Date(appointment.appointmentDate).toISOString().slice(0, 10));
+    setRescheduleSlot({ startsAt: new Date(appointment.appointmentDate).toISOString(), label: appointment.slotLabel });
+    setRescheduleSlots([]);
+  };
+
+  useEffect(() => {
+    const appointment = rescheduleModal.appointment;
+    const doctorId = appointment?.doctorId?._id || appointment?.doctorId;
+    if (!rescheduleModal.open || !appointment || !doctorId || !rescheduleDay) {
+      setRescheduleSlots([]);
+      return;
+    }
+
+    setLoadingSlots(true);
+    patientApi
+      .getAppointmentSlots({ doctorId, date: rescheduleDay })
+      .then((slots) => {
+        const currentIso = new Date(appointment.appointmentDate).toISOString();
+        const normalized = (slots || []).map((slot) => (
+          slot.startsAt === currentIso ? { ...slot, available: true } : slot
+        ));
+        setRescheduleSlots(normalized);
+        const stillSelected = normalized.find((slot) => slot.startsAt === rescheduleSlot?.startsAt && slot.available);
+        if (!stillSelected) setRescheduleSlot(null);
+      })
+      .catch(() => setError("Unable to load appointment slots for the selected date."))
+      .finally(() => setLoadingSlots(false));
+  }, [rescheduleModal.open, rescheduleModal.appointment, rescheduleDay]);
+
+  const saveReschedule = async () => {
+    if (!rescheduleModal.appointment || !rescheduleSlot) {
+      setError("Select an available date and time slot.");
+      return;
+    }
+
+    setBusyId(rescheduleModal.appointment._id);
+    setError("");
+    try {
+      await patientApi.rescheduleAppointment(rescheduleModal.appointment._id, {
+        appointmentDate: rescheduleSlot.startsAt,
+        slotLabel: rescheduleSlot.label
+      });
+      setRescheduleModal({ open: false, appointment: null });
+      setRescheduleSlot(null);
+      await load();
+      onChanged?.();
+    } catch (err) {
+      setError(err.response?.data?.message || "Unable to update appointment date and time");
+    } finally {
+      setBusyId("");
+    }
+  };
 
   const appointmentBuckets = useMemo(() => {
     const startToday = new Date();
@@ -157,9 +220,14 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
       <div className="record-item-header">
         <small className={`status-badge status-${item.status?.replace(/_/g, "-")}`}>{item.status?.replace(/_/g, " ")}</small>
         {canCancel(item) ? (
-          <button className="table-link-button danger-action" type="button" onClick={() => cancelAppointment(item._id)} disabled={busyId === item._id}>
-            {busyId === item._id ? "Cancelling..." : "Cancel"}
-          </button>
+          <>
+            <button className="table-link-button" type="button" onClick={() => openReschedule(item)} disabled={busyId === item._id}>
+              Update Date/Time
+            </button>
+            <button className="table-link-button danger-action" type="button" onClick={() => cancelAppointment(item._id)} disabled={busyId === item._id}>
+              {busyId === item._id ? "Cancelling..." : "Cancel"}
+            </button>
+          </>
         ) : null}
       </div>
     </>
@@ -318,6 +386,64 @@ export const PatientRecordsPanel = ({ refreshKey = 0 }) => {
           );
         })}
       </div>
+
+      <Modal
+        open={rescheduleModal.open}
+        title="Update Booking Date & Time"
+        subtitle={rescheduleModal.appointment ? formatAppointmentDate(rescheduleModal.appointment.appointmentDate, rescheduleModal.appointment.slotLabel) : ""}
+        onClose={() => setRescheduleModal({ open: false, appointment: null })}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <label className="form-field">
+            <span>Appointment Date</span>
+            <input
+              type="date"
+              min={new Date().toISOString().slice(0, 10)}
+              value={rescheduleDay}
+              onChange={(event) => {
+                setRescheduleDay(event.target.value);
+                setRescheduleSlot(null);
+              }}
+            />
+          </label>
+
+          <div>
+            <strong style={{ display: "block", marginBottom: "8px" }}>Available Time Slots</strong>
+            {loadingSlots ? (
+              <p style={{ color: "#64748b" }}>Loading available slots...</p>
+            ) : rescheduleSlots.length === 0 ? (
+              <p style={{ color: "#64748b" }}>No slots available for this date.</p>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "8px" }}>
+                {rescheduleSlots.map((slot) => {
+                  const selected = rescheduleSlot?.startsAt === slot.startsAt;
+                  return (
+                    <button
+                      key={slot.startsAt}
+                      type="button"
+                      className={selected ? "button-primary" : "button-secondary"}
+                      disabled={!slot.available || busyId === rescheduleModal.appointment?._id}
+                      onClick={() => setRescheduleSlot(slot)}
+                      style={{ justifyContent: "center" }}
+                    >
+                      {slot.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="modal-actions">
+            <button className="button-secondary" type="button" onClick={() => setRescheduleModal({ open: false, appointment: null })} disabled={Boolean(busyId)}>
+              Cancel
+            </button>
+            <button className="button-primary" type="button" onClick={saveReschedule} disabled={!rescheduleSlot || Boolean(busyId)}>
+              {busyId ? "Updating..." : "Update Booking"}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </section>
   );
 };

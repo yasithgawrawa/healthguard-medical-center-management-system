@@ -109,7 +109,7 @@ export const PatientDashboard = () => {
       />
 
       <PatientAppointmentBooking onBooked={() => setRefreshKey((key) => key + 1)} />
-      <PatientRecordsPanel refreshKey={refreshKey} />
+      <PatientRecordsPanel refreshKey={refreshKey} onChanged={() => setRefreshKey((key) => key + 1)} />
     </div>
   );
 };

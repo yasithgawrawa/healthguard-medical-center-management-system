@@ -9,6 +9,7 @@ export const patientApi = {
   getAppointments: async () => unwrap(await apiClient.get("/e2/clinical/appointments")),
   bookAppointment: async (payload) => unwrap(await apiClient.post("/e2/clinical/appointments", payload)),
   cancelAppointment: async (id) => unwrap(await apiClient.patch(`/e2/clinical/appointments/${id}/cancel`)),
+  rescheduleAppointment: async (id, payload) => unwrap(await apiClient.patch(`/e2/clinical/appointments/${id}/reschedule`, payload)),
   getLabRequests: async () => unwrap(await apiClient.get("/e2/clinical/lab-requests")),
   getNotifications: async () => unwrap(await apiClient.get("/e2/clinical/notifications")),
   markNotificationRead: async (id) => unwrap(await apiClient.patch(`/e2/clinical/notifications/${id}/read`)),

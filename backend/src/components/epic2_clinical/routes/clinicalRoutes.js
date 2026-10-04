@@ -6,6 +6,7 @@ import { validateRequest } from "../../../shared/middleware/validateRequest.js";
 import { idParamSchema } from "../../../shared/validators/commonSchemas.js";
 import {
   appointmentSchema,
+  appointmentRescheduleSchema,
   appointmentStatusSchema,
   consultationSchema,
   labRequestSchema,
@@ -31,6 +32,7 @@ import {
   listPrescriptions,
   markNotificationRead,
   recordVitals,
+  rescheduleAppointment,
   saveConsultation,
   updateAppointmentStatus,
   updateLabRequest
@@ -47,6 +49,7 @@ router.patch("/doctors/fee", authorizeRoles(ROLES.DOCTOR, ROLES.MANAGER, ROLES.A
 router.get("/notifications", authorizeRoles(ROLES.PATIENT), asyncHandler(listNotifications));
 router.patch("/notifications/:id/read", authorizeRoles(ROLES.PATIENT), validateRequest(idParamSchema), asyncHandler(markNotificationRead));
 router.patch("/appointments/:id/cancel", authorizeRoles(ROLES.PATIENT, ROLES.ADMIN), validateRequest(idParamSchema), asyncHandler(cancelAppointment));
+router.patch("/appointments/:id/reschedule", authorizeRoles(ROLES.PATIENT, ROLES.ADMIN), validateRequest(appointmentRescheduleSchema), asyncHandler(rescheduleAppointment));
 router.patch("/appointments/:id/status", authorizeRoles(ROLES.NURSE, ROLES.DOCTOR, ROLES.ADMIN), validateRequest(appointmentStatusSchema), asyncHandler(updateAppointmentStatus));
 router.post("/vitals", authorizeRoles(ROLES.NURSE, ROLES.DOCTOR), validateRequest(vitalsSchema), asyncHandler(recordVitals));
 router.post("/consultations", authorizeRoles(ROLES.DOCTOR), validateRequest(consultationSchema), asyncHandler(saveConsultation));

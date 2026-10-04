@@ -24,6 +24,14 @@ export const appointmentStatusSchema = z.object({
   body: z.object({ status: z.enum(["checked_in", "in_consultation", "completed", "cancelled"]) })
 });
 
+export const appointmentRescheduleSchema = z.object({
+  params: idParamSchema.shape.params,
+  body: z.object({
+    appointmentDate: z.coerce.date().refine((date) => date > new Date(), "Appointment date must be in the future"),
+    slotLabel: z.string().trim().min(2).max(40)
+  })
+});
+
 export const vitalsSchema = z.object({
   body: z.object({
     appointmentId: objectIdSchema,

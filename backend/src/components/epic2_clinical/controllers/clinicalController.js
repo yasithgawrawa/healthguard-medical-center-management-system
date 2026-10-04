@@ -176,6 +176,67 @@ export const cancelAppointment = async (req, res) => {
   return successResponse(res, "Appointment cancelled", appointment);
 };
 
+export const rescheduleAppointment = async (req, res) => {
+  const appointment = await Appointment.findById(req.params.id);
+  if (!appointment) throw new AppError("Appointment not found", 404);
+  if (req.user.role === ROLES.PATIENT && appointment.patientId.toString() !== req.user._id.toString()) {
+    throw new AppError("You can only update your own appointments", 403);
+  }
+  if (appointment.status !== "booked") {
+    throw new AppError("Only booked appointments can be rescheduled", 409);
+  }
+  if (appointment.appointmentDate <= new Date()) {
+    throw new AppError("Past appointments cannot be rescheduled", 409);
+  }
+
+  const requestedDate = new Date(req.body.appointmentDate);
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+  const istHour = Math.floor(((requestedDate.getTime() + IST_OFFSET_MS) % 86400000) / 3600000);
+  const istMinutes = Math.floor(((requestedDate.getTime() + IST_OFFSET_MS) % 3600000) / 60000);
+  const validSlotHours = [9, 10, 11, 12, 13, 14, 15, 16];
+  if (!validSlotHours.includes(istHour) || istMinutes !== 0) {
+    throw new AppError("Invalid appointment slot. Please select a valid time slot from the available options.", 400, { appointmentDate: "Invalid slot selected" });
+  }
+
+  const clash = await Appointment.findOne({
+    _id: { $ne: appointment._id },
+    doctorId: appointment.doctorId,
+    appointmentDate: requestedDate,
+    status: { $ne: "cancelled" }
+  });
+  if (clash) {
+    throw new AppError("This slot has just been booked by someone else. Please select a different time.", 409, { appointmentDate: "Slot no longer available" });
+  }
+
+  appointment.appointmentDate = requestedDate;
+  appointment.slotLabel = req.body.slotLabel;
+  await appointment.save();
+
+  try {
+    const doctor = await User.findById(appointment.doctorId).select("firstName lastName");
+    const docName = doctor ? `Dr. ${doctor.firstName} ${doctor.lastName}` : "Doctor";
+    const invoice = await Invoice.findOne({ appointmentId: appointment._id, status: { $ne: "cancelled" } });
+    if (invoice) {
+      invoice.items = invoice.items.map((item) => {
+        const desc = (item.description || "").toLowerCase();
+        if (desc.includes("consultation") || desc.includes("channelling")) {
+          const plainItem = typeof item.toObject === "function" ? item.toObject() : item;
+          return {
+            ...plainItem,
+            description: `Doctor Consultation & Channelling (${docName} - ${appointment.slotLabel || "Standard"})`
+          };
+        }
+        return item;
+      });
+      await invoice.save();
+    }
+  } catch (invoiceErr) {
+    // Appointment reschedule should not fail because of invoice text refresh.
+  }
+
+  return successResponse(res, "Appointment date and time updated", appointment);
+};
+
 export const updateAppointmentStatus = async (req, res) => {
   const appointment = await Appointment.findById(req.params.id);
   if (!appointment) throw new AppError("Appointment not found", 404);
