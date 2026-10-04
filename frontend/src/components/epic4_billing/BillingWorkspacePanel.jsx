@@ -227,9 +227,10 @@ export const BillingWorkspacePanel = () => {
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return invoices.filter((item) => {
+      if (item.status === "cancelled") return false;
       const text = [getInvoiceClient(item), item.customerPhone, item.patientId?.phone, item.status, item.subtotal, item.outstandingAmount, item.items?.map((i) => i.description).join(" ")].join(" ").toLowerCase();
       const matchesQuery = !query || text.includes(query);
-      const matchesStatus = statusFilter === "all" ? true : statusFilter === "pending" ? item.status !== "paid" : item.status === statusFilter;
+      const matchesStatus = statusFilter === "all" ? true : statusFilter === "pending" ? item.status !== "paid" && item.status !== "cancelled" : item.status === statusFilter;
       return matchesQuery && matchesStatus;
     });
   }, [invoices, search, statusFilter]);
@@ -529,7 +530,7 @@ export const BillingWorkspacePanel = () => {
                 onClick={() => setStatusFilter("pending")}
                 style={{ padding: "5px 12px", fontSize: "0.82rem" }}
               >
-                ⏳ Pending Bills ({invoices.filter((i) => i.status !== "paid").length})
+                ⏳ Pending Bills ({invoices.filter((i) => i.status !== "paid" && i.status !== "cancelled").length})
               </button>
               <button
                 type="button"

@@ -345,19 +345,35 @@ export const inventoryService = {
 
       if (patientId) {
         const latestAppt = await Appointment.findOne({ patientId }).sort({ appointmentDate: -1 });
-        // Pharmacy charges are always collected as a separate payment from visit services.
-        const newInvoice = await Invoice.create({
+        let patientInvoice = await Invoice.findOne({
           patientId,
-          appointmentId: latestAppt?._id || undefined,
-          invoiceType: "pharmacy",
-          items: invoiceItems,
-          subtotal: grandTotal,
-          paidAmount: isPaid ? grandTotal : 0,
-          outstandingAmount: isPaid ? 0 : grandTotal,
-          status: isPaid ? "paid" : "issued",
-          createdBy: soldById
-        });
-        createdInvoiceId = newInvoice._id;
+          status: { $in: ["issued", "draft"] }
+        }).sort({ createdAt: -1 });
+
+        if (patientInvoice) {
+          patientInvoice.items.push(...invoiceItems);
+          patientInvoice.invoiceType = "visit";
+          patientInvoice.subtotal = patientInvoice.items.reduce((sum, item) => sum + Number(item.lineTotal || 0), 0);
+          if (isPaid) {
+            patientInvoice.paidAmount = Math.min(patientInvoice.subtotal, Number(patientInvoice.paidAmount || 0) + grandTotal);
+          }
+          patientInvoice.outstandingAmount = Math.max(0, patientInvoice.subtotal - Number(patientInvoice.paidAmount || 0));
+          patientInvoice.status = patientInvoice.outstandingAmount === 0 ? "paid" : "issued";
+          await patientInvoice.save();
+        } else {
+          patientInvoice = await Invoice.create({
+            patientId,
+            appointmentId: latestAppt?._id || undefined,
+            invoiceType: "visit",
+            items: invoiceItems,
+            subtotal: grandTotal,
+            paidAmount: isPaid ? grandTotal : 0,
+            outstandingAmount: isPaid ? 0 : grandTotal,
+            status: isPaid ? "paid" : "issued",
+            createdBy: soldById
+          });
+        }
+        createdInvoiceId = patientInvoice._id;
       } else {
         // UNREGISTERED / WALK-IN CUSTOMER:
         // Automatically create an invoice for the Cashier desk to collect payment

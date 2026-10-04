@@ -77,7 +77,7 @@ export const createInvoice = async (req, res) => {
 };
 
 export const listInvoices = async (req, res) => {
-  const filter = req.user.role === "patient" ? { patientId: req.user._id } : {};
+  const filter = req.user.role === "patient" ? { patientId: req.user._id, status: { $ne: "cancelled" } } : { status: { $ne: "cancelled" } };
   const invoices = await Invoice.find(filter)
     .populate("patientId", "firstName lastName email phone")
     .sort({ createdAt: -1 });
@@ -317,7 +317,7 @@ export const consolidatePatientInvoices = async (req, res) => {
 };
 
 export const revenueSummary = async (req, res) => {
-  const invoices = await Invoice.find();
+  const invoices = await Invoice.find({ status: { $ne: "cancelled" } });
   const payments = await Payment.find({ status: { $ne: "voided" } });
   const invoiced = invoices.reduce((sum, invoice) => sum + invoice.subtotal, 0);
   const outstanding = invoices.reduce((sum, invoice) => sum + invoice.outstandingAmount, 0);
