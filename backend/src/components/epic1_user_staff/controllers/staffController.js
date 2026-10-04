@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { User } from "../models/User.js";
 import { Staff } from "../models/Staff.js";
 import { ROLES } from "../../../shared/constants/roles.js";
@@ -20,6 +21,15 @@ const resolveShiftPay = (body) => {
   const baseSalary = Number(body.baseSalary ?? (shiftRate ? shiftRate * 26 : 0));
   return { shiftRate, baseSalary };
 };
+
+const buildPatientEmail = (body) => {
+  if (body.email) return body.email;
+  const phonePart = String(body.phone || "").replace(/\D/g, "") || "patient";
+  const suffix = crypto.randomBytes(3).toString("hex");
+  return `walkin.${phonePart}.${suffix}@healthguard.local`;
+};
+
+const buildTemporaryPassword = () => `Hg${crypto.randomBytes(8).toString("base64url")}@1`;
 
 export const createStaff = async (req, res) => {
   if (req.body.role === ROLES.DOCTOR) {
@@ -115,4 +125,57 @@ export const updateStaff = async (req, res) => {
   const user = await User.findByIdAndUpdate(staff.userId, userUpdates, { new: true, runValidators: true }).select("-passwordHash");
 
   return successResponse(res, "Staff updated successfully", { staff, user });
+};
+
+export const listPatients = async (req, res) => {
+  const { search = "", limit = 20 } = req.validatedQuery || req.query;
+  const query = String(search || "").trim();
+  const filter = { role: ROLES.PATIENT, status: "active" };
+
+  if (query) {
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(escaped, "i");
+    filter.$or = [
+      { firstName: regex },
+      { lastName: regex },
+      { email: regex },
+      { phone: regex }
+    ];
+  }
+
+  const patients = await User.find(filter)
+    .select("-passwordHash")
+    .sort({ updatedAt: -1 })
+    .limit(Number(limit));
+
+  return successResponse(res, "Patient list loaded", patients);
+};
+
+export const createQuickPatient = async (req, res) => {
+  const email = buildPatientEmail(req.body);
+  const existingUser = await User.findOne({ email }).select("_id");
+  if (existingUser) throw new AppError("Email already exists", 409, { email: "Email already exists" });
+
+  const temporaryPassword = buildTemporaryPassword();
+  const passwordHash = await bcrypt.hash(temporaryPassword, 12);
+  const user = await User.create({
+    firstName: req.body.firstName,
+    lastName: req.body.lastName,
+    email,
+    phone: req.body.phone,
+    address: req.body.address,
+    dateOfBirth: req.body.dateOfBirth,
+    gender: req.body.gender,
+    role: ROLES.PATIENT,
+    passwordHash
+  });
+
+  return successResponse(res, "Patient created successfully", {
+    patient: user.toSafeJSON(),
+    temporaryCredentials: {
+      email,
+      password: temporaryPassword,
+      generated: !req.body.email
+    }
+  }, 201);
 };

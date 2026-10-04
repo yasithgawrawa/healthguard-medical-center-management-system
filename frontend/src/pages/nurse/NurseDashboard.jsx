@@ -1,4 +1,4 @@
-import { Activity, Thermometer, UserCheck } from "lucide-react";
+import { Activity, CalendarPlus, Thermometer, UserCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ClinicalWorkspacePanel } from "../../components/epic2_clinical/ClinicalWorkspacePanel.jsx";
 import { StaffSelfServicePanel } from "../../components/epic1_user_staff/StaffSelfServicePanel.jsx";
@@ -9,7 +9,8 @@ export const NurseDashboard = () => {
   const [metrics, setMetrics] = useState({
     awaitingArrival: 0,
     inTriage: 0,
-    vitalsDone: 0
+    vitalsDone: 0,
+    scheduled: 0
   });
 
   useEffect(() => {
@@ -25,7 +26,8 @@ export const NurseDashboard = () => {
       setMetrics({
         awaitingArrival: booked.length,
         inTriage: checkedIn.length,
-        vitalsDone: vitalsCompleted.length
+        vitalsDone: vitalsCompleted.length,
+        scheduled: todayAppointments.length
       });
     });
   }, []);
@@ -75,6 +77,16 @@ export const NurseDashboard = () => {
           href="#patient-check-in-vitals"
           command={{ workspace: "clinical", mode: "nurse", queueTab: "vitals_recorded", dateScope: "today", status: "", priority: "", search: "" }}
           actionLabel="Review recorded vitals"
+        />
+        <DashboardCard
+          title="Doctor Bookings"
+          value={`${metrics.scheduled} Today`}
+          detail="Create or update doctor appointment slots"
+          icon={CalendarPlus}
+          change="Booking Desk"
+          href="#patient-check-in-vitals"
+          command={{ workspace: "clinical", mode: "nurse", queueTab: "active", dateScope: "today", status: "", priority: "", search: "", action: "createAppointment" }}
+          actionLabel="Create booking"
         />
       </div>
 

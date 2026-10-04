@@ -27,6 +27,11 @@ export const createAppointment = async (req, res) => {
     throw new AppError("Patient is required", 400, { patientId: "Patient is required" });
   }
 
+  const patient = await User.findOne({ _id: payload.patientId, role: ROLES.PATIENT, status: "active" }).select("_id");
+  if (!patient) {
+    throw new AppError("Active patient not found", 404, { patientId: "Select an active patient" });
+  }
+
   const doctor = await User.findOne({ _id: payload.doctorId, role: ROLES.DOCTOR, status: "active" });
   if (!doctor) {
     throw new AppError("Active doctor not found", 404, { doctorId: "Select an active doctor" });

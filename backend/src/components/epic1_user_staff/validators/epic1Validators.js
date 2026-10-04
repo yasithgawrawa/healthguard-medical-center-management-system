@@ -60,6 +60,25 @@ export const updateStaffSchema = z.object({
   })
 });
 
+export const patientSearchSchema = z.object({
+  query: z.object({
+    search: z.string().trim().max(80).optional().default(""),
+    limit: z.coerce.number().int().min(1).max(50).optional().default(20)
+  })
+});
+
+export const quickPatientSchema = z.object({
+  body: z.object({
+    firstName: nameSchema("First name"),
+    lastName: nameSchema("Last name"),
+    email: z.string().trim().email().toLowerCase().optional().or(z.literal("")),
+    phone: phoneSchema,
+    address: z.string().trim().max(250).optional().default(""),
+    dateOfBirth: z.coerce.date().optional(),
+    gender: z.enum(["female", "male", "other", "prefer_not_to_say"]).optional()
+  })
+});
+
 export const shiftSchema = z.object({
   body: z.object({
     staffId: objectIdSchema,

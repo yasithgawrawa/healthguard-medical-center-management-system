@@ -4,6 +4,10 @@ const unwrap = ({ data }) => data.data;
 
 export const clinicalApi = {
   listAppointments: async () => unwrap(await apiClient.get("/e2/clinical/appointments")),
+  getAppointmentSlots: async (params) => unwrap(await apiClient.get("/e2/clinical/appointments/slots", { params })),
+  createAppointment: async (payload) => unwrap(await apiClient.post("/e2/clinical/appointments", payload)),
+  cancelAppointment: async (id) => unwrap(await apiClient.patch(`/e2/clinical/appointments/${id}/cancel`)),
+  rescheduleAppointment: async (id, payload) => unwrap(await apiClient.patch(`/e2/clinical/appointments/${id}/reschedule`, payload)),
   updateAppointmentStatus: async (id, status) => unwrap(await apiClient.patch(`/e2/clinical/appointments/${id}/status`, { status })),
   recordVitals: async (payload) => unwrap(await apiClient.post("/e2/clinical/vitals", payload)),
   saveConsultation: async (payload) => unwrap(await apiClient.post("/e2/clinical/consultations", payload)),
