@@ -1,6 +1,7 @@
 import { Activity, CalendarPlus, Thermometer, UserCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ClinicalWorkspacePanel } from "../../components/epic2_clinical/ClinicalWorkspacePanel.jsx";
+import { NurseWalkInBookingPanel } from "../../components/epic2_clinical/NurseWalkInBookingPanel.jsx";
 import { StaffSelfServicePanel } from "../../components/epic1_user_staff/StaffSelfServicePanel.jsx";
 import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
 import { clinicalApi } from "../../services/clinicalApi.js";
@@ -10,14 +11,18 @@ export const NurseDashboard = () => {
     awaitingArrival: 0,
     inTriage: 0,
     vitalsDone: 0,
-    scheduled: 0
+    upcoming: 0
   });
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     clinicalApi.listAppointments().catch(() => []).then((appointments) => {
       const today = new Date().toLocaleDateString("en-CA");
       const todayAppointments = (appointments || []).filter((appointment) => (
         new Date(appointment.appointmentDate).toLocaleDateString("en-CA") === today
+      ));
+      const upcoming = (appointments || []).filter((appointment) => (
+        appointment.status === "booked" && new Date(appointment.appointmentDate).toLocaleDateString("en-CA") > today
       ));
       const booked = todayAppointments.filter((a) => a.status === "booked");
       const checkedIn = todayAppointments.filter((a) => a.status === "checked_in" && !a.vitals);
@@ -27,21 +32,21 @@ export const NurseDashboard = () => {
         awaitingArrival: booked.length,
         inTriage: checkedIn.length,
         vitalsDone: vitalsCompleted.length,
-        scheduled: todayAppointments.length
+        upcoming: upcoming.length
       });
     });
-  }, []);
+  }, [refreshKey]);
 
   return (
     <div id="overview" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       <div className="dashboard-header-banner">
         <div>
-          <h1>Nurse Triage Station</h1>
-          <p>Check in arriving patients, record vital signs and prepare them for doctor consultation.</p>
+          <h1>Nurse Dashboard</h1>
+          <p>Handle walk-in bookings, check in arriving patients and record vital signs from one workspace.</p>
         </div>
         <div className="dashboard-live-indicator">
           <div className="live-dot" />
-          <span>Triage Active</span>
+          <span>Nurse Desk Active</span>
         </div>
       </div>
 
@@ -79,18 +84,28 @@ export const NurseDashboard = () => {
           actionLabel="Review recorded vitals"
         />
         <DashboardCard
-          title="Doctor Bookings"
-          value={`${metrics.scheduled} Today`}
-          detail="Create or update doctor appointment slots"
+          title="Walk-In Booking"
+          value="New Visit"
+          detail="Create appointments for unregistered clinic visitors"
           icon={CalendarPlus}
           change="Booking Desk"
+          href="#walk-in-booking"
+          actionLabel="Open walk-in form"
+        />
+        <DashboardCard
+          title="Upcoming Bookings"
+          value={`${metrics.upcoming} Future`}
+          detail="Review, update or cancel future doctor slots"
+          icon={CalendarPlus}
+          change="Schedule"
           href="#patient-check-in-vitals"
-          command={{ workspace: "clinical", mode: "nurse", queueTab: "active", dateScope: "today", status: "", priority: "", search: "", action: "createAppointment" }}
-          actionLabel="Create booking"
+          command={{ workspace: "clinical", mode: "nurse", queueTab: "upcoming", dateScope: "all", status: "", priority: "", search: "" }}
+          actionLabel="Manage bookings"
         />
       </div>
 
-      <ClinicalWorkspacePanel mode="nurse" />
+      <NurseWalkInBookingPanel onBooked={() => setRefreshKey((value) => value + 1)} />
+      <ClinicalWorkspacePanel mode="nurse" refreshKey={refreshKey} />
       <StaffSelfServicePanel />
     </div>
   );
