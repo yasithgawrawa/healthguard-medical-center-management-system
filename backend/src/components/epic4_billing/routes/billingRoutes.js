@@ -15,13 +15,15 @@ import {
   listInvoices,
   listPayments,
   listPayroll,
+  listSupplierBills,
+  paySupplierBill,
   previewPayroll,
   recordPayment,
   revenueSummary,
   updatePaymentStatus,
   updatePayrollStatus
 } from "../controllers/billingController.js";
-import { consolidateInvoiceSchema, invoiceSchema, paymentSchema, paymentStatusSchema, payrollPreviewSchema, payrollSchema, payrollStatusSchema, salaryAttendanceDaysSchema } from "../validators/billingValidators.js";
+import { consolidateInvoiceSchema, invoiceSchema, paymentSchema, paymentStatusSchema, payrollPreviewSchema, payrollSchema, payrollStatusSchema, salaryAttendanceDaysSchema, supplierBillPaymentSchema } from "../validators/billingValidators.js";
 
 const router = Router();
 router.use(authenticate);
@@ -35,6 +37,8 @@ router.get("/invoices/:id/receipt", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER,
 router.post("/payments", authorizeRoles(ROLES.CASHIER, ROLES.ADMIN), validateRequest(paymentSchema), asyncHandler(recordPayment));
 router.get("/payments", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN), asyncHandler(listPayments));
 router.patch("/payments/:id/status", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER), validateRequest(paymentStatusSchema), asyncHandler(updatePaymentStatus));
+router.get("/supplier-bills", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN), asyncHandler(listSupplierBills));
+router.patch("/supplier-bills/:id/pay", authorizeRoles(ROLES.CASHIER, ROLES.ADMIN), validateRequest(supplierBillPaymentSchema), asyncHandler(paySupplierBill));
 router.post("/payroll/preview", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN), validateRequest(payrollPreviewSchema), asyncHandler(previewPayroll));
 router.post("/payroll", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN), validateRequest(payrollSchema), asyncHandler(createPayroll));
 router.get("/payroll/attendance-days", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN), validateRequest(salaryAttendanceDaysSchema), asyncHandler(getSalaryAttendanceDays));

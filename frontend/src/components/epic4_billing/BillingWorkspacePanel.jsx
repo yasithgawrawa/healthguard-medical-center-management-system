@@ -21,6 +21,7 @@ import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
 
 const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
+const dateOnly = (value) => (value ? new Date(value).toLocaleDateString() : "-");
 const getInvoiceClient = (item) => customerLabel(item);
 const chargeSummary = (items = []) => items.reduce((summary, item) => {
   const description = (item.description || "").toLowerCase();
@@ -68,6 +69,9 @@ const paymentSchema = z.object({
   amount: z.coerce.number({ invalid_type_error: "Amount is required" }).min(0.01, "Amount must be greater than 0").max(10000000, "Amount is too high"),
   method: z.string().min(1, "Payment method is required")
 });
+const supplierBillSchema = z.object({
+  method: z.string().min(1, "Payment method is required")
+});
 const payrollSchema = z.object({
   staffId: z.string().min(1, "Select staff member"),
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Select payroll month")
@@ -83,6 +87,7 @@ export const BillingWorkspacePanel = () => {
   const [invoices, setInvoices] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [supplierBills, setSupplierBills] = useState([]);
   const [payroll, setPayroll] = useState([]);
   const [staff, setStaff] = useState([]);
   const [summary, setSummary] = useState({ invoiced: 0, collected: 0, outstanding: 0, payrollExpense: 0 });
@@ -118,6 +123,7 @@ export const BillingWorkspacePanel = () => {
         method: z.string().min(1, "Payment method is required")
       });
     }
+    if (modal.type === "supplierBill") return supplierBillSchema;
     if (modal.type === "payroll") return payrollSchema;
     return invoiceSchema;
   }, [modal.type, modal.record]);
@@ -136,16 +142,21 @@ export const BillingWorkspacePanel = () => {
   const load = async () => {
     try {
       const requests = [billingApi.invoices(), billingApi.summary()];
-      if (isCashier || isManager) requests.push(billingApi.payments()); else requests.push(Promise.resolve([]));
+      if (isCashier || isManager) {
+        requests.push(billingApi.payments(), billingApi.supplierBills());
+      } else {
+        requests.push(Promise.resolve([]), Promise.resolve([]));
+      }
       if (canManagePayroll) {
         requests.push(clinicalApi.listAppointments(), billingApi.payroll(), e1Api.listWorkforceStaff());
       } else {
         requests.push(isCashier ? clinicalApi.listAppointments() : Promise.resolve([]), Promise.resolve([]), Promise.resolve([]));
       }
-      const [invoiceData, summaryData, paymentData, appointmentData, payrollData, staffData] = await Promise.all(requests);
+      const [invoiceData, summaryData, paymentData, supplierBillData, appointmentData, payrollData, staffData] = await Promise.all(requests);
       setInvoices(invoiceData || []);
       setSummary(summaryData || {});
       setPayments(paymentData || []);
+      setSupplierBills(supplierBillData || []);
       setAppointments(appointmentData || []);
       setPayroll(payrollData || []);
       setStaff(staffData || []);
@@ -293,13 +304,17 @@ export const BillingWorkspacePanel = () => {
       if (modal.type === "payment") {
         await billingApi.recordPayment({ invoiceId: modal.record._id, amount: values.amount, method: values.method });
       }
+      if (modal.type === "supplierBill") {
+        await billingApi.paySupplierBill(modal.record._id, values.method);
+        setActiveTab("supplierBills");
+      }
       if (modal.type === "payroll") {
         await billingApi.createPayroll(values);
         setActiveTab("payroll");
         setPayrollMonthFilter(values.month);
         setPayrollStatusFilter("all");
       }
-      setToast({ type: "success", message: modal.type === "payroll" ? "Salary draft saved" : "Billing workflow saved" });
+      setToast({ type: "success", message: modal.type === "payroll" ? "Salary draft saved" : modal.type === "supplierBill" ? "Supplier bill paid" : "Billing workflow saved" });
       setModal({ type: null, record: null });
       await load();
     } catch (error) {
@@ -448,6 +463,7 @@ export const BillingWorkspacePanel = () => {
         {[
           { key: "invoices", label: "invoices" },
           { key: "payments", label: "payments" },
+          ...((isCashier || isManager) ? [{ key: "supplierBills", label: "supplier bills" }] : []),
           { key: "revenue", label: "revenue" },
           { key: "payroll", label: "salary" }
         ].map((tab) => (
@@ -642,12 +658,61 @@ export const BillingWorkspacePanel = () => {
         />
       ) : null}
 
+      {activeTab === "supplierBills" ? (
+        <DataTable
+          rows={supplierBills}
+          columns={[
+            { key: "createdAt", header: "Bill Date", render: (item) => dateOnly(item.createdAt) },
+            { key: "supplier", header: "Supplier", render: (item) => <strong>{item.supplierId?.name || "Supplier"}</strong> },
+            {
+              key: "purchase",
+              header: "Purchase",
+              render: (item) => {
+                const purchase = item.purchaseId || {};
+                const medicine = purchase.medicineId?.name || "Medicine";
+                const batch = purchase.batchId?.batchNumber ? ` (${purchase.batchId.batchNumber})` : "";
+                return `${medicine}${batch} - ${purchase.quantity || 0} ${purchase.medicineId?.unit || "units"}`;
+              }
+            },
+            { key: "unitCost", header: "Unit Cost", render: (item) => money(item.purchaseId?.purchasePrice) },
+            { key: "amount", header: "Amount Due", render: (item) => <strong>{money(item.amount)}</strong> },
+            { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
+            {
+              key: "actions",
+              header: "Actions",
+              render: (item) => (
+                <div className="inline-actions">
+                  {isCashier && item.status === "pending" ? (
+                    <button
+                      type="button"
+                      className="button-primary"
+                      onClick={() => {
+                        reset({ method: "cash" });
+                        setModal({ type: "supplierBill", record: item });
+                      }}
+                      disabled={busy}
+                    >
+                      <CreditCard size={15} /> Pay Supplier
+                    </button>
+                  ) : item.status === "paid" ? (
+                    <span style={{ color: "#64748b", fontSize: "0.82rem" }}>Paid {item.paidAt ? dateOnly(item.paidAt) : ""}</span>
+                  ) : null}
+                </div>
+              )
+            }
+          ]}
+          emptyText="No supplier bills sent to cashier yet."
+        />
+      ) : null}
+
       {activeTab === "revenue" ? (
         <div className="manager-summary-grid">
           <div><strong>{money(summary.invoiced)}</strong><span>total invoiced</span></div>
           <div><strong>{money(summary.collected)}</strong><span>payments collected</span></div>
           <div><strong>{money(summary.outstanding)}</strong><span>outstanding invoices</span></div>
           <div><strong>{money(summary.payrollExpense)}</strong><span>salary expense</span></div>
+          <div><strong>{money(summary.supplierPayables)}</strong><span>supplier bills pending</span></div>
+          <div><strong>{money(summary.supplierPaid)}</strong><span>supplier bills paid</span></div>
         </div>
       ) : null}
 
@@ -698,8 +763,14 @@ export const BillingWorkspacePanel = () => {
 
       <Modal
         open={Boolean(modal.type)}
-        title={modal.type === "payment" ? "Record Cashier Payment" : modal.type === "payroll" ? "Simple Salary Draft" : "Create Invoice"}
-        subtitle={modal.type === "payment" && modal.record ? `Patient: ${getInvoiceClient(modal.record)} • Due: ${money(modal.record.outstandingAmount)}` : ""}
+        title={modal.type === "payment" ? "Record Cashier Payment" : modal.type === "supplierBill" ? "Pay Supplier Bill" : modal.type === "payroll" ? "Simple Salary Draft" : "Create Invoice"}
+        subtitle={
+          modal.type === "payment" && modal.record
+            ? `Patient: ${getInvoiceClient(modal.record)} • Due: ${money(modal.record.outstandingAmount)}`
+            : modal.type === "supplierBill" && modal.record
+              ? `Supplier: ${modal.record.supplierId?.name || "Supplier"} • Due: ${money(modal.record.amount)}`
+              : ""
+        }
         onClose={() => setModal({ type: null, record: null })}
       >
         <form onSubmit={handleSubmit(submit)}>
@@ -777,6 +848,28 @@ export const BillingWorkspacePanel = () => {
               </div>
             </>
           ) : null}
+          {modal.type === "supplierBill" ? (
+            <>
+              {modal.record ? (
+                <div style={{ background: "#f8fafc", padding: "12px 14px", borderRadius: "8px", border: "1px solid #e2e8f0", marginBottom: "16px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", fontSize: "0.9rem", fontWeight: 700, color: "#0f172a" }}>
+                    <span>{modal.record.purchaseId?.medicineId?.name || "Medicine purchase"}</span>
+                    <span>{money(modal.record.amount)}</span>
+                  </div>
+                  <div style={{ marginTop: "6px", color: "#64748b", fontSize: "0.82rem" }}>
+                    Batch {modal.record.purchaseId?.batchId?.batchNumber || "-"} • Qty {modal.record.purchaseId?.quantity || 0} • Unit cost {money(modal.record.purchaseId?.purchasePrice)}
+                  </div>
+                </div>
+              ) : null}
+              <div className="form-grid">
+                <FormSelect label="Payment Method" error={errors.method?.message} {...register("method")}>
+                  <option value="cash">Cash</option>
+                  <option value="card">Card</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                </FormSelect>
+              </div>
+            </>
+          ) : null}
           {modal.type === "payroll" ? (
             <>
               <div className="form-grid">
@@ -837,7 +930,7 @@ export const BillingWorkspacePanel = () => {
               </div>
             </>
           ) : null}
-          <div className="modal-actions"><button className="button-secondary" type="button" onClick={() => setModal({ type: null, record: null })} disabled={busy}>Cancel</button><button className="button-primary" type="submit" disabled={busy || (modal.type === "payroll" && (payrollPreviewLoading || !payrollPreview || payrollPreview.existingPayroll || (payrollPreview.workingDays ?? payrollPreview.payableShifts ?? 0) === 0 || payrollDeductionsInvalid))}><CreditCard size={16} /> {busy ? "Saving..." : modal.type === "payroll" ? "Create Salary Draft" : "Save"}</button></div>
+          <div className="modal-actions"><button className="button-secondary" type="button" onClick={() => setModal({ type: null, record: null })} disabled={busy}>Cancel</button><button className="button-primary" type="submit" disabled={busy || (modal.type === "payroll" && (payrollPreviewLoading || !payrollPreview || payrollPreview.existingPayroll || (payrollPreview.workingDays ?? payrollPreview.payableShifts ?? 0) === 0 || payrollDeductionsInvalid))}><CreditCard size={16} /> {busy ? "Saving..." : modal.type === "payroll" ? "Create Salary Draft" : modal.type === "supplierBill" ? "Mark Supplier Paid" : "Save"}</button></div>
         </form>
       </Modal>
     </section>

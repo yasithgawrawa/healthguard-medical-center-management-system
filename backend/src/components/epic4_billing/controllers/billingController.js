@@ -6,6 +6,7 @@ import { PharmacySale } from "../../epic3_inventory/models/PharmacySale.js";
 import { Invoice } from "../models/Invoice.js";
 import { Payment } from "../models/Payment.js";
 import { Payroll } from "../models/Payroll.js";
+import { SupplierBill } from "../models/SupplierBill.js";
 import { ROLES } from "../../../shared/constants/roles.js";
 import { successResponse } from "../../../shared/utils/apiResponse.js";
 import { AppError } from "../../../shared/utils/AppError.js";
@@ -127,6 +128,45 @@ export const updatePaymentStatus = async (req, res) => {
   if (req.body.status === "verified") payment.verifiedBy = req.user._id;
   await payment.save();
   return successResponse(res, "Payment status updated", payment);
+};
+
+export const listSupplierBills = async (req, res) => {
+  const bills = await SupplierBill.find({ status: { $ne: "cancelled" } })
+    .populate("supplierId", "name phone email")
+    .populate({
+      path: "purchaseId",
+      populate: [
+        { path: "medicineId", select: "name unit category" },
+        { path: "batchId", select: "batchNumber" }
+      ]
+    })
+    .sort({ createdAt: -1 });
+  return successResponse(res, "Supplier bills loaded", bills);
+};
+
+export const paySupplierBill = async (req, res) => {
+  const bill = await SupplierBill.findById(req.params.id);
+  if (!bill) throw new AppError("Supplier bill not found", 404);
+  if (bill.status !== "pending") throw new AppError("Supplier bill is not payable", 409);
+
+  bill.status = "paid";
+  bill.method = req.body.method;
+  bill.paidAt = new Date();
+  bill.paidBy = req.user._id;
+  await bill.save();
+
+  await bill.populate([
+    { path: "supplierId", select: "name phone email" },
+    {
+      path: "purchaseId",
+      populate: [
+        { path: "medicineId", select: "name unit category" },
+        { path: "batchId", select: "batchNumber" }
+      ]
+    }
+  ]);
+
+  return successResponse(res, "Supplier bill marked as paid", bill);
 };
 
 export const createPayroll = async (req, res) => {
@@ -319,11 +359,14 @@ export const consolidatePatientInvoices = async (req, res) => {
 export const revenueSummary = async (req, res) => {
   const invoices = await Invoice.find({ status: { $ne: "cancelled" } });
   const payments = await Payment.find({ status: { $ne: "voided" } });
+  const supplierBills = await SupplierBill.find({ status: { $ne: "cancelled" } });
   const invoiced = invoices.reduce((sum, invoice) => sum + invoice.subtotal, 0);
   const outstanding = invoices.reduce((sum, invoice) => sum + invoice.outstandingAmount, 0);
   const collected = payments.reduce((sum, payment) => sum + payment.amount, 0);
   const payroll = await Payroll.find();
   const payrollExpense = payroll.reduce((sum, item) => sum + item.netSalary, 0);
+  const supplierPayables = supplierBills.reduce((sum, item) => sum + (item.status === "pending" ? item.amount : 0), 0);
+  const supplierPaid = supplierBills.reduce((sum, item) => sum + (item.status === "paid" ? item.amount : 0), 0);
 
   let doctorConsultationInvoiced = 0;
   invoices.forEach((inv) => {
@@ -340,8 +383,10 @@ export const revenueSummary = async (req, res) => {
     collected,
     outstanding,
     payrollExpense,
+    supplierPayables,
+    supplierPaid,
     doctorConsultationInvoiced,
-    netClinicProfit: collected - payrollExpense
+    netClinicProfit: collected - payrollExpense - supplierPaid
   });
 };
 

@@ -37,6 +37,13 @@ export const paymentStatusSchema = z.object({
   body: z.object({ status: z.enum(["verified", "reconciled", "voided"]) })
 });
 
+export const supplierBillPaymentSchema = z.object({
+  params: idParamSchema.shape.params,
+  body: z.object({
+    method: z.enum(["cash", "card", "bank_transfer"])
+  })
+});
+
 export const consolidateInvoiceSchema = z.object({
   body: z.object({
     patientId: objectIdSchema

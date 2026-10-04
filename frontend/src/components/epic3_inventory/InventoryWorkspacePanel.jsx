@@ -395,7 +395,7 @@ export const InventoryWorkspacePanel = () => {
     setBusy(true);
     try {
       await inventoryApi.createPurchase(payload);
-      setToast({ type: "success", message: "Purchase recorded and stock updated" });
+      setToast({ type: "success", message: "Purchase recorded, stock updated, and supplier bill sent to cashier" });
       setModal({ type: null, record: null });
       await loadData();
     } catch (error) {

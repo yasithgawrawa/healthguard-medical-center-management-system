@@ -6,6 +6,7 @@ import { PharmacySale } from "../models/PharmacySale.js";
 import { Prescription } from "../../epic2_clinical/models/Prescription.js";
 import { Appointment } from "../../epic2_clinical/models/Appointment.js";
 import { Invoice } from "../../epic4_billing/models/Invoice.js";
+import { SupplierBill } from "../../epic4_billing/models/SupplierBill.js";
 import { User } from "../../epic1_user_staff/models/User.js";
 import { AppError } from "../../../shared/utils/AppError.js";
 import { ROLES } from "../../../shared/constants/roles.js";
@@ -232,6 +233,12 @@ export const inventoryService = {
       quantity: data.quantity,
       purchasePrice: data.purchasePrice,
       purchasedAt: data.purchasedAt || new Date()
+    });
+
+    await SupplierBill.create({
+      supplierId: supplier._id,
+      purchaseId: purchase._id,
+      amount: Number(data.quantity) * Number(data.purchasePrice)
     });
 
     return purchase.populate([
