@@ -17,6 +17,15 @@ const isFutureAppointmentDate = (value) => {
   return new Date(value) >= startOfTomorrow;
 };
 
+const isTodayAppointmentDate = (value) => {
+  const appointmentDate = new Date(value);
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfTomorrow = new Date(startOfToday);
+  startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+  return appointmentDate >= startOfToday && appointmentDate < startOfTomorrow;
+};
+
 export const createAppointment = async (req, res) => {
   const payload = {
     ...req.body,
@@ -250,6 +259,9 @@ export const updateAppointmentStatus = async (req, res) => {
   }
   if (appointment.status === "cancelled" || appointment.status === "completed") {
     throw new AppError("Finalized appointments cannot change status", 409);
+  }
+  if (req.body.status === "checked_in" && !isTodayAppointmentDate(appointment.appointmentDate)) {
+    throw new AppError("Only today's appointments can be checked in", 409);
   }
   if (["checked_in", "in_consultation", "completed"].includes(req.body.status) && isFutureAppointmentDate(appointment.appointmentDate)) {
     throw new AppError("Future appointments cannot be checked in or moved to consultation", 409);

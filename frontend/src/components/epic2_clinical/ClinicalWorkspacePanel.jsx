@@ -614,7 +614,6 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
   const todayStr = localDateKey();
 
   const sourceRows = mode === "lab" ? labs : appointments;
-  const inSelectedDateScope = (item) => dateScope !== "today" || isTodayLocalDate(item.appointmentDate);
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return sourceRows.filter((item) => {
@@ -647,6 +646,20 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
         return true;
       }
 
+      if (mode === "nurse") {
+        const isToday = isTodayLocalDate(item.appointmentDate);
+        const isUpcoming = isUpcomingLocalDate(item.appointmentDate);
+
+        if (queueTab === "upcoming") return item.status === "booked" && isUpcoming;
+        if (!isToday) return false;
+        if (queueTab === "active" && !["booked", "checked_in"].includes(item.status)) return false;
+        if (queueTab === "booked" && item.status !== "booked") return false;
+        if (queueTab === "waiting" && (item.status !== "checked_in" || item.vitals)) return false;
+        if (queueTab === "vitals_recorded" && !item.vitals) return false;
+        if (status && item.status !== status) return false;
+        return true;
+      }
+
       if (dateScope === "today") {
         const itemDate = localDateKey(item.appointmentDate);
         if (itemDate !== todayStr) return false;
@@ -654,7 +667,6 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
 
       if (queueTab === "active" && !["booked", "checked_in"].includes(item.status)) return false;
       if (queueTab === "booked" && item.status !== "booked") return false;
-      if (queueTab === "upcoming" && (item.status !== "booked" || !isUpcomingLocalDate(item.appointmentDate))) return false;
       if (queueTab === "waiting" && (item.status !== "checked_in" || (mode === "nurse" && item.vitals))) return false;
       if (queueTab === "vitals_recorded" && !item.vitals) return false;
       if (queueTab === "in_consultation" && item.status !== "in_consultation") return false;
@@ -933,9 +945,11 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
       header: "Actions",
       render: (item) => {
         if (mode === "nurse") {
-          const canCheckIn = item.status === "booked" && !isFutureLocalDate(item.appointmentDate);
+          const isTodayAppointment = isTodayLocalDate(item.appointmentDate);
+          const isUpcomingAppointment = isUpcomingLocalDate(item.appointmentDate);
+          const canCheckIn = item.status === "booked" && isTodayAppointment;
           const canRecordVitals = item.status === "checked_in";
-          const canEditBooking = item.status === "booked" && new Date(item.appointmentDate) > new Date();
+          const canEditBooking = item.status === "booked" && isUpcomingAppointment;
           return (
             <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", whiteSpace: "nowrap" }}>
               {canEditBooking ? (
@@ -949,13 +963,13 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
                   <Clock size={12} /> Update Time
                 </button>
               ) : null}
-              {item.status === "booked" ? (
+              {item.status === "booked" && !isUpcomingAppointment ? (
                 <button
                   type="button"
                   className="button-primary compact-action-button"
                   onClick={() => checkInPatient(item)}
                   disabled={!canCheckIn}
-                  title={canCheckIn ? "Mark patient as arrived" : "Future appointments cannot be checked in yet"}
+                  title={canCheckIn ? "Mark patient as arrived" : "Only today's appointments can be checked in"}
                 >
                   <UserCheck size={12} /> Check In
                 </button>
@@ -1103,7 +1117,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
           <div style={{ flex: 1, minWidth: "260px" }}>
             <SearchBar value={search} onChange={setSearch} placeholder={mode === "lab" ? "Search lab test, doctor, or status..." : "Search patient name, phone, slot, diagnosis..."} />
           </div>
-          {mode !== "lab" ? (
+          {mode !== "lab" && mode !== "nurse" ? (
             <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
               <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#64748b" }}>Date:</span>
               <button
@@ -1138,17 +1152,17 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
                     type="button"
                     className={queueTab === "active" ? "button-primary" : "button-secondary"}
                     style={{ padding: "5px 12px", fontSize: "0.82rem" }}
-                    onClick={() => { setQueueTab("active"); setStatus(""); }}
+                    onClick={() => { setQueueTab("active"); setDateScope("today"); setStatus(""); }}
                   >
-                    Active Triage ({appointments.filter((a) => inSelectedDateScope(a) && ["booked", "checked_in"].includes(a.status)).length})
+                    Active Triage ({appointments.filter((a) => isTodayLocalDate(a.appointmentDate) && ["booked", "checked_in"].includes(a.status)).length})
                   </button>
                   <button
                     type="button"
                     className={queueTab === "booked" ? "button-primary" : "button-secondary"}
                     style={{ padding: "5px 12px", fontSize: "0.82rem" }}
-                    onClick={() => { setQueueTab("booked"); setStatus(""); }}
+                    onClick={() => { setQueueTab("booked"); setDateScope("today"); setStatus(""); }}
                   >
-                    Awaiting Arrival ({appointments.filter((a) => inSelectedDateScope(a) && a.status === "booked").length})
+                    Awaiting Arrival ({appointments.filter((a) => isTodayLocalDate(a.appointmentDate) && a.status === "booked").length})
                   </button>
                   <button
                     type="button"
@@ -1173,18 +1187,18 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
                 type="button"
                 className={queueTab === "waiting" ? "button-primary" : "button-secondary"}
                 style={{ padding: "5px 12px", fontSize: "0.82rem" }}
-                onClick={() => { setQueueTab("waiting"); setStatus(""); }}
+                onClick={() => { setQueueTab("waiting"); if (mode === "nurse") setDateScope("today"); setStatus(""); }}
               >
-                {mode === "nurse" ? "Needs Vitals" : "Waiting Room"} ({appointments.filter((a) => a.status === "checked_in" && (mode !== "nurse" || (inSelectedDateScope(a) && !a.vitals))).length})
+                {mode === "nurse" ? "Needs Vitals" : "Waiting Room"} ({appointments.filter((a) => a.status === "checked_in" && (mode !== "nurse" || (isTodayLocalDate(a.appointmentDate) && !a.vitals))).length})
               </button>
               {mode === "nurse" ? (
                 <button
                   type="button"
                   className={queueTab === "vitals_recorded" ? "button-primary" : "button-secondary"}
                   style={{ padding: "5px 12px", fontSize: "0.82rem" }}
-                  onClick={() => { setQueueTab("vitals_recorded"); setStatus(""); }}
+                  onClick={() => { setQueueTab("vitals_recorded"); setDateScope("today"); setStatus(""); }}
                 >
-                  Vitals Recorded ({appointments.filter((a) => inSelectedDateScope(a) && a.vitals).length})
+                  Vitals Recorded ({appointments.filter((a) => isTodayLocalDate(a.appointmentDate) && a.vitals).length})
                 </button>
               ) : null}
               {mode !== "nurse" ? (
