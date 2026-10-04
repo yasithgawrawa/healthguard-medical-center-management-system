@@ -127,30 +127,6 @@ export const updateStaff = async (req, res) => {
   return successResponse(res, "Staff updated successfully", { staff, user });
 };
 
-export const listPatients = async (req, res) => {
-  const { search = "", limit = 20 } = req.validatedQuery || req.query;
-  const query = String(search || "").trim();
-  const filter = { role: ROLES.PATIENT, status: "active" };
-
-  if (query) {
-    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const regex = new RegExp(escaped, "i");
-    filter.$or = [
-      { firstName: regex },
-      { lastName: regex },
-      { email: regex },
-      { phone: regex }
-    ];
-  }
-
-  const patients = await User.find(filter)
-    .select("-passwordHash")
-    .sort({ updatedAt: -1 })
-    .limit(Number(limit));
-
-  return successResponse(res, "Patient list loaded", patients);
-};
-
 export const createQuickPatient = async (req, res) => {
   const email = buildPatientEmail(req.body);
   const existingUser = await User.findOne({ email }).select("_id");

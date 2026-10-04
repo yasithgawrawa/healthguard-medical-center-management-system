@@ -163,8 +163,6 @@ const labUpdateSchema = z.object({
 const buildNumber = (value) => (value === "" || value === undefined ? undefined : Number(value));
 
 const initialNurseBookingForm = {
-  patientMode: "existing",
-  patientId: "",
   firstName: "",
   lastName: "",
   email: "",
@@ -198,9 +196,6 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
   const [labParameters, setLabParameters] = useState([]);
   const [specimenType, setSpecimenType] = useState("Venous Blood");
   const [doctors, setDoctors] = useState([]);
-  const [patientSearch, setPatientSearch] = useState("");
-  const [patientResults, setPatientResults] = useState([]);
-  const [loadingPatients, setLoadingPatients] = useState(false);
   const [nurseBookingForm, setNurseBookingForm] = useState(initialNurseBookingForm);
   const [nurseBookingErrors, setNurseBookingErrors] = useState({});
   const [appointmentSlots, setAppointmentSlots] = useState([]);
@@ -397,29 +392,6 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
   }, [mode]);
 
   useEffect(() => {
-    if (mode !== "nurse" || modal.type !== "nurse-booking") return;
-    const query = patientSearch.trim();
-    if (query.length < 2) {
-      setPatientResults([]);
-      return;
-    }
-
-    setLoadingPatients(true);
-    const timer = setTimeout(() => {
-      e1Api
-        .listPatients({ search: query, limit: 12 })
-        .then((data) => setPatientResults(data || []))
-        .catch(() => setPatientResults([]))
-        .finally(() => setLoadingPatients(false));
-    }, 250);
-
-    return () => {
-      clearTimeout(timer);
-      setLoadingPatients(false);
-    };
-  }, [mode, modal.type, patientSearch]);
-
-  useEffect(() => {
     if (mode !== "nurse" || !["nurse-booking", "reschedule"].includes(modal.type)) return;
     if (!nurseBookingForm.doctorId || !nurseBookingForm.appointmentDay) {
       setAppointmentSlots([]);
@@ -464,9 +436,6 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
         next.appointmentDate = "";
         next.slotLabel = "";
       }
-      if (field === "patientMode") {
-        next.patientId = "";
-      }
       return next;
     });
     setNurseBookingErrors((current) => ({ ...current, [field]: "" }));
@@ -485,15 +454,11 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
   const validateNurseBooking = ({ rescheduleOnly = false } = {}) => {
     const nextErrors = {};
     if (!rescheduleOnly) {
-      if (nurseBookingForm.patientMode === "existing") {
-        if (!nurseBookingForm.patientId) nextErrors.patientId = "Select an existing patient";
-      } else {
-        if (nurseBookingForm.firstName.trim().length < 2) nextErrors.firstName = "First name is required";
-        if (nurseBookingForm.lastName.trim().length < 2) nextErrors.lastName = "Last name is required";
-        if (nurseBookingForm.phone.trim().length < 9) nextErrors.phone = "Valid phone number is required";
-        if (nurseBookingForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nurseBookingForm.email)) {
-          nextErrors.email = "Enter a valid email";
-        }
+      if (nurseBookingForm.firstName.trim().length < 2) nextErrors.firstName = "First name is required";
+      if (nurseBookingForm.lastName.trim().length < 2) nextErrors.lastName = "Last name is required";
+      if (nurseBookingForm.phone.trim().length < 9) nextErrors.phone = "Valid phone number is required";
+      if (nurseBookingForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nurseBookingForm.email)) {
+        nextErrors.email = "Enter a valid email";
       }
     }
     if (!nurseBookingForm.doctorId) nextErrors.doctorId = "Doctor is required";
@@ -512,23 +477,19 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
 
     setBusy(true);
     try {
-      let patientId = nurseBookingForm.patientId;
       let credentialMessage = "";
-
-      if (nurseBookingForm.patientMode === "new") {
-        const created = await e1Api.createQuickPatient({
-          firstName: nurseBookingForm.firstName,
-          lastName: nurseBookingForm.lastName,
-          email: nurseBookingForm.email,
-          phone: nurseBookingForm.phone,
-          address: nurseBookingForm.address,
-          dateOfBirth: nurseBookingForm.dateOfBirth || undefined,
-          gender: nurseBookingForm.gender || undefined
-        });
-        patientId = created.patient?._id || created.patient?.id;
-        if (created.temporaryCredentials) {
-          credentialMessage = ` Login: ${created.temporaryCredentials.email} / ${created.temporaryCredentials.password}`;
-        }
+      const created = await e1Api.createQuickPatient({
+        firstName: nurseBookingForm.firstName,
+        lastName: nurseBookingForm.lastName,
+        email: nurseBookingForm.email,
+        phone: nurseBookingForm.phone,
+        address: nurseBookingForm.address,
+        dateOfBirth: nurseBookingForm.dateOfBirth || undefined,
+        gender: nurseBookingForm.gender || undefined
+      });
+      const patientId = created.patient?._id || created.patient?.id;
+      if (created.temporaryCredentials) {
+        credentialMessage = ` Login: ${created.temporaryCredentials.email} / ${created.temporaryCredentials.password}`;
       }
 
       await clinicalApi.createAppointment({
@@ -637,8 +598,6 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
       });
     } else if (type === "nurse-booking") {
       const defaultDoctorId = doctors.length === 1 ? doctors[0]._id : "";
-      setPatientSearch("");
-      setPatientResults([]);
       setAppointmentSlots([]);
       setNurseBookingErrors({});
       setNurseBookingForm({ ...initialNurseBookingForm, doctorId: defaultDoctorId });
@@ -1389,7 +1348,7 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
         }
         subtitle={
           modal.type === "nurse-booking"
-            ? "Search an existing patient or create a quick patient record first."
+            ? "Enter patient details, choose a slot, and create the doctor appointment."
             : modal.record ? `${patientName(modal.record)} • ${modal.record.slotLabel || "Standard Visit"}` : ""
         }
         onClose={() => setModal({ type: null, record: null })}
@@ -1405,93 +1364,24 @@ export const ClinicalWorkspacePanel = ({ mode }) => {
         >
           {modal.type === "nurse-booking" ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                <button
-                  type="button"
-                  className={nurseBookingForm.patientMode === "existing" ? "button-primary" : "button-secondary"}
-                  style={{ padding: "6px 12px", fontSize: "0.84rem" }}
-                  onClick={() => setNurseBookingField("patientMode", "existing")}
-                >
-                  Existing Patient
-                </button>
-                <button
-                  type="button"
-                  className={nurseBookingForm.patientMode === "new" ? "button-primary" : "button-secondary"}
-                  style={{ padding: "6px 12px", fontSize: "0.84rem" }}
-                  onClick={() => setNurseBookingField("patientMode", "new")}
-                >
-                  Quick New Patient
-                </button>
+              <div className="form-grid">
+                <FormInput label="First Name" required value={nurseBookingForm.firstName} onChange={(event) => setNurseBookingField("firstName", event.target.value)} error={nurseBookingErrors.firstName} />
+                <FormInput label="Last Name" required value={nurseBookingForm.lastName} onChange={(event) => setNurseBookingField("lastName", event.target.value)} error={nurseBookingErrors.lastName} />
+                <FormInput label="Phone" required value={nurseBookingForm.phone} onChange={(event) => setNurseBookingField("phone", event.target.value)} error={nurseBookingErrors.phone} />
+                <FormInput label="Email" type="email" value={nurseBookingForm.email} onChange={(event) => setNurseBookingField("email", event.target.value)} error={nurseBookingErrors.email} placeholder="Optional patient email" />
+                <FormInput label="Date of Birth" type="date" value={nurseBookingForm.dateOfBirth} onChange={(event) => setNurseBookingField("dateOfBirth", event.target.value)} />
+                <label className="form-field">
+                  <span>Gender</span>
+                  <select value={nurseBookingForm.gender} onChange={(event) => setNurseBookingField("gender", event.target.value)}>
+                    <option value="">Not specified</option>
+                    <option value="female">Female</option>
+                    <option value="male">Male</option>
+                    <option value="other">Other</option>
+                    <option value="prefer_not_to_say">Prefer not to say</option>
+                  </select>
+                </label>
+                <FormInput label="Address" value={nurseBookingForm.address} onChange={(event) => setNurseBookingField("address", event.target.value)} containerStyle={{ gridColumn: "1 / -1" }} />
               </div>
-
-              {nurseBookingForm.patientMode === "existing" ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  <FormInput
-                    label="Search Patient"
-                    placeholder="Type name, phone, or email"
-                    value={patientSearch}
-                    onChange={(event) => setPatientSearch(event.target.value)}
-                    error={nurseBookingErrors.patientId}
-                  />
-                  <div style={{ border: "1px solid #e2e8f0", borderRadius: "8px", maxHeight: "180px", overflow: "auto", background: "#ffffff" }}>
-                    {loadingPatients ? (
-                      <div style={{ padding: "10px 12px", color: "#64748b", fontSize: "0.85rem" }}>Searching patients...</div>
-                    ) : patientResults.length ? (
-                      patientResults.map((patient) => {
-                        const selected = nurseBookingForm.patientId === patient._id;
-                        return (
-                          <button
-                            key={patient._id}
-                            type="button"
-                            onClick={() => {
-                              setNurseBookingField("patientId", patient._id);
-                              setPatientSearch(`${patient.firstName || ""} ${patient.lastName || ""}`.trim());
-                            }}
-                            style={{
-                              width: "100%",
-                              display: "flex",
-                              justifyContent: "space-between",
-                              gap: "10px",
-                              padding: "9px 12px",
-                              border: "none",
-                              borderBottom: "1px solid #f1f5f9",
-                              background: selected ? "#e0f2fe" : "#ffffff",
-                              cursor: "pointer",
-                              textAlign: "left"
-                            }}
-                          >
-                            <span style={{ fontWeight: 700, color: "#0f172a" }}>{patientLabel(patient)}</span>
-                            <span style={{ color: "#64748b", fontSize: "0.82rem" }}>{patient.phone || patient.email}</span>
-                          </button>
-                        );
-                      })
-                    ) : (
-                      <div style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.85rem" }}>
-                        {patientSearch.trim().length >= 2 ? "No matching active patients found." : "Enter at least 2 characters to search."}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="form-grid">
-                  <FormInput label="First Name" required value={nurseBookingForm.firstName} onChange={(event) => setNurseBookingField("firstName", event.target.value)} error={nurseBookingErrors.firstName} />
-                  <FormInput label="Last Name" required value={nurseBookingForm.lastName} onChange={(event) => setNurseBookingField("lastName", event.target.value)} error={nurseBookingErrors.lastName} />
-                  <FormInput label="Phone" required value={nurseBookingForm.phone} onChange={(event) => setNurseBookingField("phone", event.target.value)} error={nurseBookingErrors.phone} />
-                  <FormInput label="Email" type="email" value={nurseBookingForm.email} onChange={(event) => setNurseBookingField("email", event.target.value)} error={nurseBookingErrors.email} placeholder="Optional patient email" />
-                  <FormInput label="Date of Birth" type="date" value={nurseBookingForm.dateOfBirth} onChange={(event) => setNurseBookingField("dateOfBirth", event.target.value)} />
-                  <label className="form-field">
-                    <span>Gender</span>
-                    <select value={nurseBookingForm.gender} onChange={(event) => setNurseBookingField("gender", event.target.value)}>
-                      <option value="">Not specified</option>
-                      <option value="female">Female</option>
-                      <option value="male">Male</option>
-                      <option value="other">Other</option>
-                      <option value="prefer_not_to_say">Prefer not to say</option>
-                    </select>
-                  </label>
-                  <FormInput label="Address" value={nurseBookingForm.address} onChange={(event) => setNurseBookingField("address", event.target.value)} containerStyle={{ gridColumn: "1 / -1" }} />
-                </div>
-              )}
 
               <div className="form-grid">
                 <label className={`form-field${nurseBookingErrors.doctorId ? " has-error" : ""}`}>

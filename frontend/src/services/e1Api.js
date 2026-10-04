@@ -8,7 +8,6 @@ export const e1Api = {
   updateStaff: async (id, payload) => unwrap(await apiClient.patch(`/e1/staff/${id}`, payload)),
   deactivateStaff: async (id) => unwrap(await apiClient.delete(`/e1/staff/${id}`)),
 
-  listPatients: async (params = {}) => unwrap(await apiClient.get("/e1/staff/patients", { params })),
   createQuickPatient: async (payload) => unwrap(await apiClient.post("/e1/staff/patients", payload)),
 
   listWorkforceStaff: async () => unwrap(await apiClient.get("/e1/workforce/staff")),

@@ -60,13 +60,6 @@ export const updateStaffSchema = z.object({
   })
 });
 
-export const patientSearchSchema = z.object({
-  query: z.object({
-    search: z.string().trim().max(80).optional().default(""),
-    limit: z.coerce.number().int().min(1).max(50).optional().default(20)
-  })
-});
-
 export const quickPatientSchema = z.object({
   body: z.object({
     firstName: nameSchema("First name"),
