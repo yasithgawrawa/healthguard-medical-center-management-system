@@ -61,7 +61,7 @@ const salaryByEmployeeId = {
 };
 
 const patientUsers = [
-  ["Saman", "Kumara", "saman.kumara@example.lk", "+94712345671", "No. 24, Galle Road, Colombo 03", "1984-04-16", "male"],
+  ["Saman", "Kumara", "saman.kumara@gmail.com", "+94712345671", "No. 24, Galle Road, Colombo 03", "1984-04-16", "male"],
   ["Nethmi", "Herath", "nethmi.herath@example.lk", "+94712345672", "No. 12, Lake Road, Kandy", "1996-10-02", "female"],
   ["Fathima", "Nazeer", "fathima.nazeer@example.lk", "+94712345673", "Main Street, Galle Fort", "1978-01-22", "female"],
   ["Ruwan", "Bandara", "ruwan.bandara@example.lk", "+94712345674", "Temple Road, Kurunegala", "1990-07-09", "male"]
@@ -71,10 +71,15 @@ const userByEmail = new Map();
 const staffByEmployeeId = new Map();
 
 const upsertUser = async ({ firstName, lastName, email, phone, role, address, dateOfBirth, gender }) => {
+  const userUpdates = { firstName, lastName, phone, role, status: "active", address, dateOfBirth, gender };
+  if (role !== ROLES.PATIENT) {
+    userUpdates.passwordHash = passwordHash;
+  }
+
   const user = await User.findOneAndUpdate(
     { email },
     {
-      $set: { firstName, lastName, phone, role, status: "active", address, dateOfBirth, gender },
+      $set: userUpdates,
       $setOnInsert: { passwordHash }
     },
     { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
