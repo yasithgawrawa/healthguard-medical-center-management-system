@@ -73,6 +73,37 @@ export const recordPurchase = async (req, res) => {
   return successResponse(res, "Purchase recorded and stock updated", purchase, 201);
 };
 
+// Medicine Returns
+export const listMedicineReturns = async (req, res) => {
+  const returns = await inventoryService.getMedicineReturns();
+  return successResponse(res, "Medicine return list loaded", returns);
+};
+
+export const getMedicineReturnDetails = async (req, res) => {
+  const medicineReturn = await inventoryService.getMedicineReturnById(req.params.id);
+  return successResponse(res, "Medicine return details loaded", medicineReturn);
+};
+
+export const createMedicineReturn = async (req, res) => {
+  const medicineReturn = await inventoryService.createMedicineReturnDraft(req.body, req.user._id);
+  return successResponse(res, "Medicine return draft created", medicineReturn, 201);
+};
+
+export const updateMedicineReturn = async (req, res) => {
+  const medicineReturn = await inventoryService.updateMedicineReturnDraft(req.params.id, req.body);
+  return successResponse(res, "Medicine return draft updated", medicineReturn);
+};
+
+export const deleteMedicineReturn = async (req, res) => {
+  const medicineReturn = await inventoryService.deleteMedicineReturnDraft(req.params.id);
+  return successResponse(res, "Medicine return draft deleted", medicineReturn);
+};
+
+export const completeMedicineReturn = async (req, res) => {
+  const medicineReturn = await inventoryService.completeMedicineReturn(req.params.id, req.user._id);
+  return successResponse(res, "Medicine return completed and stock deducted", medicineReturn);
+};
+
 // Sales / POS
 export const listPharmacySales = async (req, res) => {
   const sales = await inventoryService.getSales();

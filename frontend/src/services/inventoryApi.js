@@ -29,6 +29,14 @@ export const inventoryApi = {
   purchases: async () => unwrap(await apiClient.get("/e3/inventory/purchases")),
   createPurchase: async (payload) => unwrap(await apiClient.post("/e3/inventory/purchases", payload)),
 
+  // Medicine Returns
+  returns: async () => unwrap(await apiClient.get("/e3/inventory/returns")),
+  getReturnDetails: async (id) => unwrap(await apiClient.get(`/e3/inventory/returns/${id}`)),
+  createReturn: async (payload) => unwrap(await apiClient.post("/e3/inventory/returns", payload)),
+  updateReturn: async (id, payload) => unwrap(await apiClient.patch(`/e3/inventory/returns/${id}`, payload)),
+  deleteReturn: async (id) => unwrap(await apiClient.delete(`/e3/inventory/returns/${id}`)),
+  completeReturn: async (id) => unwrap(await apiClient.patch(`/e3/inventory/returns/${id}/complete`)),
+
   // Sales / POS
   sales: async () => unwrap(await apiClient.get("/e3/inventory/sales")),
   createSale: async (payload) => unwrap(await apiClient.post("/e3/inventory/sales", payload)),

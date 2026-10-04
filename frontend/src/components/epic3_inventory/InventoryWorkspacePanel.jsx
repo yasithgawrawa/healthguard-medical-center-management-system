@@ -14,6 +14,7 @@ import {
   Plus,
   Printer,
   RefreshCw,
+  RotateCcw,
   Search,
   ShoppingCart,
   Trash2,
@@ -165,6 +166,22 @@ const schemas = {
   }).refine((data) => new Date(data.expiryDate) > new Date(data.manufactureDate), {
     path: ["expiryDate"],
     message: "Expiry date must be after manufacture date"
+  }),
+  return: z.object({
+    medicineId: z.string().min(1, "Select medicine"),
+    batchId: z.string().min(1, "Select batch"),
+    supplierId: z.string().min(1, "Select supplier"),
+    quantity: requiredQuantity("Return quantity"),
+    returnReason: z.enum(["damaged", "expired", "incorrect"], {
+      required_error: "Select return reason",
+      invalid_type_error: "Select return reason"
+    }),
+    returnDate: z.string().min(1, "Return date is required").refine((val) => {
+      const d = new Date(val);
+      const end = new Date();
+      end.setHours(23, 59, 59, 999);
+      return !isNaN(d.getTime()) && d <= end;
+    }, "Return date cannot be in the future")
   })
 };
 
@@ -178,6 +195,7 @@ export const InventoryWorkspacePanel = () => {
   const [batches, setBatches] = useState([]);
   const [sales, setSales] = useState([]);
   const [purchases, setPurchases] = useState([]);
+  const [returns, setReturns] = useState([]);
   const [alerts, setAlerts] = useState({ lowStock: [], expiring: [] });
   const [report, setReport] = useState({ totalSales: 0, totalRevenue: 0, totalItemsSold: 0, averageOrderValue: 0, topMedicines: [] });
   const [patients, setPatients] = useState([]);
@@ -187,6 +205,7 @@ export const InventoryWorkspacePanel = () => {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [stockStatusFilter, setStockStatusFilter] = useState("");
+  const [returnStatusFilter, setReturnStatusFilter] = useState("");
   const [reportPeriod, setReportPeriod] = useState("all");
 
   const [modal, setModal] = useState({ type: null, record: null });
@@ -217,19 +236,24 @@ export const InventoryWorkspacePanel = () => {
   const [purchasePrice, setPurchasePrice] = useState("");
 
   const formSchema = modal.type === "batch" && modal.record ? schemas.batchUpdate : schemas[modal.type] || schemas.medicine;
-  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(formSchema),
     mode: "onChange"
   });
+  const selectedReturnMedicineId = watch("medicineId");
+  const selectedReturnBatchId = watch("batchId");
+  const selectedReturnBatch = batches.find((batch) => batch._id === selectedReturnBatchId);
+  const returnBatchesForMedicine = batches.filter((batch) => (batch.medicineId?._id || batch.medicineId) === selectedReturnMedicineId);
 
   const loadData = async () => {
     try {
-      const [meds, sups, bts, sls, prchs, alrts, rpt, pts, rx] = await Promise.all([
+      const [meds, sups, bts, sls, prchs, rts, alrts, rpt, pts, rx] = await Promise.all([
         inventoryApi.medicines(),
         inventoryApi.suppliers(),
         inventoryApi.batches(),
         inventoryApi.sales(),
         inventoryApi.purchases(),
+        inventoryApi.returns(),
         inventoryApi.alerts(),
         inventoryApi.salesReport(reportPeriod),
         inventoryApi.patients().catch(() => []),
@@ -240,6 +264,7 @@ export const InventoryWorkspacePanel = () => {
       setBatches(bts || []);
       setSales(sls || []);
       setPurchases(prchs || []);
+      setReturns(rts || []);
       setAlerts(alrts || { lowStock: [], expiring: [] });
       setReport(rpt || { totalSales: 0, totalRevenue: 0, totalItemsSold: 0, averageOrderValue: 0, topMedicines: [] });
       setPatients(pts || []);
@@ -300,6 +325,29 @@ export const InventoryWorkspacePanel = () => {
     setModal({ type: "purchase", record: prefillMed });
   };
 
+  const openReturnModal = (record = null) => {
+    const medicineId = record?.medicineId?._id || record?.medicineId || medicines[0]?._id || "";
+    const availableBatches = batches.filter((batch) => (batch.medicineId?._id || batch.medicineId) === medicineId);
+    reset(record
+      ? {
+          medicineId,
+          batchId: record.batchId?._id || record.batchId || "",
+          supplierId: record.supplierId?._id || record.supplierId || "",
+          quantity: record.quantity,
+          returnReason: record.returnReason,
+          returnDate: dateOnly(record.returnDate)
+        }
+      : {
+          medicineId,
+          batchId: availableBatches[0]?._id || "",
+          supplierId: suppliers.find((supplier) => supplier.status === "active")?._id || "",
+          quantity: 1,
+          returnReason: "damaged",
+          returnDate: todayStr()
+        });
+    setModal({ type: "return", record });
+  };
+
   // Open POS / Dispense Modal
   const openPosModal = (prefillRx = null) => {
     setPosCart([]);
@@ -336,11 +384,68 @@ export const InventoryWorkspacePanel = () => {
       } else if (modal.type === "batch") {
         modal.record ? await inventoryApi.updateBatch(modal.record._id, values) : await inventoryApi.createBatch(values);
         setToast({ type: "success", message: `Medicine batch ${modal.record ? "updated" : "received"} successfully` });
+      } else if (modal.type === "return") {
+        const batch = batches.find((item) => item._id === values.batchId);
+        if (!batch || (batch.medicineId?._id || batch.medicineId) !== values.medicineId) {
+          setToast({ type: "error", message: "Select a batch that belongs to the selected medicine" });
+          return;
+        }
+        if (Number(values.quantity) > Number(batch.quantity || 0)) {
+          setToast({ type: "error", message: `Return quantity cannot exceed available batch stock (${batch.quantity})` });
+          return;
+        }
+        const payload = {
+          ...values,
+          quantity: Number(values.quantity)
+        };
+        modal.record ? await inventoryApi.updateReturn(modal.record._id, payload) : await inventoryApi.createReturn(payload);
+        setToast({ type: "success", message: `Return draft ${modal.record ? "updated" : "created"} successfully` });
+        setActiveTab("returns");
       }
       setModal({ type: null, record: null });
       await loadData();
     } catch (error) {
       setToast({ type: "error", message: error.response?.data?.message || "Failed to save record" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleViewReturn = async (item) => {
+    setBusy(true);
+    try {
+      const details = await inventoryApi.getReturnDetails(item._id);
+      setModal({ type: "returnDetails", record: details });
+    } catch (error) {
+      setToast({ type: "error", message: error.response?.data?.message || "Unable to load return details" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDeleteReturn = async (item) => {
+    if (!window.confirm(`Delete draft return ${item.returnId}? This cannot be undone.`)) return;
+    setBusy(true);
+    try {
+      await inventoryApi.deleteReturn(item._id);
+      setToast({ type: "success", message: `${item.returnId} deleted successfully` });
+      await loadData();
+    } catch (error) {
+      setToast({ type: "error", message: error.response?.data?.message || "Unable to delete return draft" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleCompleteReturn = async (item) => {
+    if (!window.confirm(`Complete ${item.returnId} and deduct ${item.quantity} unit(s) from batch ${item.batchId?.batchNumber || ""}?`)) return;
+    setBusy(true);
+    try {
+      await inventoryApi.completeReturn(item._id);
+      setToast({ type: "success", message: `${item.returnId} completed and stock deducted` });
+      await loadData();
+    } catch (error) {
+      setToast({ type: "error", message: error.response?.data?.message || "Unable to complete return" });
     } finally {
       setBusy(false);
     }
@@ -547,6 +652,22 @@ export const InventoryWorkspacePanel = () => {
     });
   }, [purchases, search]);
 
+  const returnRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return returns.filter((item) => {
+      const matchesSearch = [
+        item.returnId,
+        item.medicineId?.name,
+        item.batchId?.batchNumber,
+        item.supplierId?.name,
+        item.returnReason,
+        item.status
+      ].join(" ").toLowerCase().includes(q);
+      const matchesStatus = !returnStatusFilter || item.status === returnStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [returns, search, returnStatusFilter]);
+
   // Filtered Sales
   const salesRows = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -580,6 +701,9 @@ export const InventoryWorkspacePanel = () => {
             <button type="button" onClick={() => openPurchaseModal()} className="button-secondary">
               <ArrowDownCircle size={16} /> Record Purchase
             </button>
+            <button type="button" onClick={() => openReturnModal()} className="button-secondary">
+              <RotateCcw size={16} /> New Return
+            </button>
             <button type="button" onClick={() => openPosModal()} className="button-primary" style={{ fontWeight: 600 }}>
               <ShoppingCart size={16} /> Dispense / POS
             </button>
@@ -599,6 +723,7 @@ export const InventoryWorkspacePanel = () => {
           { id: "catalog", label: "Medicine Catalog", icon: Pill, badge: medicines.length },
           { id: "suppliers", label: "Suppliers", icon: Truck, badge: suppliers.length },
           { id: "purchases", label: "Purchases", icon: ArrowDownCircle, badge: purchases.length },
+          { id: "returns", label: "Returns", icon: RotateCcw, badge: returns.length },
           { id: "alerts", label: "Stock & Expiry Alerts", icon: AlertTriangle, badge: alerts.lowStock.length + alerts.expiring.length, badgeWarn: true },
           { id: "sales", label: "Sales & Invoices", icon: ShoppingCart, badge: sales.length },
           { id: "reports", label: "Sales Analytics", icon: TrendingUp }
@@ -780,6 +905,70 @@ export const InventoryWorkspacePanel = () => {
               { key: "quantity", header: "Qty Purchased", render: (item) => `${item.quantity} ${item.medicineId?.unit || "units"}` },
               { key: "purchasePrice", header: "Unit Cost", render: (item) => money(item.purchasePrice) },
               { key: "totalCost", header: "Total Cost", render: (item) => <strong>{money(item.quantity * item.purchasePrice)}</strong> }
+            ]}
+          />
+        </>
+      ) : null}
+
+      {/* TAB 5: MEDICINE RETURNS */}
+      {activeTab === "returns" ? (
+        <>
+          <div className="table-toolbar compact-toolbar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+            <div style={{ flex: 1, minWidth: "240px", maxWidth: "420px" }}>
+              <SearchBar value={search} onChange={setSearch} placeholder="Search returns by medicine, batch, supplier..." />
+            </div>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+              <FilterSelect
+                label="Status"
+                value={returnStatusFilter}
+                onChange={setReturnStatusFilter}
+                options={[
+                  { value: "draft", label: "Draft" },
+                  { value: "completed", label: "Completed" }
+                ]}
+              />
+              {isPharmacist ? (
+                <button type="button" onClick={() => openReturnModal()} className="button-primary">
+                  <RotateCcw size={16} /> New Return
+                </button>
+              ) : null}
+            </div>
+          </div>
+          <DataTable
+            rows={returnRows}
+            columns={[
+              { key: "returnId", header: "Return ID", render: (item) => <strong>{item.returnId}</strong> },
+              { key: "medicine", header: "Medicine", render: (item) => item.medicineId?.name || "Unknown" },
+              { key: "batch", header: "Batch No", render: (item) => item.batchId?.batchNumber || "-" },
+              { key: "supplier", header: "Supplier", render: (item) => item.supplierId?.name || "-" },
+              { key: "quantity", header: "Qty", render: (item) => `${item.quantity} ${item.medicineId?.unit || "units"}` },
+              { key: "reason", header: "Reason", render: (item) => (item.returnReason || "-").replace("_", " ") },
+              { key: "returnDate", header: "Return Date", render: (item) => dateOnly(item.returnDate) },
+              { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} /> },
+              {
+                key: "actions",
+                header: "Actions",
+                render: (item) => (
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    <button className="table-link-button" type="button" onClick={() => handleViewReturn(item)}>
+                      <FileText size={14} /> View
+                    </button>
+                    {isPharmacist && item.status === "draft" ? (
+                      <>
+                        <button className="table-link-button" type="button" onClick={() => openReturnModal(item)}>
+                          <Edit2 size={14} /> Edit
+                        </button>
+                        <button className="table-link-button" type="button" onClick={() => handleCompleteReturn(item)}>
+                          <CheckCircle2 size={14} /> Complete
+                        </button>
+                        <button className="table-link-button danger-action" type="button" onClick={() => handleDeleteReturn(item)}>
+                          <Trash2 size={14} /> Delete
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
+                )
+              }
             ]}
           />
         </>
@@ -1364,7 +1553,117 @@ export const InventoryWorkspacePanel = () => {
       </Modal>
 
       {/* ========================================================================= */}
-      {/* MODAL 5: PHARMACY POS / DISPENSING */}
+      {/* MODAL 5: MEDICINE RETURN DRAFT */}
+      {/* ========================================================================= */}
+      <Modal
+        open={modal.type === "return"}
+        title={modal.record ? "Update Medicine Return Draft" : "Create Medicine Return Draft"}
+        subtitle="Draft returns do not change stock. Complete the return when the medicine is physically returned or disposed."
+        onClose={() => setModal({ type: null, record: null })}
+      >
+        <form onSubmit={handleSubmit(submitStandard)}>
+          <div className="form-section-title" style={{ marginTop: 0 }}>Return Details</div>
+          <div className="form-grid">
+            <FormSelect
+              label="Medicine"
+              error={errors.medicineId?.message}
+              {...register("medicineId", {
+                onChange: (event) => {
+                  const firstBatch = batches.find((batch) => (batch.medicineId?._id || batch.medicineId) === event.target.value);
+                  setValue("batchId", firstBatch?._id || "", { shouldValidate: true });
+                }
+              })}
+            >
+              <option value="">Select Medicine</option>
+              {medicines.filter((medicine) => medicine.status === "active").map((medicine) => (
+                <option value={medicine._id} key={medicine._id}>{medicine.name} ({medicine.category})</option>
+              ))}
+            </FormSelect>
+            <FormSelect label="Batch Number" error={errors.batchId?.message} {...register("batchId")}>
+              <option value="">Select Batch</option>
+              {returnBatchesForMedicine.map((batch) => (
+                <option value={batch._id} key={batch._id}>
+                  {batch.batchNumber} (Available: {batch.quantity} {batch.medicineId?.unit || "units"})
+                </option>
+              ))}
+            </FormSelect>
+            <FormSelect label="Supplier" error={errors.supplierId?.message} {...register("supplierId")}>
+              <option value="">Select Supplier</option>
+              {suppliers
+                .filter((supplier) => supplier.status === "active" || supplier._id === (modal.record?.supplierId?._id || modal.record?.supplierId))
+                .map((supplier) => (
+                  <option value={supplier._id} key={supplier._id}>{supplier.name} ({supplier.phone})</option>
+                ))}
+            </FormSelect>
+            <FormInput
+              label="Quantity"
+              type="number"
+              min="1"
+              max={selectedReturnBatch?.quantity || undefined}
+              step="1"
+              error={errors.quantity?.message}
+              {...register("quantity")}
+            />
+            <FormSelect label="Return Reason" error={errors.returnReason?.message} {...register("returnReason")}>
+              <option value="">Select Reason</option>
+              <option value="damaged">Damaged</option>
+              <option value="expired">Expired</option>
+              <option value="incorrect">Incorrect Medicine</option>
+            </FormSelect>
+            <FormInput label="Return Date" type="date" max={todayStr()} error={errors.returnDate?.message} {...register("returnDate")} />
+          </div>
+
+          {selectedReturnBatch ? (
+            <div style={{ marginTop: "14px", padding: "12px 14px", background: "#f8fafc", border: "1px solid var(--line)", borderRadius: "8px", fontSize: "0.86rem", color: "var(--ink-700)" }}>
+              Batch stock available: <strong>{selectedReturnBatch.quantity} {selectedReturnBatch.medicineId?.unit || "units"}</strong>. Stock changes only after clicking <strong>Complete</strong>.
+            </div>
+          ) : null}
+
+          <div className="modal-actions">
+            <button className="button-secondary" type="button" onClick={() => setModal({ type: null, record: null })} disabled={busy}>Cancel</button>
+            <button className="button-primary" type="submit" disabled={busy}>
+              <CheckCircle2 size={16} /> {busy ? "Saving..." : "Save Draft"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL 6: RETURN DETAILS */}
+      {/* ========================================================================= */}
+      <Modal
+        open={modal.type === "returnDetails"}
+        title={modal.record?.returnId || "Medicine Return Details"}
+        subtitle="Return record summary and stock impact status."
+        onClose={() => setModal({ type: null, record: null })}
+      >
+        {modal.record ? (
+          <div style={{ display: "grid", gap: "12px" }}>
+            {[
+              ["Medicine", modal.record.medicineId?.name || "-"],
+              ["Batch Number", modal.record.batchId?.batchNumber || "-"],
+              ["Supplier", modal.record.supplierId?.name || "-"],
+              ["Quantity", `${modal.record.quantity} ${modal.record.medicineId?.unit || "units"}`],
+              ["Reason", (modal.record.returnReason || "-").replace("_", " ")],
+              ["Return Date", dateOnly(modal.record.returnDate)],
+              ["Status", modal.record.status],
+              ["Created By", [modal.record.createdBy?.firstName, modal.record.createdBy?.lastName].filter(Boolean).join(" ") || "-"],
+              ["Completed At", modal.record.completedAt ? new Date(modal.record.completedAt).toLocaleString("en-LK") : "Not completed"]
+            ].map(([label, value]) => (
+              <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: "16px", padding: "10px 0", borderBottom: "1px solid var(--line-light)" }}>
+                <span style={{ color: "var(--muted)", fontWeight: 700 }}>{label}</span>
+                <strong style={{ textAlign: "right", color: "var(--ink-900)", textTransform: label === "Status" ? "capitalize" : "none" }}>{value}</strong>
+              </div>
+            ))}
+            <div className="modal-actions">
+              <button className="button-secondary" type="button" onClick={() => setModal({ type: null, record: null })}>Close</button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL 7: PHARMACY POS / DISPENSING */}
       {/* ========================================================================= */}
       <Modal
         open={modal.type === "pos"}

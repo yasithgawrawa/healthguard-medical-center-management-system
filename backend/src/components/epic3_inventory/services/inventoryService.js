@@ -3,6 +3,7 @@ import { MedicineBatch } from "../models/MedicineBatch.js";
 import { Supplier } from "../models/Supplier.js";
 import { Purchase } from "../models/Purchase.js";
 import { PharmacySale } from "../models/PharmacySale.js";
+import { MedicineReturn } from "../models/MedicineReturn.js";
 import { Prescription } from "../../epic2_clinical/models/Prescription.js";
 import { Appointment } from "../../epic2_clinical/models/Appointment.js";
 import { Invoice } from "../../epic4_billing/models/Invoice.js";
@@ -10,6 +11,29 @@ import { SupplierBill } from "../../epic4_billing/models/SupplierBill.js";
 import { User } from "../../epic1_user_staff/models/User.js";
 import { AppError } from "../../../shared/utils/AppError.js";
 import { ROLES } from "../../../shared/constants/roles.js";
+
+const populateMedicineReturn = (query) =>
+  query
+    .populate("medicineId", "name category unit")
+    .populate("batchId", "batchNumber quantity expiryDate")
+    .populate("supplierId", "name phone email")
+    .populate("createdBy", "firstName lastName")
+    .populate("completedBy", "firstName lastName");
+
+const generateReturnId = async (date = new Date()) => {
+  const key = date.toISOString().slice(0, 10).replace(/-/g, "");
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  let next = await MedicineReturn.countDocuments({ createdAt: { $gte: start, $lt: end } }) + 1;
+  let returnId = `RT-${key}-${String(next).padStart(4, "0")}`;
+  while (await MedicineReturn.exists({ returnId })) {
+    next += 1;
+    returnId = `RT-${key}-${String(next).padStart(4, "0")}`;
+  }
+  return returnId;
+};
 
 export const inventoryService = {
   // --- MEDICINES ---
@@ -246,6 +270,107 @@ export const inventoryService = {
       { path: "medicineId", select: "name unit" },
       { path: "batchId", select: "batchNumber expiryDate" }
     ]);
+  },
+
+  // --- MEDICINE RETURNS ---
+  async validateMedicineReturnPayload(data) {
+    const medicine = await Medicine.findById(data.medicineId);
+    if (!medicine) throw new AppError("Medicine not found", 404);
+
+    const batch = await MedicineBatch.findById(data.batchId);
+    if (!batch) throw new AppError("Medicine batch not found", 404);
+    if (batch.medicineId.toString() !== medicine._id.toString()) {
+      throw new AppError("Batch does not belong to selected medicine", 400, { batchId: "Select a matching batch" });
+    }
+
+    const supplier = await Supplier.findById(data.supplierId);
+    if (!supplier || supplier.status !== "active") {
+      throw new AppError("Active supplier not found", 404, { supplierId: "Select an active supplier" });
+    }
+
+    if (Number(data.quantity) > Number(batch.quantity || 0)) {
+      throw new AppError(`Return quantity cannot exceed available batch stock (${batch.quantity})`, 400, { quantity: "Quantity exceeds available stock" });
+    }
+
+    return { medicine, batch, supplier };
+  },
+
+  async createMedicineReturnDraft(data, userId) {
+    await this.validateMedicineReturnPayload(data);
+    const returnId = await generateReturnId();
+    const medicineReturn = await MedicineReturn.create({
+      ...data,
+      returnId,
+      status: "draft",
+      createdBy: userId
+    });
+    return populateMedicineReturn(MedicineReturn.findById(medicineReturn._id));
+  },
+
+  async getMedicineReturns() {
+    return populateMedicineReturn(MedicineReturn.find().sort({ createdAt: -1 }));
+  },
+
+  async getMedicineReturnById(id) {
+    const medicineReturn = await populateMedicineReturn(MedicineReturn.findById(id));
+    if (!medicineReturn) throw new AppError("Medicine return not found", 404);
+    return medicineReturn;
+  },
+
+  async updateMedicineReturnDraft(id, data) {
+    const medicineReturn = await MedicineReturn.findById(id);
+    if (!medicineReturn) throw new AppError("Medicine return not found", 404);
+    if (medicineReturn.status !== "draft") throw new AppError("Completed returns cannot be edited", 409);
+
+    const nextData = {
+      medicineId: data.medicineId ?? medicineReturn.medicineId,
+      batchId: data.batchId ?? medicineReturn.batchId,
+      supplierId: data.supplierId ?? medicineReturn.supplierId,
+      quantity: data.quantity ?? medicineReturn.quantity,
+      returnReason: data.returnReason ?? medicineReturn.returnReason,
+      returnDate: data.returnDate ?? medicineReturn.returnDate
+    };
+    await this.validateMedicineReturnPayload(nextData);
+
+    Object.assign(medicineReturn, data);
+    await medicineReturn.save();
+    return populateMedicineReturn(MedicineReturn.findById(medicineReturn._id));
+  },
+
+  async deleteMedicineReturnDraft(id) {
+    const medicineReturn = await MedicineReturn.findById(id);
+    if (!medicineReturn) throw new AppError("Medicine return not found", 404);
+    if (medicineReturn.status !== "draft") throw new AppError("Completed returns cannot be deleted", 409);
+    await medicineReturn.deleteOne();
+    return medicineReturn;
+  },
+
+  async completeMedicineReturn(id, userId) {
+    const medicineReturn = await MedicineReturn.findById(id);
+    if (!medicineReturn) throw new AppError("Medicine return not found", 404);
+    if (medicineReturn.status !== "draft") throw new AppError("Return has already been completed", 409);
+
+    const batch = await MedicineBatch.findOneAndUpdate(
+      { _id: medicineReturn.batchId, quantity: { $gte: medicineReturn.quantity } },
+      { $inc: { quantity: -medicineReturn.quantity } },
+      { new: true }
+    );
+    if (!batch) {
+      throw new AppError("Not enough stock remains in this batch to complete the return", 409, { quantity: "Quantity exceeds available stock" });
+    }
+
+    const completed = await MedicineReturn.findOneAndUpdate(
+      { _id: medicineReturn._id, status: "draft" },
+      { status: "completed", completedAt: new Date(), completedBy: userId },
+      { new: true, runValidators: true }
+    );
+
+    if (!completed) {
+      await MedicineBatch.findByIdAndUpdate(medicineReturn.batchId, { $inc: { quantity: medicineReturn.quantity } });
+      throw new AppError("Return has already been completed", 409);
+    }
+
+    return populateMedicineReturn(MedicineReturn.findById(completed._id));
   },
 
   // --- SALES / POS ---

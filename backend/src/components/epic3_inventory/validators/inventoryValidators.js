@@ -102,6 +102,27 @@ export const purchaseSchema = z.object({
   })
 });
 
+const medicineReturnBodySchema = z.object({
+  medicineId: objectIdSchema,
+  batchId: objectIdSchema,
+  supplierId: objectIdSchema,
+  quantity: quantitySchema(),
+  returnReason: z.enum(["damaged", "expired", "incorrect"], {
+    required_error: "Select return reason",
+    invalid_type_error: "Select return reason"
+  }),
+  returnDate: z.coerce.date().refine(isPastOrToday, "Return date cannot be in the future")
+});
+
+export const medicineReturnSchema = z.object({
+  body: medicineReturnBodySchema
+});
+
+export const updateMedicineReturnSchema = z.object({
+  params: idParamSchema.shape.params,
+  body: medicineReturnBodySchema.partial()
+});
+
 export const saleSchema = z.object({
   body: z.object({
     prescriptionId: objectIdSchema.optional(),

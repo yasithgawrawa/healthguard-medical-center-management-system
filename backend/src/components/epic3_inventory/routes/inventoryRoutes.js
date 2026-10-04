@@ -7,16 +7,21 @@ import { idParamSchema } from "../../../shared/validators/commonSchemas.js";
 import {
   createBatch,
   createMedicine,
+  createMedicineReturn,
   createPharmacySale,
   createSupplier,
   deleteMedicine,
+  deleteMedicineReturn,
   deleteSupplier,
   downloadSaleBill,
+  completeMedicineReturn,
+  getMedicineReturnDetails,
   getSaleDetails,
   inventoryAlerts,
   listActivePrescriptions,
   listBatches,
   listMedicines,
+  listMedicineReturns,
   listPatients,
   listPharmacySales,
   listPurchases,
@@ -25,15 +30,18 @@ import {
   recordPurchase,
   updateBatch,
   updateMedicine,
+  updateMedicineReturn,
   updateSupplier
 } from "../controllers/inventoryController.js";
 import {
   batchSchema,
+  medicineReturnSchema,
   medicineSchema,
   purchaseSchema,
   saleSchema,
   supplierSchema,
   updateBatchSchema,
+  updateMedicineReturnSchema,
   updateMedicineSchema,
   updateSupplierSchema
 } from "../validators/inventoryValidators.js";
@@ -67,6 +75,14 @@ router.delete("/suppliers/:id", authorizeRoles(ROLES.PHARMACIST, ROLES.ADMIN), v
 // Purchases: Procurement recorded only by Pharmacist & Admin (E3-US11)
 router.get("/purchases", authorizeRoles(ROLES.PHARMACIST, ROLES.MANAGER, ROLES.ADMIN), asyncHandler(listPurchases));
 router.post("/purchases", authorizeRoles(ROLES.PHARMACIST, ROLES.ADMIN), validateRequest(purchaseSchema), asyncHandler(recordPurchase));
+
+// Medicine Returns: Drafts do not affect stock; completion deducts stock once
+router.get("/returns", authorizeRoles(ROLES.PHARMACIST, ROLES.MANAGER, ROLES.ADMIN), asyncHandler(listMedicineReturns));
+router.post("/returns", authorizeRoles(ROLES.PHARMACIST, ROLES.ADMIN), validateRequest(medicineReturnSchema), asyncHandler(createMedicineReturn));
+router.get("/returns/:id", authorizeRoles(ROLES.PHARMACIST, ROLES.MANAGER, ROLES.ADMIN), validateRequest(idParamSchema), asyncHandler(getMedicineReturnDetails));
+router.patch("/returns/:id", authorizeRoles(ROLES.PHARMACIST, ROLES.ADMIN), validateRequest(updateMedicineReturnSchema), asyncHandler(updateMedicineReturn));
+router.delete("/returns/:id", authorizeRoles(ROLES.PHARMACIST, ROLES.ADMIN), validateRequest(idParamSchema), asyncHandler(deleteMedicineReturn));
+router.patch("/returns/:id/complete", authorizeRoles(ROLES.PHARMACIST, ROLES.ADMIN), validateRequest(idParamSchema), asyncHandler(completeMedicineReturn));
 
 // Sales / POS: Dispensing & bill generation by Pharmacist & Admin (E3-US16, E3-US17)
 router.get("/sales", authorizeRoles(ROLES.PHARMACIST, ROLES.MANAGER, ROLES.ADMIN), asyncHandler(listPharmacySales));
