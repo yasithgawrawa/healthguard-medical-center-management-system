@@ -3,7 +3,6 @@ import {
   AlertCircle,
   AlertTriangle,
   ArrowDownCircle,
-  Boxes,
   Calendar,
   CheckCircle2,
   DollarSign,
@@ -253,7 +252,7 @@ export const InventoryWorkspacePanel = () => {
     const handleDashboardCommand = (event) => {
       const command = event.detail || {};
       if (command.workspace !== "inventory") return;
-      if (command.tab) setActiveTab(command.tab);
+      if (command.tab && command.tab !== "batches") setActiveTab(command.tab);
       if (command.search !== undefined) setSearch(command.search);
       if (command.stockStatus !== undefined) setStockStatusFilter(command.stockStatus);
       if (command.category !== undefined) setCategoryFilter(command.category);
@@ -525,15 +524,6 @@ export const InventoryWorkspacePanel = () => {
     });
   }, [medicines, search, categoryFilter, stockStatusFilter]);
 
-  // Filtered Batches
-  const batchRows = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return batches.filter((b) => {
-      const medName = b.medicineId?.name || "";
-      return [b.batchNumber, medName].join(" ").toLowerCase().includes(q);
-    });
-  }, [batches, search]);
-
   // Filtered Suppliers
   const supplierRows = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -569,8 +559,8 @@ export const InventoryWorkspacePanel = () => {
           <h2>Pharmacy & Inventory Workspace</h2>
           <p>
             {isPharmacist
-              ? "Complete medicine catalog, batch tracking, supplier management, procurement, dispensing POS, alerts and sales reports."
-              : "Supervisory overview of medicine catalog, batch tracking, supplier directory, procurement history, stock alerts, and sales analytics."}
+              ? "Complete medicine catalog, supplier management, procurement, dispensing POS, alerts and sales reports."
+              : "Supervisory overview of medicine catalog, supplier directory, procurement history, stock alerts, and sales analytics."}
           </p>
         </div>
         {isPharmacist ? (
@@ -601,7 +591,6 @@ export const InventoryWorkspacePanel = () => {
       <div className="e1-tabbar">
         {[
           { id: "catalog", label: "Medicine Catalog", icon: Pill, badge: medicines.length },
-          { id: "batches", label: "Batches & Stock", icon: Boxes, badge: batches.length },
           { id: "suppliers", label: "Suppliers", icon: Truck, badge: suppliers.length },
           { id: "purchases", label: "Purchases", icon: ArrowDownCircle, badge: purchases.length },
           { id: "alerts", label: "Stock & Expiry Alerts", icon: AlertTriangle, badge: alerts.lowStock.length + alerts.expiring.length, badgeWarn: true },
@@ -707,61 +696,6 @@ export const InventoryWorkspacePanel = () => {
                             Delete
                           </button>
                         </div>
-                      )
-                    }
-                  ]
-                : [])
-            ]}
-          />
-        </>
-      ) : null}
-
-      {/* TAB 2: BATCHES & STOCK */}
-      {activeTab === "batches" ? (
-        <>
-          <div className="table-toolbar compact-toolbar">
-            <SearchBar value={search} onChange={setSearch} placeholder="Search by batch number or medicine name..." />
-          </div>
-          <DataTable
-            rows={batchRows}
-            columns={[
-              { key: "batchNumber", header: "Batch No", render: (item) => <strong>{item.batchNumber}</strong> },
-              { key: "medicine", header: "Medicine", render: (item) => item.medicineId?.name || "Unknown" },
-              { key: "category", header: "Category", render: (item) => item.medicineId?.category || "-" },
-              {
-                key: "quantity",
-                header: "Stock Qty",
-                render: (item) => (
-                  <span style={{ fontWeight: 600, color: item.quantity === 0 ? "var(--danger)" : "inherit" }}>
-                    {item.quantity} {item.medicineId?.unit || "units"}
-                  </span>
-                )
-              },
-              { key: "purchasePrice", header: "Purchase Cost", render: (item) => money(item.purchasePrice) },
-              { key: "manufactureDate", header: "Mfg Date", render: (item) => dateOnly(item.manufactureDate) },
-              { key: "expiryDate", header: "Expiry Date", render: (item) => dateOnly(item.expiryDate) },
-              {
-                key: "expiryStatus",
-                header: "Expiry Status",
-                render: (item) => {
-                  if (item.expiryStatus === "expired") {
-                    return <span style={{ color: "var(--danger)", fontWeight: 600, background: "var(--danger-bg)", padding: "2px 8px", borderRadius: "12px", fontSize: "12px" }}>Expired</span>;
-                  }
-                  if (item.expiryStatus === "expiring_soon") {
-                    return <span style={{ color: "var(--warning)", fontWeight: 600, background: "var(--warning-bg)", padding: "2px 8px", borderRadius: "12px", fontSize: "12px" }}>Expiring Soon</span>;
-                  }
-                  return <span style={{ color: "var(--success)", fontWeight: 600, background: "var(--success-bg)", padding: "2px 8px", borderRadius: "12px", fontSize: "12px" }}>Valid</span>;
-                }
-              },
-              ...(isPharmacist
-                ? [
-                    {
-                      key: "actions",
-                      header: "Actions",
-                      render: (item) => (
-                        <button className="table-link-button" type="button" onClick={() => openStandardModal("batch", item)}>
-                          <Edit2 size={14} /> Adjust Stock / Edit
-                        </button>
                       )
                     }
                   ]
