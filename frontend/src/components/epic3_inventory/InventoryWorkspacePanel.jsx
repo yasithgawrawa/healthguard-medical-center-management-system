@@ -322,7 +322,8 @@ export const InventoryWorkspacePanel = () => {
     setBusy(true);
     try {
       if (modal.type === "medicine") {
-        modal.record ? await inventoryApi.updateMedicine(modal.record._id, values) : await inventoryApi.createMedicine(values);
+        const medicineValues = { ...values, status: "active" };
+        modal.record ? await inventoryApi.updateMedicine(modal.record._id, medicineValues) : await inventoryApi.createMedicine(medicineValues);
         setToast({ type: "success", message: `Medicine ${modal.record ? "updated" : "added"} successfully` });
       } else if (modal.type === "supplier") {
         modal.record ? await inventoryApi.updateSupplier(modal.record._id, values) : await inventoryApi.createSupplier(values);
@@ -1099,10 +1100,6 @@ export const InventoryWorkspacePanel = () => {
               {MEDICINE_UNITS.map((unit) => (
                 <option value={unit} key={unit}>{unit.charAt(0).toUpperCase() + unit.slice(1)}</option>
               ))}
-            </FormSelect>
-            <FormSelect label="Status" error={errors.status?.message} {...register("status")}>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
             </FormSelect>
           </div>
 
