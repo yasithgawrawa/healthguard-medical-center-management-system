@@ -12,13 +12,22 @@ import {
   listMyAnnouncements,
   updateAnnouncement
 } from "../controllers/announcementController.js";
-import { STAFF_NOTICE_ROLES } from "../models/StaffAnnouncement.js";
 import { announcementSchema, updateAnnouncementSchema } from "../validators/epic1Validators.js";
+
+const staffNoticeRoles = [
+  ROLES.ADMIN,
+  ROLES.MANAGER,
+  ROLES.DOCTOR,
+  ROLES.NURSE,
+  ROLES.PHARMACIST,
+  ROLES.CASHIER,
+  ROLES.LAB_ASSISTANT
+];
 
 const router = Router();
 router.use(authenticate);
 
-router.get("/my", authorizeRoles(...STAFF_NOTICE_ROLES), asyncHandler(listMyAnnouncements));
+router.get("/my", authorizeRoles(...staffNoticeRoles), asyncHandler(listMyAnnouncements));
 
 router.use(authorizeRoles(ROLES.ADMIN));
 router.get("/", asyncHandler(listAnnouncements));

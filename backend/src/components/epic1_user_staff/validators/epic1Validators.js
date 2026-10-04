@@ -1,11 +1,11 @@
 import { z } from "zod";
 import { ROLE_VALUES, ROLES } from "../../../shared/constants/roles.js";
-import { ANNOUNCEMENT_TARGET_ROLES } from "../models/StaffAnnouncement.js";
 import { employeeIdSchema, moneySchema, nameSchema, phoneSchema, textNoNumbersSchema } from "../../../shared/validators/fieldSchemas.js";
 import { idParamSchema, objectIdSchema } from "../../../shared/validators/commonSchemas.js";
 
 const staffRoleValues = ROLE_VALUES.filter((role) => role !== ROLES.PATIENT);
 const creatableStaffRoleValues = staffRoleValues.filter((role) => role !== ROLES.DOCTOR);
+const announcementTargetRoleValues = ["all", ...staffRoleValues];
 const optionalAnnouncementDate = z.preprocess(
   (value) => (value === "" || value === null ? undefined : value),
   z.coerce.date().optional()
@@ -189,7 +189,7 @@ const announcementBodySchema = z.object({
   message: z.string().trim().min(5, "Message must be at least 5 characters").max(1000, "Message cannot exceed 1000 characters"),
   publishedDate: z.coerce.date(),
   expiryDate: optionalAnnouncementDate,
-  targetRole: z.enum(ANNOUNCEMENT_TARGET_ROLES)
+  targetRole: z.enum(announcementTargetRoleValues)
 }).refine((data) => !data.expiryDate || data.expiryDate >= data.publishedDate, {
   path: ["expiryDate"],
   message: "Expiry date cannot be earlier than published date"

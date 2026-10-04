@@ -1,14 +1,7 @@
 import { Megaphone, RefreshCcw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { e1Api } from "../../services/e1Api.js";
-import { roleLabel } from "./e1Constants.js";
-
-const safeFormatDate = (value) => {
-  if (!value) return "Not set";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Not set";
-  return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(date);
-};
+import { formatDate, roleLabel } from "./e1Constants.js";
 
 export const StaffNoticesPanel = () => {
   const [notices, setNotices] = useState([]);
@@ -80,7 +73,7 @@ export const StaffNoticesPanel = () => {
                   <div>
                     <h3 style={{ margin: 0, fontSize: "1rem", color: "var(--ink-900)" }}>{notice.title}</h3>
                     <small style={{ color: "var(--muted)", fontWeight: 700 }}>
-                      {safeFormatDate(notice.publishedDate)} - {notice.targetRole === "all" ? "All Staff" : roleLabel(notice.targetRole)}
+                      {formatDate(notice.publishedDate)} - {notice.targetRole === "all" ? "All Staff" : roleLabel(notice.targetRole)}
                     </small>
                   </div>
                 </div>
