@@ -341,14 +341,14 @@ export const InventoryWorkspacePanel = () => {
     }
   };
 
-  const handleDeactivateMedicine = async (med) => {
-    if (!window.confirm(`Are you sure you want to deactivate ${med.name}?`)) return;
+  const handleDeleteMedicine = async (med) => {
+    if (!window.confirm(`Permanently delete ${med.name} from the database? This cannot be undone.`)) return;
     try {
       await inventoryApi.deleteMedicine(med._id);
-      setToast({ type: "success", message: `${med.name} marked as inactive` });
+      setToast({ type: "success", message: `${med.name} deleted successfully` });
       await loadData();
     } catch (error) {
-      setToast({ type: "error", message: error.response?.data?.message || "Unable to deactivate medicine" });
+      setToast({ type: "error", message: error.response?.data?.message || "Unable to delete medicine" });
     }
   };
 
@@ -703,11 +703,9 @@ export const InventoryWorkspacePanel = () => {
                           <button className="table-link-button" type="button" onClick={() => openStandardModal("medicine", item)}>
                             <Edit2 size={14} /> Edit
                           </button>
-                          {item.status === "active" ? (
-                            <button className="table-link-button danger-action" type="button" onClick={() => handleDeactivateMedicine(item)}>
-                              Deactivate
-                            </button>
-                          ) : null}
+                          <button className="table-link-button danger-action" type="button" onClick={() => handleDeleteMedicine(item)}>
+                            Delete
+                          </button>
                         </div>
                       )
                     }

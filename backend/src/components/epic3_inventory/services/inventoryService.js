@@ -68,9 +68,16 @@ export const inventoryService = {
   },
 
   async deleteMedicine(id) {
-    const medicine = await Medicine.findByIdAndUpdate(id, { status: "inactive" }, { new: true });
+    const medicine = await Medicine.findById(id);
     if (!medicine) throw new AppError("Medicine not found", 404);
-    return medicine;
+
+    const deletedBatches = await MedicineBatch.deleteMany({ medicineId: medicine._id });
+    await Medicine.findByIdAndDelete(medicine._id);
+
+    return {
+      ...medicine.toObject(),
+      deletedBatchesCount: deletedBatches.deletedCount || 0
+    };
   },
 
   // --- BATCHES ---

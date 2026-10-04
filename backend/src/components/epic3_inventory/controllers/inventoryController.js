@@ -22,7 +22,7 @@ export const updateMedicine = async (req, res) => {
 
 export const deleteMedicine = async (req, res) => {
   const medicine = await inventoryService.deleteMedicine(req.params.id);
-  return successResponse(res, "Medicine marked as inactive", medicine);
+  return successResponse(res, "Medicine deleted successfully", medicine);
 };
 
 // Batches
