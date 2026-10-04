@@ -60,6 +60,17 @@ const userSchema = new mongoose.Schema(
       required: true,
       select: false
     },
+    registrationSource: {
+      type: String,
+      enum: ["self_registered", "staff_created", "walk_in"],
+      default: "self_registered",
+      index: true
+    },
+    portalAccessEnabled: {
+      type: Boolean,
+      default: true,
+      index: true
+    },
     consultationFee: {
       type: Number,
       min: 0,
@@ -85,6 +96,8 @@ userSchema.methods.toSafeJSON = function toSafeJSON() {
     gender: this.gender,
     role: this.role,
     status: this.status,
+    registrationSource: this.registrationSource,
+    portalAccessEnabled: this.portalAccessEnabled,
     consultationFee: this.consultationFee ?? 1500,
     createdAt: this.createdAt,
     updatedAt: this.updatedAt

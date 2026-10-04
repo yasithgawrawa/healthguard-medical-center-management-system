@@ -68,6 +68,11 @@ const MEDICINE_UNITS = [
 const dateOnly = (value) => (value ? new Date(value).toISOString().slice(0, 10) : "-");
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
+const isWalkInPatientRecord = (patient) => (
+  patient?.registrationSource === "walk_in" ||
+  patient?.portalAccessEnabled === false ||
+  /^walkin\..+@healthguard\.local$/i.test(patient?.email || "")
+);
 const saveBlob = (blob, filename) => {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -304,7 +309,7 @@ export const InventoryWorkspacePanel = () => {
       setPosPrescriptionId(prefillRx._id);
       setPosCustomerPhone("");
     } else {
-      setPosPatientType("walk_in");
+      setPosPatientType(patients.length ? "registered" : "walk_in");
       setPosCustomerName("");
       setPosCustomerPhone("");
       setPosPatientId("");
@@ -455,7 +460,7 @@ export const InventoryWorkspacePanel = () => {
   const handleCheckoutSale = async () => {
     if (posCart.length === 0) return setToast({ type: "error", message: "Cart is empty. Add at least one medicine item." });
     if (posPatientType === "registered" && !posPatientId) {
-      return setToast({ type: "error", message: "Please select a registered patient" });
+      return setToast({ type: "error", message: "Please select a clinic patient record" });
     }
     if (posPatientType === "walk_in" && !posCustomerName.trim()) {
       return setToast({ type: "error", message: "Walk-in customer name is required" });
@@ -1364,7 +1369,7 @@ export const InventoryWorkspacePanel = () => {
       <Modal
         open={modal.type === "pos"}
         title="Pharmacy Dispensary & Medicine Counter"
-        subtitle="Dispense prescribed medicines from active inventory. Registered patient medicine charges are added to the cashier bill."
+        subtitle="Dispense prescribed medicines from active inventory and attach charges to cashier checkout."
         onClose={() => setModal({ type: null, record: null })}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
@@ -1384,7 +1389,7 @@ export const InventoryWorkspacePanel = () => {
                   }}
                 />
                 <UserCheck size={16} />
-                <span>Walk-in Patient</span>
+                <span>One-Time Customer</span>
               </label>
               <label className={`pos-type-pill ${posPatientType === "registered" ? "active" : ""}`}>
                 <input
@@ -1395,7 +1400,7 @@ export const InventoryWorkspacePanel = () => {
                   onChange={() => setPosPatientType("registered")}
                 />
                 <Users size={16} />
-                <span>Registered Patient</span>
+                <span>Clinic Patient</span>
               </label>
             </div>
 
@@ -1403,7 +1408,7 @@ export const InventoryWorkspacePanel = () => {
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 <div className="form-grid">
                   <FormSelect
-                    label="Select Patient"
+                    label="Select Clinic Patient"
                     value={posPatientId}
                     onChange={(e) => {
                       setPosPatientId(e.target.value);
@@ -1414,7 +1419,7 @@ export const InventoryWorkspacePanel = () => {
                     <option value="">Choose Patient</option>
                     {patients.map((p) => (
                       <option value={p._id} key={p._id}>
-                        {patientLabel(p)} ({p.phone || p.email})
+                        {patientLabel(p)} {isWalkInPatientRecord(p) ? "[Walk-in]" : ""} ({p.phone || p.email})
                       </option>
                     ))}
                   </FormSelect>

@@ -71,6 +71,8 @@ export const createStaff = async (req, res) => {
     phone: req.body.phone,
     address: req.body.address,
     role: req.body.role,
+    registrationSource: "staff_created",
+    portalAccessEnabled: true,
     passwordHash
   });
 
@@ -143,15 +145,12 @@ export const createQuickPatient = async (req, res) => {
     dateOfBirth: req.body.dateOfBirth,
     gender: req.body.gender,
     role: ROLES.PATIENT,
+    registrationSource: "walk_in",
+    portalAccessEnabled: false,
     passwordHash
   });
 
   return successResponse(res, "Patient created successfully", {
-    patient: user.toSafeJSON(),
-    temporaryCredentials: {
-      email,
-      password: temporaryPassword,
-      generated: !req.body.email
-    }
+    patient: user.toSafeJSON()
   }, 201);
 };

@@ -23,6 +23,10 @@ import { FormSelect } from "../shared/forms/FormSelect.jsx";
 const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
 const dateOnly = (value) => (value ? new Date(value).toLocaleDateString() : "-");
 const getInvoiceClient = (item) => customerLabel(item);
+const normalizePhone = (value) => {
+  const digits = String(value || "").replace(/\D/g, "");
+  return digits.length > 9 ? digits.slice(-9) : digits;
+};
 const chargeSummary = (items = []) => items.reduce((summary, item) => {
   const description = (item.description || "").toLowerCase();
   const amount = Number(item.lineTotal || 0);
@@ -248,29 +252,46 @@ export const BillingWorkspacePanel = () => {
 
   const checkoutGroups = useMemo(() => {
     const groups = new Map();
-    invoices
-      .filter((invoice) => invoice.status !== "cancelled" && Number(invoice.outstandingAmount || 0) > 0)
-      .forEach((invoice) => {
-        const patientId = invoice.patientId?._id || invoice.patientId || "";
-        const key = patientId ? `patient:${patientId}` : `invoice:${invoice._id}`;
-        if (!groups.has(key)) {
-          groups.set(key, {
-            key,
-            patientId,
-            patient: invoice.patientId,
-            customerName: invoice.customerName,
-            customerPhone: invoice.customerPhone,
-            label: getInvoiceClient(invoice),
-            invoices: [],
-            items: [],
-            totalOutstanding: 0
-          });
-        }
-        const group = groups.get(key);
-        group.invoices.push(invoice);
-        group.items.push(...(invoice.items || []));
-        group.totalOutstanding += Number(invoice.outstandingAmount || 0);
-      });
+    const payableInvoices = invoices.filter((invoice) => invoice.status !== "cancelled" && Number(invoice.outstandingAmount || 0) > 0);
+    const patientByPhone = new Map();
+
+    payableInvoices.forEach((invoice) => {
+      const patientId = invoice.patientId?._id || invoice.patientId || "";
+      const phone = normalizePhone(invoice.patientId?.phone);
+      if (patientId && phone && !patientByPhone.has(phone)) {
+        patientByPhone.set(phone, {
+          key: `patient:${patientId}`,
+          patientId,
+          patient: invoice.patientId,
+          label: getInvoiceClient(invoice),
+          customerPhone: invoice.patientId?.phone
+        });
+      }
+    });
+
+    payableInvoices.forEach((invoice) => {
+      const invoicePatientId = invoice.patientId?._id || invoice.patientId || "";
+      const matchedPatient = invoicePatientId ? null : patientByPhone.get(normalizePhone(invoice.customerPhone));
+      const patientId = invoicePatientId || matchedPatient?.patientId || "";
+      const key = patientId ? `patient:${patientId}` : `invoice:${invoice._id}`;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
+          patientId,
+          patient: invoice.patientId || matchedPatient?.patient,
+          customerName: patientId ? undefined : invoice.customerName,
+          customerPhone: matchedPatient?.customerPhone || invoice.customerPhone,
+          label: matchedPatient?.label || getInvoiceClient(invoice),
+          invoices: [],
+          items: [],
+          totalOutstanding: 0
+        });
+      }
+      const group = groups.get(key);
+      group.invoices.push(invoice);
+      group.items.push(...(invoice.items || []));
+      group.totalOutstanding += Number(invoice.outstandingAmount || 0);
+    });
 
     return Array.from(groups.values()).sort((a, b) => a.label.localeCompare(b.label));
   }, [invoices]);

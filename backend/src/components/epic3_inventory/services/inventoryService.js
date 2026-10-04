@@ -253,6 +253,10 @@ export const inventoryService = {
     if (!items || items.length === 0) {
       throw new AppError("Sale must contain at least one item", 400);
     }
+    if (patientId) {
+      const patient = await User.findOne({ _id: patientId, role: ROLES.PATIENT, status: "active" }).select("_id");
+      if (!patient) throw new AppError("Active patient not found for medicine sale", 404);
+    }
 
     const now = new Date();
     const processedItems = [];
@@ -422,7 +426,7 @@ export const inventoryService = {
     }
 
     return sale.populate([
-      { path: "patientId", select: "firstName lastName email phone" },
+      { path: "patientId", select: "firstName lastName email phone registrationSource portalAccessEnabled" },
       { path: "soldBy", select: "firstName lastName" },
       { path: "items.medicineId", select: "name unit price" },
       { path: "items.batchId", select: "batchNumber" }
@@ -431,7 +435,7 @@ export const inventoryService = {
 
   async getSales() {
     return PharmacySale.find()
-      .populate("patientId", "firstName lastName email phone")
+      .populate("patientId", "firstName lastName email phone registrationSource portalAccessEnabled")
       .populate("soldBy", "firstName lastName")
       .populate("items.medicineId", "name unit price")
       .populate("items.batchId", "batchNumber")
@@ -440,7 +444,7 @@ export const inventoryService = {
 
   async getSaleById(id) {
     const sale = await PharmacySale.findById(id)
-      .populate("patientId", "firstName lastName email phone address")
+      .populate("patientId", "firstName lastName email phone address registrationSource portalAccessEnabled")
       .populate("soldBy", "firstName lastName")
       .populate("prescriptionId")
       .populate("items.medicineId", "name unit price category")
@@ -634,13 +638,13 @@ export const inventoryService = {
   // --- PATIENTS & PRESCRIPTIONS HELPERS FOR PHARMACY ---
   async getEligiblePatients() {
     return User.find({ role: ROLES.PATIENT, status: "active" })
-      .select("firstName lastName email phone")
+      .select("firstName lastName email phone registrationSource portalAccessEnabled")
       .sort({ firstName: 1 });
   },
 
   async getActivePrescriptions() {
     return Prescription.find({ status: "active" })
-      .populate("patientId", "firstName lastName email phone")
+      .populate("patientId", "firstName lastName email phone registrationSource portalAccessEnabled")
       .populate("doctorId", "firstName lastName")
       .sort({ createdAt: -1 });
   }

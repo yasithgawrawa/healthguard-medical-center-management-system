@@ -19,6 +19,10 @@ const recalculateInvoice = (invoice) => {
 };
 
 const roundMoney = (value) => Number(Number(value || 0).toFixed(2));
+const normalizePhone = (value) => {
+  const digits = String(value || "").replace(/\D/g, "");
+  return digits.length > 9 ? digits.slice(-9) : digits;
+};
 
 const buildDailyPayroll = async ({ staffId, month, dailyPay, workingDays, allowances = 0, deductions = 0 }) => {
   const staff = await Staff.findById(staffId).populate("userId", "firstName lastName email");
@@ -80,7 +84,7 @@ export const createInvoice = async (req, res) => {
 export const listInvoices = async (req, res) => {
   const filter = req.user.role === "patient" ? { patientId: req.user._id, status: { $ne: "cancelled" } } : { status: { $ne: "cancelled" } };
   const invoices = await Invoice.find(filter)
-    .populate("patientId", "firstName lastName email phone")
+    .populate("patientId", "firstName lastName email phone registrationSource portalAccessEnabled")
     .sort({ createdAt: -1 });
   return successResponse(res, "Invoice list loaded", invoices);
 };
@@ -108,7 +112,7 @@ export const recordPayment = async (req, res) => {
   // Mark all related pharmacy sales as paid
   await PharmacySale.updateMany({ invoiceId: invoice._id }, { paymentStatus: "paid" });
 
-  await invoice.populate("patientId", "firstName lastName email phone");
+  await invoice.populate("patientId", "firstName lastName email phone registrationSource portalAccessEnabled");
 
   return successResponse(res, "Payment recorded successfully", { payment, invoice }, 201);
 };
@@ -264,7 +268,7 @@ export const updatePayrollStatus = async (req, res) => {
 export const downloadInvoiceReceipt = async (req, res) => {
   const filter = { _id: req.params.id };
   if (req.user.role === ROLES.PATIENT) filter.patientId = req.user._id;
-  const invoice = await Invoice.findOne(filter).populate("patientId", "firstName lastName email phone");
+  const invoice = await Invoice.findOne(filter).populate("patientId", "firstName lastName email phone registrationSource portalAccessEnabled");
   if (!invoice) throw new AppError("Invoice not found", 404);
   if (invoice.status !== "paid") throw new AppError("Receipt is available only after the invoice is fully paid", 409);
 
@@ -323,20 +327,46 @@ export const consolidatePatientInvoices = async (req, res) => {
   const { patientId } = req.body;
   if (!patientId) throw new AppError("Patient ID is required", 400);
 
-  const unpaidInvoices = await Invoice.find({
+  const patient = await User.findOne({ _id: patientId, role: ROLES.PATIENT, status: "active" }).select("phone");
+  if (!patient) throw new AppError("Active patient not found", 404);
+
+  const patientInvoices = await Invoice.find({
     patientId,
     status: { $in: ["issued", "draft"] }
   }).sort({ createdAt: 1 });
 
+  const patientPhone = normalizePhone(patient.phone);
+  let matchedCustomerInvoices = [];
+  if (patientPhone) {
+    const customerInvoices = await Invoice.find({
+      $or: [{ patientId: { $exists: false } }, { patientId: null }],
+      customerPhone: { $exists: true, $ne: "" },
+      status: { $in: ["issued", "draft"] }
+    }).sort({ createdAt: 1 });
+
+    matchedCustomerInvoices = customerInvoices.filter((invoice) => normalizePhone(invoice.customerPhone) === patientPhone);
+  }
+
+  const unpaidInvoices = [...patientInvoices, ...matchedCustomerInvoices]
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
   if (unpaidInvoices.length <= 1) {
     if (unpaidInvoices[0]) {
-      await unpaidInvoices[0].populate("patientId", "firstName lastName email phone");
+      unpaidInvoices[0].patientId = patientId;
+      unpaidInvoices[0].customerName = undefined;
+      unpaidInvoices[0].customerPhone = undefined;
+      unpaidInvoices[0].invoiceType = "visit";
+      await unpaidInvoices[0].save();
+      await unpaidInvoices[0].populate("patientId", "firstName lastName email phone registrationSource portalAccessEnabled");
     }
     return successResponse(res, "Single bill already unified", unpaidInvoices[0] || null);
   }
 
-  const primaryInvoice = unpaidInvoices[0];
-  const otherInvoices = unpaidInvoices.slice(1);
+  const primaryInvoice = unpaidInvoices.find((invoice) => invoice.patientId?.toString() === patientId) || unpaidInvoices[0];
+  primaryInvoice.patientId = patientId;
+  primaryInvoice.customerName = undefined;
+  primaryInvoice.customerPhone = undefined;
+  const otherInvoices = unpaidInvoices.filter((invoice) => invoice._id.toString() !== primaryInvoice._id.toString());
 
   for (const other of otherInvoices) {
     primaryInvoice.items.push(...other.items);
@@ -351,7 +381,7 @@ export const consolidatePatientInvoices = async (req, res) => {
   primaryInvoice.subtotal = primaryInvoice.items.reduce((sum, item) => sum + Number(item.lineTotal || 0), 0);
   recalculateInvoice(primaryInvoice);
   await primaryInvoice.save();
-  await primaryInvoice.populate("patientId", "firstName lastName email phone");
+  await primaryInvoice.populate("patientId", "firstName lastName email phone registrationSource portalAccessEnabled");
 
   return successResponse(res, "Consolidated into one unified bill for patient", primaryInvoice);
 };

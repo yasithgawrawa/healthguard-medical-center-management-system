@@ -15,6 +15,8 @@ const signToken = (user) =>
     { expiresIn: env.JWT_EXPIRES_IN }
   );
 
+const isGeneratedWalkInEmail = (email = "") => /^walkin\..+@healthguard\.local$/i.test(email);
+
 export const registerPatient = async (payload) => {
   const existingUser = await User.findOne({ email: payload.email }).select("_id");
   if (existingUser) {
@@ -31,6 +33,8 @@ export const registerPatient = async (payload) => {
     dateOfBirth: payload.dateOfBirth,
     gender: payload.gender,
     role: ROLES.PATIENT,
+    registrationSource: "self_registered",
+    portalAccessEnabled: true,
     passwordHash
   });
 
@@ -49,6 +53,10 @@ export const login = async ({ email, password }) => {
 
   if (user.status !== "active") {
     throw new AppError("Account is inactive", 403);
+  }
+
+  if (user.portalAccessEnabled === false || isGeneratedWalkInEmail(user.email)) {
+    throw new AppError("This patient record is for in-clinic use only. Please register online to access the patient portal.", 403);
   }
 
   return {

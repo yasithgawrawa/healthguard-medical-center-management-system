@@ -130,10 +130,7 @@ export const NurseWalkInBookingPanel = ({ onBooked }) => {
         reason: form.reason
       });
 
-      const credentialMessage = created.temporaryCredentials
-        ? ` Login: ${created.temporaryCredentials.email} / ${created.temporaryCredentials.password}`
-        : "";
-      setToast({ type: "success", message: `Walk-in appointment created.${credentialMessage}` });
+      setToast({ type: "success", message: "Walk-in appointment created as an internal patient record." });
       setForm({ ...initialForm, doctorId: doctors.length === 1 ? doctors[0]._id : "" });
       setSlots([]);
       onBooked?.();
