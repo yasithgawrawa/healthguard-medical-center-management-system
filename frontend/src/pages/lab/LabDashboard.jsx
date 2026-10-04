@@ -1,7 +1,6 @@
 import { AlertCircle, CheckCircle2, FlaskConical, Microscope } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ClinicalWorkspacePanel } from "../../components/epic2_clinical/ClinicalWorkspacePanel.jsx";
-import { StaffNoticesPanel } from "../../components/epic1_user_staff/StaffNoticesPanel.jsx";
 import { StaffSelfServicePanel } from "../../components/epic1_user_staff/StaffSelfServicePanel.jsx";
 import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
 import { DashboardQuickActions } from "../../components/shared/DashboardQuickActions.jsx";
@@ -99,7 +98,6 @@ export const LabDashboard = () => {
         ]}
       />
 
-      <StaffNoticesPanel />
       <ClinicalWorkspacePanel mode="lab" />
       <StaffSelfServicePanel />
     </div>

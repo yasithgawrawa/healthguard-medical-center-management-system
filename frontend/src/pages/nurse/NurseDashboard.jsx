@@ -2,7 +2,6 @@ import { Activity, CalendarPlus, Thermometer, UserCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ClinicalWorkspacePanel } from "../../components/epic2_clinical/ClinicalWorkspacePanel.jsx";
 import { NurseWalkInBookingPanel } from "../../components/epic2_clinical/NurseWalkInBookingPanel.jsx";
-import { StaffNoticesPanel } from "../../components/epic1_user_staff/StaffNoticesPanel.jsx";
 import { StaffSelfServicePanel } from "../../components/epic1_user_staff/StaffSelfServicePanel.jsx";
 import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
 import { clinicalApi } from "../../services/clinicalApi.js";
@@ -105,7 +104,6 @@ export const NurseDashboard = () => {
         />
       </div>
 
-      <StaffNoticesPanel />
       <NurseWalkInBookingPanel onBooked={() => setRefreshKey((value) => value + 1)} />
       <ClinicalWorkspacePanel mode="nurse" refreshKey={refreshKey} />
       <StaffSelfServicePanel />
