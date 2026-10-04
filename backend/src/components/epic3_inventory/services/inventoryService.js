@@ -283,9 +283,12 @@ export const inventoryService = {
       throw new AppError("Batch does not belong to selected medicine", 400, { batchId: "Select a matching batch" });
     }
 
-    const supplier = await Supplier.findById(data.supplierId);
-    if (!supplier || supplier.status !== "active") {
-      throw new AppError("Active supplier not found", 404, { supplierId: "Select an active supplier" });
+    const purchase = await Purchase.findOne({ batchId: batch._id })
+      .populate("supplierId", "name phone email status")
+      .sort({ purchasedAt: -1, createdAt: -1 });
+    const supplier = purchase?.supplierId;
+    if (!supplier) {
+      throw new AppError("Supplier could not be found for this batch. Please check purchase history.", 409, { batchId: "No supplier found for selected batch" });
     }
 
     if (Number(data.quantity) > Number(batch.quantity || 0)) {
@@ -296,10 +299,11 @@ export const inventoryService = {
   },
 
   async createMedicineReturnDraft(data, userId) {
-    await this.validateMedicineReturnPayload(data);
+    const { supplier } = await this.validateMedicineReturnPayload(data);
     const returnId = await generateReturnId();
     const medicineReturn = await MedicineReturn.create({
       ...data,
+      supplierId: supplier._id,
       returnId,
       status: "draft",
       createdBy: userId
@@ -325,14 +329,14 @@ export const inventoryService = {
     const nextData = {
       medicineId: data.medicineId ?? medicineReturn.medicineId,
       batchId: data.batchId ?? medicineReturn.batchId,
-      supplierId: data.supplierId ?? medicineReturn.supplierId,
       quantity: data.quantity ?? medicineReturn.quantity,
       returnReason: data.returnReason ?? medicineReturn.returnReason,
       returnDate: data.returnDate ?? medicineReturn.returnDate
     };
-    await this.validateMedicineReturnPayload(nextData);
+    const { supplier } = await this.validateMedicineReturnPayload(nextData);
 
     Object.assign(medicineReturn, data);
+    medicineReturn.supplierId = supplier._id;
     await medicineReturn.save();
     return populateMedicineReturn(MedicineReturn.findById(medicineReturn._id));
   },

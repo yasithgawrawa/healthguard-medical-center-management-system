@@ -105,7 +105,6 @@ export const purchaseSchema = z.object({
 const medicineReturnBodySchema = z.object({
   medicineId: objectIdSchema,
   batchId: objectIdSchema,
-  supplierId: objectIdSchema,
   quantity: quantitySchema(),
   returnReason: z.enum(["damaged", "expired", "incorrect"], {
     required_error: "Select return reason",

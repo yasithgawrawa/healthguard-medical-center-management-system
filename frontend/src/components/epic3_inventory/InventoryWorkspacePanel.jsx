@@ -170,7 +170,6 @@ const schemas = {
   return: z.object({
     medicineId: z.string().min(1, "Select medicine"),
     batchId: z.string().min(1, "Select batch"),
-    supplierId: z.string().min(1, "Select supplier"),
     quantity: requiredQuantity("Return quantity"),
     returnReason: z.enum(["damaged", "expired", "incorrect"], {
       required_error: "Select return reason",
@@ -244,6 +243,8 @@ export const InventoryWorkspacePanel = () => {
   const selectedReturnBatchId = watch("batchId");
   const selectedReturnBatch = batches.find((batch) => batch._id === selectedReturnBatchId);
   const returnBatchesForMedicine = batches.filter((batch) => (batch.medicineId?._id || batch.medicineId) === selectedReturnMedicineId);
+  const getSupplierForBatch = (batchId) => purchases.find((purchase) => (purchase.batchId?._id || purchase.batchId) === batchId)?.supplierId;
+  const selectedReturnSupplier = getSupplierForBatch(selectedReturnBatchId);
 
   const loadData = async () => {
     try {
@@ -332,15 +333,13 @@ export const InventoryWorkspacePanel = () => {
       ? {
           medicineId,
           batchId: record.batchId?._id || record.batchId || "",
-          supplierId: record.supplierId?._id || record.supplierId || "",
           quantity: record.quantity,
           returnReason: record.returnReason,
           returnDate: dateOnly(record.returnDate)
         }
-      : {
+        : {
           medicineId,
           batchId: availableBatches[0]?._id || "",
-          supplierId: suppliers.find((supplier) => supplier.status === "active")?._id || "",
           quantity: 1,
           returnReason: "damaged",
           returnDate: todayStr()
@@ -394,9 +393,16 @@ export const InventoryWorkspacePanel = () => {
           setToast({ type: "error", message: `Return quantity cannot exceed available batch stock (${batch.quantity})` });
           return;
         }
+        if (!getSupplierForBatch(values.batchId)) {
+          setToast({ type: "error", message: "Supplier could not be found for this batch. Please check purchase history." });
+          return;
+        }
         const payload = {
-          ...values,
-          quantity: Number(values.quantity)
+          medicineId: values.medicineId,
+          batchId: values.batchId,
+          quantity: Number(values.quantity),
+          returnReason: values.returnReason,
+          returnDate: values.returnDate
         };
         modal.record ? await inventoryApi.updateReturn(modal.record._id, payload) : await inventoryApi.createReturn(payload);
         setToast({ type: "success", message: `Return draft ${modal.record ? "updated" : "created"} successfully` });
@@ -1587,14 +1593,16 @@ export const InventoryWorkspacePanel = () => {
                 </option>
               ))}
             </FormSelect>
-            <FormSelect label="Supplier" error={errors.supplierId?.message} {...register("supplierId")}>
-              <option value="">Select Supplier</option>
-              {suppliers
-                .filter((supplier) => supplier.status === "active" || supplier._id === (modal.record?.supplierId?._id || modal.record?.supplierId))
-                .map((supplier) => (
-                  <option value={supplier._id} key={supplier._id}>{supplier.name} ({supplier.phone})</option>
-                ))}
-            </FormSelect>
+            <label className="form-field">
+              <span>Supplier</span>
+              <input
+                value={selectedReturnSupplier ? `${selectedReturnSupplier.name} (${selectedReturnSupplier.phone || "No phone"})` : "Supplier not found for selected batch"}
+                readOnly
+                aria-label="Auto selected supplier"
+                style={{ color: selectedReturnSupplier ? undefined : "var(--danger)" }}
+              />
+              {!selectedReturnSupplier ? <small>Supplier is auto-selected from purchase history and cannot be changed.</small> : null}
+            </label>
             <FormInput
               label="Quantity"
               type="number"
@@ -1621,7 +1629,7 @@ export const InventoryWorkspacePanel = () => {
 
           <div className="modal-actions">
             <button className="button-secondary" type="button" onClick={() => setModal({ type: null, record: null })} disabled={busy}>Cancel</button>
-            <button className="button-primary" type="submit" disabled={busy}>
+            <button className="button-primary" type="submit" disabled={busy || !selectedReturnSupplier}>
               <CheckCircle2 size={16} /> {busy ? "Saving..." : "Save Draft"}
             </button>
           </div>
