@@ -107,6 +107,8 @@ export const recordPayment = async (req, res) => {
   // Mark all related pharmacy sales as paid
   await PharmacySale.updateMany({ invoiceId: invoice._id }, { paymentStatus: "paid" });
 
+  await invoice.populate("patientId", "firstName lastName email phone");
+
   return successResponse(res, "Payment recorded successfully", { payment, invoice }, 201);
 };
 
@@ -283,11 +285,13 @@ export const consolidatePatientInvoices = async (req, res) => {
 
   const unpaidInvoices = await Invoice.find({
     patientId,
-    invoiceType: { $ne: "pharmacy" },
     status: { $in: ["issued", "draft"] }
   }).sort({ createdAt: 1 });
 
   if (unpaidInvoices.length <= 1) {
+    if (unpaidInvoices[0]) {
+      await unpaidInvoices[0].populate("patientId", "firstName lastName email phone");
+    }
     return successResponse(res, "Single bill already unified", unpaidInvoices[0] || null);
   }
 
@@ -303,10 +307,13 @@ export const consolidatePatientInvoices = async (req, res) => {
     await PharmacySale.updateMany({ invoiceId: other._id }, { invoiceId: primaryInvoice._id });
   }
 
+  primaryInvoice.invoiceType = "visit";
+  primaryInvoice.subtotal = primaryInvoice.items.reduce((sum, item) => sum + Number(item.lineTotal || 0), 0);
   recalculateInvoice(primaryInvoice);
   await primaryInvoice.save();
+  await primaryInvoice.populate("patientId", "firstName lastName email phone");
 
-  return successResponse(res, `Consolidated into one unified visit bill for patient`, primaryInvoice);
+  return successResponse(res, "Consolidated into one unified bill for patient", primaryInvoice);
 };
 
 export const revenueSummary = async (req, res) => {

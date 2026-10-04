@@ -37,6 +37,12 @@ export const paymentStatusSchema = z.object({
   body: z.object({ status: z.enum(["verified", "reconciled", "voided"]) })
 });
 
+export const consolidateInvoiceSchema = z.object({
+  body: z.object({
+    patientId: objectIdSchema
+  })
+});
+
 export const payrollSchema = z.object({
   body: z.object({
     staffId: objectIdSchema,

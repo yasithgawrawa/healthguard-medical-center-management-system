@@ -22,6 +22,20 @@ import { FormSelect } from "../shared/forms/FormSelect.jsx";
 
 const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
 const getInvoiceClient = (item) => customerLabel(item);
+const chargeSummary = (items = []) => items.reduce((summary, item) => {
+  const description = (item.description || "").toLowerCase();
+  const amount = Number(item.lineTotal || 0);
+  if (description.includes("consultation") || description.includes("channelling") || description.includes("doctor")) {
+    summary.consultation += amount;
+  } else if (description.includes("lab") || description.includes("investigation") || description.includes("test")) {
+    summary.lab += amount;
+  } else if (description.includes("medicine") || description.includes("medication") || description.includes("dispensed")) {
+    summary.medicines += amount;
+  } else {
+    summary.other += amount;
+  }
+  return summary;
+}, { consultation: 0, lab: 0, medicines: 0, other: 0 });
 // Resolves a staff name from multiple possible shapes the API may return:
 // 1. Populated: { userId: { firstName, lastName } }
 // 2. Flat merged: { firstName, lastName } (userId fields hoisted)
@@ -82,6 +96,9 @@ export const BillingWorkspacePanel = () => {
   const [payrollPreviewLoading, setPayrollPreviewLoading] = useState(false);
   const [payrollPreviewError, setPayrollPreviewError] = useState("");
   const [attendanceDaysLoading, setAttendanceDaysLoading] = useState(false);
+  const [checkoutKey, setCheckoutKey] = useState("");
+  const [checkoutMethod, setCheckoutMethod] = useState("cash");
+  const [checkoutError, setCheckoutError] = useState("");
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
   const isManager = [ROLES.MANAGER, ROLES.ADMIN].includes(user?.role);
@@ -217,6 +234,45 @@ export const BillingWorkspacePanel = () => {
     });
   }, [invoices, search, statusFilter]);
 
+  const checkoutGroups = useMemo(() => {
+    const groups = new Map();
+    invoices
+      .filter((invoice) => invoice.status !== "cancelled" && Number(invoice.outstandingAmount || 0) > 0)
+      .forEach((invoice) => {
+        const patientId = invoice.patientId?._id || invoice.patientId || "";
+        const key = patientId ? `patient:${patientId}` : `invoice:${invoice._id}`;
+        if (!groups.has(key)) {
+          groups.set(key, {
+            key,
+            patientId,
+            patient: invoice.patientId,
+            customerName: invoice.customerName,
+            customerPhone: invoice.customerPhone,
+            label: getInvoiceClient(invoice),
+            invoices: [],
+            items: [],
+            totalOutstanding: 0
+          });
+        }
+        const group = groups.get(key);
+        group.invoices.push(invoice);
+        group.items.push(...(invoice.items || []));
+        group.totalOutstanding += Number(invoice.outstandingAmount || 0);
+      });
+
+    return Array.from(groups.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }, [invoices]);
+
+  const selectedCheckoutGroup = useMemo(
+    () => checkoutGroups.find((group) => group.key === checkoutKey),
+    [checkoutGroups, checkoutKey]
+  );
+
+  const selectedCheckoutSummary = useMemo(
+    () => chargeSummary(selectedCheckoutGroup?.items || []),
+    [selectedCheckoutGroup]
+  );
+
   const payrollRows = useMemo(() => payroll.filter((item) => (
     (payrollStatusFilter === "all" || item.status === payrollStatusFilter) &&
     (!payrollMonthFilter || item.month === payrollMonthFilter)
@@ -317,6 +373,58 @@ export const BillingWorkspacePanel = () => {
     }
   };
 
+  const collectUnifiedCheckout = async () => {
+    setCheckoutError("");
+    if (!selectedCheckoutGroup) {
+      setCheckoutError("Select a patient or bill to collect.");
+      return;
+    }
+    if (!checkoutMethod) {
+      setCheckoutError("Select a payment method.");
+      return;
+    }
+    if (selectedCheckoutGroup.totalOutstanding <= 0) {
+      setCheckoutError("There is no outstanding amount to collect.");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const unifiedInvoice = selectedCheckoutGroup.patientId
+        ? await billingApi.consolidateInvoices(selectedCheckoutGroup.patientId)
+        : selectedCheckoutGroup.invoices[0];
+
+      if (!unifiedInvoice?._id || Number(unifiedInvoice.outstandingAmount || 0) <= 0) {
+        throw new Error("No payable invoice found for this checkout.");
+      }
+
+      const amountDue = Number(unifiedInvoice.outstandingAmount || 0);
+      const paymentResult = await billingApi.recordPayment({
+        invoiceId: unifiedInvoice._id,
+        amount: amountDue,
+        method: checkoutMethod
+      });
+      const paidInvoice = paymentResult?.invoice || unifiedInvoice;
+      printInvoicePDF({
+        ...paidInvoice,
+        patientId: typeof paidInvoice.patientId === "object" ? paidInvoice.patientId : selectedCheckoutGroup.patient,
+        customerName: paidInvoice.customerName || selectedCheckoutGroup.customerName,
+        customerPhone: paidInvoice.customerPhone || selectedCheckoutGroup.customerPhone,
+        status: "paid",
+        paidAmount: Number(paidInvoice.subtotal || amountDue),
+        outstandingAmount: 0,
+        updatedAt: paidInvoice.updatedAt || new Date().toISOString()
+      });
+      setCheckoutKey("");
+      setToast({ type: "success", message: "Unified payment collected and invoice opened for printing" });
+      await load();
+    } catch (error) {
+      setCheckoutError(error.response?.data?.message || error.message || "Unable to collect unified payment.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const printInvoice = (invoice) => {
     printInvoicePDF(invoice);
   };
@@ -348,6 +456,60 @@ export const BillingWorkspacePanel = () => {
 
       {activeTab === "invoices" ? (
         <>
+          {isCashier ? (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                collectUnifiedCheckout();
+              }}
+              style={{ border: "1px solid #dbeafe", borderRadius: "8px", background: "#ffffff", marginBottom: "12px", overflow: "hidden" }}
+            >
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "end", padding: "12px", background: "#f8fafc" }}>
+                <div style={{ flex: "1 1 280px" }}>
+                  <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase", marginBottom: "5px" }}>
+                    Unified Checkout
+                  </label>
+                  <select value={checkoutKey} onChange={(event) => { setCheckoutKey(event.target.value); setCheckoutError(""); }} aria-label="Unified checkout patient">
+                    <option value="">Select patient or customer</option>
+                    {checkoutGroups.map((group) => (
+                      <option value={group.key} key={group.key}>
+                        {group.label} - {money(group.totalOutstanding)} ({group.invoices.length} bill{group.invoices.length === 1 ? "" : "s"})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ flex: "1 1 160px" }}>
+                  <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase", marginBottom: "5px" }}>
+                    Amount Due
+                  </label>
+                  <input value={money(selectedCheckoutGroup?.totalOutstanding || 0)} readOnly aria-label="Unified checkout amount due" />
+                </div>
+                <div style={{ flex: "1 1 150px" }}>
+                  <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase", marginBottom: "5px" }}>
+                    Method
+                  </label>
+                  <select value={checkoutMethod} onChange={(event) => { setCheckoutMethod(event.target.value); setCheckoutError(""); }} aria-label="Unified checkout payment method">
+                    <option value="cash">Cash</option>
+                    <option value="card">Card</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                  </select>
+                </div>
+                <button className="button-primary" type="submit" disabled={busy || !selectedCheckoutGroup} style={{ flex: "0 0 auto" }}>
+                  <CreditCard size={16} /> Collect & Print
+                </button>
+              </div>
+              {selectedCheckoutGroup ? (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center", padding: "10px 12px", borderTop: "1px solid #e2e8f0" }}>
+                  <span style={{ fontWeight: 700, color: "#0f172a" }}>{selectedCheckoutGroup.invoices.length} bill{selectedCheckoutGroup.invoices.length === 1 ? "" : "s"}</span>
+                  <span>Consultation {money(selectedCheckoutSummary.consultation)}</span>
+                  <span>Lab {money(selectedCheckoutSummary.lab)}</span>
+                  <span>Medicines {money(selectedCheckoutSummary.medicines)}</span>
+                  {selectedCheckoutSummary.other > 0 ? <span>Other {money(selectedCheckoutSummary.other)}</span> : null}
+                </div>
+              ) : null}
+              {checkoutError ? <p className="form-error" style={{ margin: "0 12px 12px" }}>{checkoutError}</p> : null}
+            </form>
+          ) : null}
           <div className="table-toolbar compact-toolbar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
             <div style={{ flex: 1, minWidth: "260px" }}>
               <SearchBar value={search} onChange={setSearch} placeholder="Search patient, medicine, or bill details..." />
@@ -441,7 +603,7 @@ export const BillingWorkspacePanel = () => {
                             reset({ amount: item.outstandingAmount || "", method: "cash" });
                             setModal({ type: "payment", record: item });
                           }}
-                          title={item.invoiceType === "pharmacy" ? "Collect this pharmacy payment separately" : "Collect this invoice in full"}
+                          title="Collect this invoice in full"
                         >
                           <CreditCard size={13} style={{ display: "inline", marginRight: "3px" }} />
                           Collect
