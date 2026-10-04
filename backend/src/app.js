@@ -3,6 +3,7 @@ import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
 import authRoutes from "./components/epic1_user_staff/routes/authRoutes.js";
+import announcementRoutes from "./components/epic1_user_staff/routes/announcementRoutes.js";
 import staffRoutes from "./components/epic1_user_staff/routes/staffRoutes.js";
 import workforceRoutes from "./components/epic1_user_staff/routes/workforceRoutes.js";
 import clinicalRoutes from "./components/epic2_clinical/routes/clinicalRoutes.js";
@@ -62,6 +63,7 @@ app.get("/api/health", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/e1/announcements", announcementRoutes);
 app.use("/api/e1/staff", staffRoutes);
 app.use("/api/e1/workforce", workforceRoutes);
 app.use("/api/e2/clinical", clinicalRoutes);

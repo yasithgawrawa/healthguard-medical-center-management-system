@@ -5,6 +5,7 @@ import { InventoryWorkspacePanel } from "../../components/epic3_inventory/Invent
 import { ManagerLabPricingPanel } from "../../components/epic2_clinical/ManagerLabPricingPanel.jsx";
 import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
 import { DashboardQuickActions } from "../../components/shared/DashboardQuickActions.jsx";
+import { StaffNoticesPanel } from "../../components/epic1_user_staff/StaffNoticesPanel.jsx";
 import { WorkforceManagementPanel } from "../../components/epic1_user_staff/WorkforceManagementPanel.jsx";
 import { billingApi } from "../../services/billingApi.js";
 import { e1Api } from "../../services/e1Api.js";
@@ -109,6 +110,7 @@ export const ManagerDashboard = () => {
         ]}
       />
 
+      <StaffNoticesPanel />
       <WorkforceManagementPanel />
       <ManagerLabPricingPanel />
       <InventoryWorkspacePanel />

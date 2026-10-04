@@ -5,6 +5,11 @@ import { idParamSchema, objectIdSchema } from "../../../shared/validators/common
 
 const staffRoleValues = ROLE_VALUES.filter((role) => role !== ROLES.PATIENT);
 const creatableStaffRoleValues = staffRoleValues.filter((role) => role !== ROLES.DOCTOR);
+const announcementTargetRoleValues = ["all", ...staffRoleValues];
+const optionalAnnouncementDate = z.preprocess(
+  (value) => (value === "" || value === null ? undefined : value),
+  z.coerce.date().optional()
+);
 const passwordSchema = z
   .string({ required_error: "Password is required" })
   .min(8, "Password must be at least 8 characters")
@@ -176,5 +181,31 @@ export const centerLocationSchema = z.object({
     latitude: z.coerce.number().min(-90).max(90),
     longitude: z.coerce.number().min(-180).max(180),
     radiusMeters: z.coerce.number().min(10).max(1000)
+  })
+});
+
+const announcementBodySchema = z.object({
+  title: z.string().trim().min(2, "Title must be at least 2 characters").max(120, "Title cannot exceed 120 characters"),
+  message: z.string().trim().min(5, "Message must be at least 5 characters").max(1000, "Message cannot exceed 1000 characters"),
+  publishedDate: z.coerce.date(),
+  expiryDate: optionalAnnouncementDate,
+  targetRole: z.enum(announcementTargetRoleValues)
+}).refine((data) => !data.expiryDate || data.expiryDate >= data.publishedDate, {
+  path: ["expiryDate"],
+  message: "Expiry date cannot be earlier than published date"
+});
+
+export const announcementSchema = z.object({
+  body: announcementBodySchema
+});
+
+export const updateAnnouncementSchema = z.object({
+  params: idParamSchema.shape.params,
+  body: announcementBodySchema.partial().refine((data) => {
+    if (!data.expiryDate || !data.publishedDate) return true;
+    return data.expiryDate >= data.publishedDate;
+  }, {
+    path: ["expiryDate"],
+    message: "Expiry date cannot be earlier than published date"
   })
 });

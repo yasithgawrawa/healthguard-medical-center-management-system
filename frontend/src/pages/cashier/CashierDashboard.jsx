@@ -1,5 +1,6 @@
 import { CheckCircle, CreditCard, DollarSign, FileCheck, Receipt } from "lucide-react";
 import { useEffect, useState } from "react";
+import { StaffNoticesPanel } from "../../components/epic1_user_staff/StaffNoticesPanel.jsx";
 import { StaffSelfServicePanel } from "../../components/epic1_user_staff/StaffSelfServicePanel.jsx";
 import { BillingWorkspacePanel } from "../../components/epic4_billing/BillingWorkspacePanel.jsx";
 import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
@@ -117,6 +118,7 @@ export const CashierDashboard = () => {
         ]}
       />
 
+      <StaffNoticesPanel />
       <BillingWorkspacePanel />
       <StaffSelfServicePanel />
     </div>
