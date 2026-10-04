@@ -1,8 +1,17 @@
 import mongoose from "mongoose";
-import { ROLE_VALUES, ROLES } from "../../../shared/constants/roles.js";
+import { ROLES } from "../../../shared/constants/roles.js";
 
 export const ANNOUNCEMENT_TARGET_ALL = "all";
-export const ANNOUNCEMENT_TARGET_ROLES = [ANNOUNCEMENT_TARGET_ALL, ...ROLE_VALUES.filter((role) => role !== ROLES.PATIENT)];
+export const STAFF_NOTICE_ROLES = [
+  ROLES.ADMIN,
+  ROLES.MANAGER,
+  ROLES.DOCTOR,
+  ROLES.NURSE,
+  ROLES.PHARMACIST,
+  ROLES.CASHIER,
+  ROLES.LAB_ASSISTANT
+];
+export const ANNOUNCEMENT_TARGET_ROLES = [ANNOUNCEMENT_TARGET_ALL, ...STAFF_NOTICE_ROLES];
 
 const staffAnnouncementSchema = new mongoose.Schema(
   {
