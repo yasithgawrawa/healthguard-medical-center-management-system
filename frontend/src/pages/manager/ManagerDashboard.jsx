@@ -1,5 +1,7 @@
-import { AlertTriangle, ClipboardCheck, ClipboardList, DollarSign, FlaskConical, Users } from "lucide-react";
+import { AlertTriangle, ClipboardCheck, ClipboardList, DollarSign, FlaskConical, Megaphone, Users } from "lucide-react";
 import { useEffect, useState } from "react";
+import { StaffAnnouncementManagementPanel } from "../../components/epic1_user_staff/StaffAnnouncementManagementPanel.jsx";
+import { StaffNoticesPanel } from "../../components/epic1_user_staff/StaffNoticesPanel.jsx";
 import { BillingWorkspacePanel } from "../../components/epic4_billing/BillingWorkspacePanel.jsx";
 import { InventoryWorkspacePanel } from "../../components/epic3_inventory/InventoryWorkspacePanel.jsx";
 import { ManagerLabPricingPanel } from "../../components/epic2_clinical/ManagerLabPricingPanel.jsx";
@@ -55,6 +57,8 @@ export const ManagerDashboard = () => {
         </div>
       </div>
 
+      <StaffNoticesPanel />
+
       <div className="dashboard-grid">
         <DashboardCard
           title="Staff On Duty Today"
@@ -105,10 +109,12 @@ export const ManagerDashboard = () => {
           { label: "Lab Tariffs & Pricing", detail: "Adjust test prices & doctor fees", icon: FlaskConical, href: "#manager-tariffs" },
           { label: "Review Attendance", detail: "Search staff attendance records", icon: ClipboardCheck, href: "#manager-workforce" },
           { label: "Review Leave", detail: "Approve or reject requests", icon: ClipboardList, href: "#manager-workforce" },
+          { label: "Staff Announcements", detail: "Publish notices to staff dashboards", icon: Megaphone, href: "#staff-announcements" },
           { label: "Finance Reports", detail: "Revenue, outstanding and payroll", icon: ClipboardCheck, href: "#billing-payments" }
         ]}
       />
 
+      <StaffAnnouncementManagementPanel />
       <WorkforceManagementPanel />
       <ManagerLabPricingPanel />
       <InventoryWorkspacePanel />

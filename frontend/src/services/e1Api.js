@@ -8,6 +8,13 @@ export const e1Api = {
   updateStaff: async (id, payload) => unwrap(await apiClient.patch(`/e1/staff/${id}`, payload)),
   deactivateStaff: async (id) => unwrap(await apiClient.delete(`/e1/staff/${id}`)),
 
+  listCurrentAnnouncements: async () => unwrap(await apiClient.get("/e1/announcements/current")),
+  listAnnouncements: async () => unwrap(await apiClient.get("/e1/announcements")),
+  getAnnouncement: async (id) => unwrap(await apiClient.get(`/e1/announcements/${id}`)),
+  createAnnouncement: async (payload) => unwrap(await apiClient.post("/e1/announcements", payload)),
+  updateAnnouncement: async (id, payload) => unwrap(await apiClient.patch(`/e1/announcements/${id}`, payload)),
+  deleteAnnouncement: async (id) => unwrap(await apiClient.delete(`/e1/announcements/${id}`)),
+
   createQuickPatient: async (payload) => unwrap(await apiClient.post("/e1/staff/patients", payload)),
 
   listWorkforceStaff: async () => unwrap(await apiClient.get("/e1/workforce/staff")),

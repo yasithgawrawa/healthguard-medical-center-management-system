@@ -2,6 +2,7 @@ import { AlertCircle, CheckCircle2, FlaskConical, Microscope } from "lucide-reac
 import { useEffect, useState } from "react";
 import { ClinicalWorkspacePanel } from "../../components/epic2_clinical/ClinicalWorkspacePanel.jsx";
 import { StaffSelfServicePanel } from "../../components/epic1_user_staff/StaffSelfServicePanel.jsx";
+import { StaffNoticesPanel } from "../../components/epic1_user_staff/StaffNoticesPanel.jsx";
 import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
 import { DashboardQuickActions } from "../../components/shared/DashboardQuickActions.jsx";
 import { clinicalApi } from "../../services/clinicalApi.js";
@@ -43,6 +44,8 @@ export const LabDashboard = () => {
           <span>Lab Queue Live</span>
         </div>
       </div>
+
+      <StaffNoticesPanel />
 
       <div className="dashboard-grid">
         <DashboardCard

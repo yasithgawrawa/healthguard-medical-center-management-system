@@ -1,5 +1,6 @@
 import { CalendarPlus, Shield, UserPlus, Users } from "lucide-react";
 import { StaffManagementPanel } from "../../components/epic1_user_staff/StaffManagementPanel.jsx";
+import { StaffNoticesPanel } from "../../components/epic1_user_staff/StaffNoticesPanel.jsx";
 import { WorkforceManagementPanel } from "../../components/epic1_user_staff/WorkforceManagementPanel.jsx";
 import { DashboardQuickActions } from "../../components/shared/DashboardQuickActions.jsx";
 
@@ -16,6 +17,8 @@ export const AdminDashboard = () => {
           <span>System Online</span>
         </div>
       </div>
+
+      <StaffNoticesPanel />
 
       <DashboardQuickActions
         actions={[

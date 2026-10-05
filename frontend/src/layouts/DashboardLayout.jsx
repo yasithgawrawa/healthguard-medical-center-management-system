@@ -3,6 +3,7 @@ import {
   Calendar,
   ClipboardList,
   CreditCard,
+  Megaphone,
   PackageSearch,
   Shield,
   UserRoundCheck,
@@ -27,6 +28,7 @@ const roleNavItems = (role) => {
     return [
       { href: "#overview", label: "Overview", icon: Activity },
       { href: "#work", label: "Quick Actions", icon: ClipboardList },
+      { href: "#staff-notices", label: "Staff Notices", icon: Megaphone },
       { href: "#staff-directory", label: "Staff Directory", icon: Users },
       { href: "#staff-directory", label: "Roles & Access", icon: Shield },
       { href: "#manager-workforce", label: "Schedule & Shifts", icon: Calendar }
@@ -37,6 +39,7 @@ const roleNavItems = (role) => {
     return [
       { href: "#overview", label: "Overview", icon: Activity },
       { href: "#work", label: "Quick Actions", icon: ClipboardList },
+      { href: "#staff-announcements", label: "Announcements", icon: Megaphone },
       { href: "#manager-workforce", label: "Schedule & Shifts", icon: Calendar },
       { href: "#manager-workforce", label: "Attendance & Leave", icon: UserRoundCheck },
       { href: "#pharmacy-inventory", label: "Inventory Reports", icon: PackageSearch },
@@ -48,6 +51,7 @@ const roleNavItems = (role) => {
     return [
       { href: "#overview", label: "Overview", icon: Activity },
       { href: "#work", label: "Work Queue", icon: ClipboardList },
+      { href: "#staff-notices", label: "Staff Notices", icon: Megaphone },
       { href: "#attendance-leave", label: "Attendance & Leave", icon: UserRoundCheck }
     ];
   }

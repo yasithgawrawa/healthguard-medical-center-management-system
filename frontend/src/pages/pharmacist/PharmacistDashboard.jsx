@@ -1,6 +1,7 @@
 import { AlertCircle, AlertTriangle, ArrowDownCircle, PackageCheck, Pill, ShoppingCart, Truck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { StaffSelfServicePanel } from "../../components/epic1_user_staff/StaffSelfServicePanel.jsx";
+import { StaffNoticesPanel } from "../../components/epic1_user_staff/StaffNoticesPanel.jsx";
 import { InventoryWorkspacePanel } from "../../components/epic3_inventory/InventoryWorkspacePanel.jsx";
 import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
 import { DashboardQuickActions } from "../../components/shared/DashboardQuickActions.jsx";
@@ -49,6 +50,8 @@ export const PharmacistDashboard = () => {
           <span>Inventory Synced</span>
         </div>
       </div>
+
+      <StaffNoticesPanel />
 
       <div className="dashboard-grid">
         <DashboardCard

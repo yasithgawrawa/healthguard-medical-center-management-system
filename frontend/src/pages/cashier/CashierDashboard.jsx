@@ -1,6 +1,7 @@
 import { CheckCircle, CreditCard, DollarSign, FileCheck, Receipt } from "lucide-react";
 import { useEffect, useState } from "react";
 import { StaffSelfServicePanel } from "../../components/epic1_user_staff/StaffSelfServicePanel.jsx";
+import { StaffNoticesPanel } from "../../components/epic1_user_staff/StaffNoticesPanel.jsx";
 import { BillingWorkspacePanel } from "../../components/epic4_billing/BillingWorkspacePanel.jsx";
 import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
 import { DashboardQuickActions } from "../../components/shared/DashboardQuickActions.jsx";
@@ -62,6 +63,8 @@ export const CashierDashboard = () => {
           <span>Cashier Active</span>
         </div>
       </div>
+
+      <StaffNoticesPanel />
 
       <div className="dashboard-grid">
         <DashboardCard

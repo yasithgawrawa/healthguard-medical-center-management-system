@@ -13,6 +13,19 @@ import { notFoundHandler } from "./shared/middleware/notFoundHandler.js";
 import { successResponse } from "./shared/utils/apiResponse.js";
 import { env } from "./shared/config/env.js";
 
+let announcementRoutesPromise;
+
+const loadAnnouncementRoutes = async (req, res, next) => {
+  try {
+    announcementRoutesPromise ||= import("./components/epic1_user_staff/routes/announcementRoutes.js")
+      .then((module) => module.default);
+    const announcementRoutes = await announcementRoutesPromise;
+    return announcementRoutes(req, res, next);
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const app = express();
 const vercelOrigin = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null;
 const allowedOrigins = new Set([
@@ -62,6 +75,7 @@ app.get("/api/health", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/e1/announcements", loadAnnouncementRoutes);
 app.use("/api/e1/staff", staffRoutes);
 app.use("/api/e1/workforce", workforceRoutes);
 app.use("/api/e2/clinical", clinicalRoutes);

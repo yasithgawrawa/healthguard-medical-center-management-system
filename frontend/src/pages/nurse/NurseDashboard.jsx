@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ClinicalWorkspacePanel } from "../../components/epic2_clinical/ClinicalWorkspacePanel.jsx";
 import { NurseWalkInBookingPanel } from "../../components/epic2_clinical/NurseWalkInBookingPanel.jsx";
 import { StaffSelfServicePanel } from "../../components/epic1_user_staff/StaffSelfServicePanel.jsx";
+import { StaffNoticesPanel } from "../../components/epic1_user_staff/StaffNoticesPanel.jsx";
 import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
 import { clinicalApi } from "../../services/clinicalApi.js";
 
@@ -49,6 +50,8 @@ export const NurseDashboard = () => {
           <span>Nurse Desk Active</span>
         </div>
       </div>
+
+      <StaffNoticesPanel />
 
       <div className="dashboard-grid">
         <DashboardCard

@@ -2,6 +2,7 @@ import { CalendarCheck, CheckCircle2, ClipboardPlus, DollarSign, Edit3, FlaskCon
 import { useEffect, useState } from "react";
 import { ClinicalWorkspacePanel } from "../../components/epic2_clinical/ClinicalWorkspacePanel.jsx";
 import { StaffSelfServicePanel } from "../../components/epic1_user_staff/StaffSelfServicePanel.jsx";
+import { StaffNoticesPanel } from "../../components/epic1_user_staff/StaffNoticesPanel.jsx";
 import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
 import { DashboardQuickActions } from "../../components/shared/DashboardQuickActions.jsx";
 import { Modal } from "../../components/shared/Modal.jsx";
@@ -135,6 +136,8 @@ export const DoctorDashboard = () => {
           </div>
         </div>
       </div>
+
+      <StaffNoticesPanel />
 
       <div style={{
         background: "linear-gradient(135deg, rgba(236, 253, 245, 0.7) 0%, rgba(224, 242, 254, 0.7) 100%)",
