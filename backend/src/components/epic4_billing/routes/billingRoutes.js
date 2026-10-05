@@ -23,7 +23,9 @@ import {
   updatePaymentStatus,
   updatePayrollStatus
 } from "../controllers/billingController.js";
+import { createExpense, deleteExpense, getExpenseDetails, listExpenses, updateExpense } from "../controllers/expenseController.js";
 import { consolidateInvoiceSchema, invoiceSchema, paymentSchema, paymentStatusSchema, payrollPreviewSchema, payrollSchema, payrollStatusSchema, salaryAttendanceDaysSchema, supplierBillPaymentSchema } from "../validators/billingValidators.js";
+import { createExpenseSchema, expenseListQuerySchema, updateExpenseSchema } from "../validators/expenseValidators.js";
 
 const router = Router();
 router.use(authenticate);
@@ -39,6 +41,11 @@ router.get("/payments", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN
 router.patch("/payments/:id/status", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER), validateRequest(paymentStatusSchema), asyncHandler(updatePaymentStatus));
 router.get("/supplier-bills", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN), asyncHandler(listSupplierBills));
 router.patch("/supplier-bills/:id/pay", authorizeRoles(ROLES.CASHIER, ROLES.ADMIN), validateRequest(supplierBillPaymentSchema), asyncHandler(paySupplierBill));
+router.get("/expenses", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN), validateRequest(expenseListQuerySchema), asyncHandler(listExpenses));
+router.post("/expenses", authorizeRoles(ROLES.CASHIER), validateRequest(createExpenseSchema), asyncHandler(createExpense));
+router.get("/expenses/:id", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN), validateRequest(idParamSchema), asyncHandler(getExpenseDetails));
+router.patch("/expenses/:id", authorizeRoles(ROLES.CASHIER), validateRequest(updateExpenseSchema), asyncHandler(updateExpense));
+router.delete("/expenses/:id", authorizeRoles(ROLES.CASHIER), validateRequest(idParamSchema), asyncHandler(deleteExpense));
 router.post("/payroll/preview", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN), validateRequest(payrollPreviewSchema), asyncHandler(previewPayroll));
 router.post("/payroll", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN), validateRequest(payrollSchema), asyncHandler(createPayroll));
 router.get("/payroll/attendance-days", authorizeRoles(ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN), validateRequest(salaryAttendanceDaysSchema), asyncHandler(getSalaryAttendanceDays));

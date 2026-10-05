@@ -1,4 +1,4 @@
-import { CheckCircle, CreditCard, DollarSign, FileCheck, Receipt } from "lucide-react";
+import { CheckCircle, CreditCard, DollarSign, FileCheck, Receipt, ReceiptText } from "lucide-react";
 import { useEffect, useState } from "react";
 import { StaffSelfServicePanel } from "../../components/epic1_user_staff/StaffSelfServicePanel.jsx";
 import { StaffNoticesPanel } from "../../components/epic1_user_staff/StaffNoticesPanel.jsx";
@@ -116,7 +116,8 @@ export const CashierDashboard = () => {
           { label: "Create Invoice", detail: "Add billable services", icon: Receipt, href: "#billing-payments" },
           { label: "Record Payment", detail: "Settle an invoice", icon: CreditCard, href: "#billing-payments" },
           { label: "Run Salary", detail: "Create salary draft", icon: DollarSign, href: "#billing-payments", command: { workspace: "billing", tab: "payroll", action: "createSalary" } },
-          { label: "Verify Receipt", detail: "Confirm paid status", icon: FileCheck, href: "#billing-payments" }
+          { label: "Verify Receipt", detail: "Confirm paid status", icon: FileCheck, href: "#billing-payments" },
+          { label: "Expenses", detail: "Record operating expenses", icon: ReceiptText, href: "#billing-payments", command: { workspace: "billing", tab: "expenses" } }
         ]}
       />
 

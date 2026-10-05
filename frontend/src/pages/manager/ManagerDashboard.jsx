@@ -1,4 +1,4 @@
-import { AlertTriangle, ClipboardCheck, ClipboardList, DollarSign, FlaskConical, Megaphone, Users } from "lucide-react";
+import { AlertTriangle, ClipboardCheck, ClipboardList, DollarSign, FlaskConical, Megaphone, ReceiptText, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { StaffAnnouncementManagementPanel } from "../../components/epic1_user_staff/StaffAnnouncementManagementPanel.jsx";
 import { StaffNoticesPanel } from "../../components/epic1_user_staff/StaffNoticesPanel.jsx";
@@ -110,7 +110,8 @@ export const ManagerDashboard = () => {
           { label: "Review Attendance", detail: "Search staff attendance records", icon: ClipboardCheck, href: "#manager-workforce" },
           { label: "Review Leave", detail: "Approve or reject requests", icon: ClipboardList, href: "#manager-workforce" },
           { label: "Staff Announcements", detail: "Publish notices to staff dashboards", icon: Megaphone, href: "#staff-announcements" },
-          { label: "Finance Reports", detail: "Revenue, outstanding and payroll", icon: ClipboardCheck, href: "#billing-payments" }
+          { label: "Finance Reports", detail: "Revenue, outstanding and payroll", icon: ClipboardCheck, href: "#billing-payments" },
+          { label: "View Expenses", detail: "Review operating expenses", icon: ReceiptText, href: "#billing-payments", command: { workspace: "billing", tab: "expenses" } }
         ]}
       />
 

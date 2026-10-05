@@ -1,8 +1,9 @@
-import { CalendarPlus, Shield, UserPlus, Users } from "lucide-react";
+import { CalendarPlus, ReceiptText, Shield, UserPlus, Users } from "lucide-react";
 import { StaffManagementPanel } from "../../components/epic1_user_staff/StaffManagementPanel.jsx";
 import { StaffNoticesPanel } from "../../components/epic1_user_staff/StaffNoticesPanel.jsx";
 import { WorkforceManagementPanel } from "../../components/epic1_user_staff/WorkforceManagementPanel.jsx";
 import { DashboardQuickActions } from "../../components/shared/DashboardQuickActions.jsx";
+import { ExpenseManagementPanel } from "../../components/epic4_billing/ExpenseManagementPanel.jsx";
 
 export const AdminDashboard = () => {
   return (
@@ -25,12 +26,14 @@ export const AdminDashboard = () => {
           { label: "Add Staff", detail: "Create a login and staff profile", icon: UserPlus, href: "#staff-directory" },
           { label: "Manage Staff", detail: "Search, edit or deactivate staff", icon: Users, href: "#staff-directory" },
           { label: "Manage Roles", detail: "Change staff access level", icon: Shield, href: "#staff-directory" },
-          { label: "Review Attendance", detail: "Check daily staff attendance", icon: CalendarPlus, href: "#manager-workforce", command: { workspace: "workforce", tab: "attendance", date: "", role: "", search: "" } }
+          { label: "Review Attendance", detail: "Check daily staff attendance", icon: CalendarPlus, href: "#manager-workforce", command: { workspace: "workforce", tab: "attendance", date: "", role: "", search: "" } },
+          { label: "View Expenses", detail: "Review operating expenses", icon: ReceiptText, href: "#billing-expenses" }
         ]}
       />
 
       <StaffManagementPanel />
       <WorkforceManagementPanel />
+      <ExpenseManagementPanel />
     </div>
   );
 };

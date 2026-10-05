@@ -19,6 +19,7 @@ import { StatusBadge } from "../shared/StatusBadge.jsx";
 import { Toast } from "../shared/Toast.jsx";
 import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
+import { ExpenseManagementPanel } from "./ExpenseManagementPanel.jsx";
 
 const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
 const dateOnly = (value) => (value ? new Date(value).toLocaleDateString() : "-");
@@ -114,6 +115,7 @@ export const BillingWorkspacePanel = () => {
   const isCashier = [ROLES.CASHIER, ROLES.ADMIN].includes(user?.role);
   const canManagePayroll = [ROLES.MANAGER, ROLES.ADMIN, ROLES.CASHIER].includes(user?.role);
   const canCreatePayroll = [ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN].includes(user?.role);
+  const canViewExpenses = [ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN].includes(user?.role);
 
   const schema = useMemo(() => {
     if (modal.type === "payment") {
@@ -474,7 +476,7 @@ export const BillingWorkspacePanel = () => {
     <section className="e1-panel" id="billing-payments">
       <Toast toast={toast} onClose={() => setToast(null)} />
       <div className="e1-panel-header">
-        <div><h2>Billing, Payments & Salary</h2><p>Collect invoices, reconcile revenue and create simple salary drafts from daily pay and working days.</p></div>
+        <div><h2>Billing, Payments, Salary & Expenses</h2><p>Manage collections, supplier payments, salary records and medical center expenses.</p></div>
         <div className="inline-actions">
           {canCreatePayroll ? <button type="button" onClick={() => { setActiveTab("payroll"); setPayrollPreview(null); setPayrollPreviewError(""); reset({ month: new Date().toISOString().slice(0, 7), dailyPay: 0, workingDays: 26, allowances: 0, deductions: 0 }); setModal({ type: "payroll", record: null }); }}><DollarSign size={17} /> Run Salary</button> : null}
         </div>
@@ -486,6 +488,7 @@ export const BillingWorkspacePanel = () => {
           { key: "payments", label: "payments" },
           ...((isCashier || isManager) ? [{ key: "supplierBills", label: "supplier bills" }] : []),
           { key: "revenue", label: "revenue" },
+          ...(canViewExpenses ? [{ key: "expenses", label: "expenses" }] : []),
           { key: "payroll", label: "salary" }
         ].map((tab) => (
           <button className={activeTab === tab.key ? "active" : ""} type="button" onClick={() => setActiveTab(tab.key)} key={tab.key}>{tab.label}</button>
@@ -736,6 +739,8 @@ export const BillingWorkspacePanel = () => {
           <div><strong>{money(summary.supplierPaid)}</strong><span>supplier bills paid</span></div>
         </div>
       ) : null}
+
+      {activeTab === "expenses" && canViewExpenses ? <ExpenseManagementPanel embedded /> : null}
 
       {activeTab === "payroll" ? (
         <>

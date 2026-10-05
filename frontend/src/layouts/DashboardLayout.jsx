@@ -31,7 +31,8 @@ const roleNavItems = (role) => {
       { href: "#staff-notices", label: "Staff Notices", icon: Megaphone },
       { href: "#staff-directory", label: "Staff Directory", icon: Users },
       { href: "#staff-directory", label: "Roles & Access", icon: Shield },
-      { href: "#manager-workforce", label: "Schedule & Shifts", icon: Calendar }
+      { href: "#manager-workforce", label: "Schedule & Shifts", icon: Calendar },
+      { href: "#billing-expenses", label: "Expenses", icon: CreditCard }
     ];
   }
 
@@ -43,17 +44,19 @@ const roleNavItems = (role) => {
       { href: "#manager-workforce", label: "Schedule & Shifts", icon: Calendar },
       { href: "#manager-workforce", label: "Attendance & Leave", icon: UserRoundCheck },
       { href: "#pharmacy-inventory", label: "Inventory Reports", icon: PackageSearch },
-      { href: "#billing-payments", label: "Finance & Payroll", icon: CreditCard }
+      { href: "#billing-payments", label: "Finance, Payroll & Expenses", icon: CreditCard }
     ];
   }
 
   if (staffSelfServiceRoles.includes(role)) {
-    return [
+    const items = [
       { href: "#overview", label: "Overview", icon: Activity },
       { href: "#work", label: "Work Queue", icon: ClipboardList },
       { href: "#staff-notices", label: "Staff Notices", icon: Megaphone },
       { href: "#attendance-leave", label: "Attendance & Leave", icon: UserRoundCheck }
     ];
+    if (role === ROLES.CASHIER) items.splice(3, 0, { href: "#billing-payments", label: "Billing & Expenses", icon: CreditCard });
+    return items;
   }
 
   return [
