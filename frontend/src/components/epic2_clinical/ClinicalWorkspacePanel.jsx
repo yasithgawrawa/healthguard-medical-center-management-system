@@ -12,6 +12,7 @@ import {
   Microscope,
   Phone,
   Play,
+  Plus,
   Printer,
   RefreshCw,
   Sparkles,
