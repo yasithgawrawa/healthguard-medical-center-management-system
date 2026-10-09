@@ -25,11 +25,31 @@ const announcementFields = {
 
 const validDateRange = (data) => !data.expiryDate || !data.publishedDate || data.expiryDate >= data.publishedDate;
 
+const clinicTodayStart = () => {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Colombo",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric"
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return new Date(Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day)));
+};
+
 export const createAnnouncementSchema = z.object({
-  body: z.object(announcementFields).refine(validDateRange, {
-    path: ["expiryDate"],
-    message: "Expiry date cannot be earlier than published date"
-  })
+  body: z.object(announcementFields)
+    .refine((data) => data.publishedDate >= clinicTodayStart(), {
+      path: ["publishedDate"],
+      message: "Published date cannot be in the past"
+    })
+    .refine((data) => !data.expiryDate || data.expiryDate >= clinicTodayStart(), {
+      path: ["expiryDate"],
+      message: "Expiry date cannot be in the past"
+    })
+    .refine(validDateRange, {
+      path: ["expiryDate"],
+      message: "Expiry date cannot be earlier than published date"
+    })
 });
 
 export const updateAnnouncementSchema = z.object({

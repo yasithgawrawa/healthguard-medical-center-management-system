@@ -18,6 +18,12 @@ import { formatDate, roleLabel, STAFF_ROLES } from "./e1Constants.js";
 
 const targetRoleOptions = [{ value: "all", label: "All Staff" }, ...STAFF_ROLES];
 
+const todayInputValue = () => {
+  const now = new Date();
+  const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return localDate.toISOString().slice(0, 10);
+};
+
 const announcementFormSchema = z.object({
   title: z.string().trim().min(2, "Title must be at least 2 characters").max(120, "Title cannot exceed 120 characters"),
   message: z.string().trim().min(5, "Message must be at least 5 characters").max(1000, "Message cannot exceed 1000 characters"),
@@ -29,11 +35,15 @@ const announcementFormSchema = z.object({
   message: "Expiry date cannot be earlier than published date"
 });
 
-const todayInputValue = () => {
-  const now = new Date();
-  const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-  return localDate.toISOString().slice(0, 10);
-};
+const createAnnouncementFormSchema = announcementFormSchema
+  .refine((data) => data.publishedDate >= todayInputValue(), {
+    path: ["publishedDate"],
+    message: "Published date cannot be in the past"
+  })
+  .refine((data) => !data.expiryDate || data.expiryDate >= todayInputValue(), {
+    path: ["expiryDate"],
+    message: "Expiry date cannot be in the past"
+  });
 
 const dateInputValue = (value) => {
   if (!value) return "";
@@ -75,12 +85,18 @@ export const StaffAnnouncementManagementPanel = () => {
     handleSubmit,
     reset,
     setError,
+    watch,
     formState: { errors }
   } = useForm({
-    resolver: zodResolver(announcementFormSchema),
+    resolver: zodResolver(modal.type === "create" ? createAnnouncementFormSchema : announcementFormSchema),
     mode: "onChange",
     defaultValues: formValuesFor()
   });
+  const selectedPublishedDate = watch("publishedDate");
+  const minimumCreateDate = todayInputValue();
+  const minimumCreateExpiryDate = selectedPublishedDate && selectedPublishedDate > minimumCreateDate
+    ? selectedPublishedDate
+    : minimumCreateDate;
 
   const loadAnnouncements = async () => {
     try {
@@ -242,8 +258,21 @@ export const StaffAnnouncementManagementPanel = () => {
             <FormSelect label="Target Role" required error={errors.targetRole?.message} {...register("targetRole")}>
               {targetRoleOptions.map((role) => <option key={role.value} value={role.value}>{role.label}</option>)}
             </FormSelect>
-            <FormInput label="Published Date" type="date" required error={errors.publishedDate?.message} {...register("publishedDate")} />
-            <FormInput label="Expiry Date" type="date" error={errors.expiryDate?.message} {...register("expiryDate")} />
+            <FormInput
+              label="Published Date"
+              type="date"
+              min={modal.type === "create" ? minimumCreateDate : undefined}
+              required
+              error={errors.publishedDate?.message}
+              {...register("publishedDate")}
+            />
+            <FormInput
+              label="Expiry Date"
+              type="date"
+              min={modal.type === "create" ? minimumCreateExpiryDate : undefined}
+              error={errors.expiryDate?.message}
+              {...register("expiryDate")}
+            />
           </div>
           <FormTextarea label="Message" rows={5} maxLength={1000} required error={errors.message?.message} {...register("message")} />
           <div className="modal-actions">
