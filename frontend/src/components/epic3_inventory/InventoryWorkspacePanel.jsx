@@ -67,7 +67,11 @@ const MEDICINE_UNITS = [
 ];
 
 const dateOnly = (value) => (value ? new Date(value).toISOString().slice(0, 10) : "-");
-const todayStr = () => new Date().toISOString().slice(0, 10);
+const todayStr = () => {
+  const now = new Date();
+  const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return localDate.toISOString().slice(0, 10);
+};
 const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
 const isWalkInPatientRecord = (patient) => (
   patient?.registrationSource === "walk_in" ||
@@ -177,10 +181,8 @@ const schemas = {
     }),
     returnDate: z.string().min(1, "Return date is required").refine((val) => {
       const d = new Date(val);
-      const end = new Date();
-      end.setHours(23, 59, 59, 999);
-      return !isNaN(d.getTime()) && d <= end;
-    }, "Return date cannot be in the future")
+      return !isNaN(d.getTime()) && val >= todayStr();
+    }, "Return date cannot be in the past")
   })
 };
 
@@ -1618,7 +1620,7 @@ export const InventoryWorkspacePanel = () => {
               <option value="expired">Expired</option>
               <option value="incorrect">Incorrect Medicine</option>
             </FormSelect>
-            <FormInput label="Return Date" type="date" max={todayStr()} error={errors.returnDate?.message} {...register("returnDate")} />
+            <FormInput label="Return Date" type="date" min={todayStr()} error={errors.returnDate?.message} {...register("returnDate")} />
           </div>
 
           {selectedReturnBatch ? (

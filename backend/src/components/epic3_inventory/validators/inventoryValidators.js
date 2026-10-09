@@ -24,6 +24,12 @@ const isFutureDate = (date) => {
   return date > start;
 };
 
+const isTodayOrFuture = (date) => {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  return date >= start;
+};
+
 const batchBodySchema = z.object({
   medicineId: objectIdSchema,
   batchNumber: z.string().trim().min(2, "Batch number is required").max(40).regex(batchNumberPattern, "Batch number can only contain letters, numbers and hyphens"),
@@ -110,7 +116,7 @@ const medicineReturnBodySchema = z.object({
     required_error: "Select return reason",
     invalid_type_error: "Select return reason"
   }),
-  returnDate: z.coerce.date().refine(isPastOrToday, "Return date cannot be in the future")
+  returnDate: z.coerce.date().refine(isTodayOrFuture, "Return date cannot be in the past")
 });
 
 export const medicineReturnSchema = z.object({
