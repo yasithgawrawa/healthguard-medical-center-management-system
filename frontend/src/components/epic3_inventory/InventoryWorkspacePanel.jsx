@@ -23,7 +23,7 @@ import {
   UserCheck,
   Users
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -50,6 +50,7 @@ import { Toast } from "../shared/Toast.jsx";
 import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
 import { MEDICINE_CATEGORIES } from "./medicineCategories.js";
+import { loadInventoryWorkspace } from "./utils/loadInventoryWorkspace.js";
 
 const MEDICINE_UNITS = [
   "tablet",
@@ -235,6 +236,9 @@ export const InventoryWorkspacePanel = () => {
   const [selectedBill, setSelectedBill] = useState(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [loadFailures, setLoadFailures] = useState([]);
+  const loadVersion = useRef(0);
 
   // POS / Dispensing State
   // Keep dispensing customer, prescription, batch selection, and cart state in the component.
@@ -280,48 +284,27 @@ export const InventoryWorkspacePanel = () => {
 
   // Inventory Workspace | Frontend Logic | Load medicines, suppliers, batches, sales and update the displayed state.
   const loadData = async () => {
-    try {
-      // Load independent inventory lists and reports concurrently to populate the workspace.
-      const [meds, sups, bts, sls, prchs, rts, alrts, rpt, pts, rx] = await Promise.all([
-        // View Medicines | Data Loading | Load records through inventoryApi.medicines for this feature.
-        inventoryApi.medicines(),
-        // View Suppliers | Data Loading | Load records through inventoryApi.suppliers for this feature.
-        inventoryApi.suppliers(),
-        // View Medicine Batches | Data Loading | Load records through inventoryApi.batches for this feature.
-        inventoryApi.batches(),
-        // View Pharmacy Sales | Data Loading | Load records through inventoryApi.sales for this feature.
-        inventoryApi.sales(),
-        // View Medicine Purchases | Data Loading | Load records through inventoryApi.purchases for this feature.
-        inventoryApi.purchases(),
-        // View Medicine Returns | Data Loading | Load records through inventoryApi.returns for this feature.
-        inventoryApi.returns(),
-        // View Inventory Alerts | Data Loading | Load records through inventoryApi.alerts for this feature.
-        inventoryApi.alerts(),
-        // View Pharmacy Sales Report | Data Loading | Load records through inventoryApi.salesReport for this feature.
-        inventoryApi.salesReport(reportPeriod),
-        // View Pharmacy Patients | Data Loading | Load records through inventoryApi.patients for this feature.
-        inventoryApi.patients().catch(() => []),
-        // View Active Prescriptions | Data Loading | Load records through inventoryApi.prescriptions for this feature.
-        inventoryApi.prescriptions().catch(() => [])
-      ]);
-      setMedicines(meds || []);
-      setSuppliers(sups || []);
-      setBatches(bts || []);
-      setSales(sls || []);
-      setPurchases(prchs || []);
-      setReturns(rts || []);
-      setAlerts(alrts || { lowStock: [], expiring: [] });
-      setReport(rpt || { totalSales: 0, totalRevenue: 0, totalItemsSold: 0, averageOrderValue: 0, topMedicines: [] });
-      setPatients(pts || []);
-      setPrescriptions(rx || []);
-    } catch (error) {
-      setToast({ type: "error", message: `Unable to load pharmacy workspace: ${error.response?.data?.message || "Please try again"}` });
+    const version = ++loadVersion.current;
+    setLoading(true);
+    const { data, failures } = await loadInventoryWorkspace(inventoryApi, reportPeriod);
+    // Inventory Workspace | Data Loading | Ignore an older request after a report change, a newer refresh, or unmounting.
+    if (version !== loadVersion.current) return;
+    const setters = {
+      medicines: setMedicines, suppliers: setSuppliers, batches: setBatches,
+      sales: setSales, purchases: setPurchases, returns: setReturns,
+      alerts: setAlerts, report: setReport, patients: setPatients, prescriptions: setPrescriptions
+    };
+    for (const [key, value] of Object.entries(data)) {
+      setters[key](value);
     }
+    setLoadFailures(failures);
+    setLoading(false);
   };
 
   // Load workspace data on mount and whenever the effect dependencies change.
   useEffect(() => {
     loadData();
+    return () => { loadVersion.current += 1; };
   }, [reportPeriod]);
 
   // Open Standard Modal (Medicine, Batch, Supplier)
@@ -847,6 +830,20 @@ export const InventoryWorkspacePanel = () => {
           </div>
         )}
       </div>
+
+      {/* Inventory Workspace | Data Loading | Keep failures next to the affected workspace and allow a refresh without reloading the page. */}
+      {loadFailures.length > 0 ? (
+        <div className="form-alert" role="alert">
+          <strong>Some pharmacy information could not be loaded.</strong>
+          <ul>
+            {loadFailures.map((failure) => <li key={failure.key}>{failure.label}: {failure.message}</li>)}
+          </ul>
+          <button type="button" className="button-secondary" onClick={loadData} disabled={loading}>
+            <RefreshCw size={16} /> {loading ? "Retrying..." : "Retry loading"}
+          </button>
+        </div>
+      ) : null}
+      {loading ? <p role="status">Loading pharmacy information...</p> : null}
 
       {/* Workspace Tabs */}
       <div className="e1-tabbar">
