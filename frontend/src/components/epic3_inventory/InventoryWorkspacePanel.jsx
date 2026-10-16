@@ -315,7 +315,7 @@ export const InventoryWorkspacePanel = () => {
       setPatients(pts || []);
       setPrescriptions(rx || []);
     } catch (error) {
-      setToast({ type: "error", message: error.response?.data?.message || "Unable to load pharmacy workspace" });
+      setToast({ type: "error", message: `Unable to load pharmacy workspace: ${error.response?.data?.message || "Please try again"}` });
     }
   };
 

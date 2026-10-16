@@ -51,6 +51,8 @@ export const inventoryService = {
     const batchCountMap = new Map();
 
     for (const batch of batches) {
+      // View Medicines | Business Logic | Ignore legacy batches without a medicine ID when totaling catalog stock.
+      if (!batch.medicineId) continue;
       const medId = batch.medicineId.toString();
       stockMap.set(medId, (stockMap.get(medId) || 0) + batch.quantity);
       batchCountMap.set(medId, (batchCountMap.get(medId) || 0) + 1);
@@ -701,7 +703,10 @@ export const inventoryService = {
     const stockMap = new Map();
 
     for (const batch of batches) {
-      const medId = (batch.medicineId?._id || batch.medicineId).toString();
+      // View Inventory Alerts | Business Logic | A deleted medicine populates as null; retain its expiry alert without counting it toward catalog stock.
+      const medicineId = batch.medicineId?._id || batch.medicineId;
+      if (!medicineId) continue;
+      const medId = medicineId.toString();
       stockMap.set(medId, (stockMap.get(medId) || 0) + batch.quantity);
     }
 
