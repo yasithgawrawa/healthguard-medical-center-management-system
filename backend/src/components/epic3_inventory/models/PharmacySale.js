@@ -1,7 +1,9 @@
-// Define the MongoDB structure, constraints, and relationships for pharmacy sale records.
+// Shared PharmacySale Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
-// Define stored sale item data with medicine id, batch id, quantity, unit price, line total and database validation.
+// Record Pharmacy Sale | Database Model | Define stored sale item data with medicine id, batch id, quantity, unit price, line total and database validation.
+// View Pharmacy Sales | Database Model | Define stored sale item data with medicine id, batch id, quantity, unit price, line total and database validation.
+// Download Pharmacy Bill | Database Model | Define stored sale item data with medicine id, batch id, quantity, unit price, line total and database validation.
 const saleItemSchema = new mongoose.Schema(
   {
     // Reference the shared Medicine record by ID and require the relationship.
@@ -15,7 +17,9 @@ const saleItemSchema = new mongoose.Schema(
   { _id: false }
 );
 
-// Define stored pharmacy sale data with sale number, prescription id, patient id, customer name, customer phone and database validation.
+// Record Pharmacy Sale | Database Model | Define stored pharmacy sale data with sale number, prescription id, patient id, customer name, customer phone and database validation.
+// View Pharmacy Sales | Database Model | Define stored pharmacy sale data with sale number, prescription id, patient id, customer name, customer phone and database validation.
+// Download Pharmacy Bill | Database Model | Define stored pharmacy sale data with sale number, prescription id, patient id, customer name, customer phone and database validation.
 const pharmacySaleSchema = new mongoose.Schema(
   {
     // Require a unique sale number value through a MongoDB unique index.

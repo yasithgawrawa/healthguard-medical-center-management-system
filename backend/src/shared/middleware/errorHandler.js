@@ -1,7 +1,7 @@
 import { ZodError } from "zod";
 import { errorResponse } from "../utils/apiResponse.js";
 
-// Convert Zod issue paths into field names and messages for form errors.
+// Shared Error Handling | Shared Logic | Convert Zod issue paths into field names and messages for form errors.
 const formatZodErrors = (error) =>
   error.errors.reduce((acc, issue) => {
     const key = issue.path.join(".") || "request";
@@ -9,7 +9,7 @@ const formatZodErrors = (error) =>
     return acc;
   }, {});
 
-// Translate validation, duplicate-key, and application errors into consistent HTTP responses.
+// Shared Error Handling | Shared Logic | Translate validation, duplicate-key, and application errors into consistent HTTP responses.
 export const errorHandler = (error, req, res, next) => {
   if (process.env.NODE_ENV !== "production") {
     console.error(error);

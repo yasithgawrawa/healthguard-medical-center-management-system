@@ -1,4 +1,4 @@
-// Connect to MongoDB before starting the Express HTTP server.
+// API Startup | Shared Logic | Connect to MongoDB before starting the Express HTTP server.
 import app from "./app.js";
 import { connectDatabase } from "./shared/config/database.js";
 import { env } from "./shared/config/env.js";

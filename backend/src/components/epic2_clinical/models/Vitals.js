@@ -1,7 +1,7 @@
-// Define the MongoDB structure, constraints, and relationships for vitals records.
+// Shared Vitals Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
-// Define stored vitals data with appointment id, patient id, temperature, blood pressure, heart rate and database validation.
+// Record Vitals | Database Model | Define stored vitals data with appointment id, patient id, temperature, blood pressure, heart rate and database validation.
 const vitalsSchema = new mongoose.Schema(
   {
     // Reference the shared Appointment record by ID and require the relationship.

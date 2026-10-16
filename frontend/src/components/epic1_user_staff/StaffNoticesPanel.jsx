@@ -3,20 +3,21 @@ import { useEffect, useState } from "react";
 import { e1Api } from "../../services/e1Api.js";
 import { formatDate, roleLabel } from "./e1Constants.js";
 
-// Show All Staff for a broadcast announcement or the selected role label.
+// View Current Staff Announcements | Frontend Logic | Show All Staff for a broadcast announcement or the selected role label.
 const targetLabel = (targetRole) => targetRole === "all" ? "All Staff" : roleLabel(targetRole);
 
-// Show current announcements addressed to the signed-in staff member.
+// View Current Staff Announcements | Frontend Logic | Show current announcements addressed to the signed-in staff member.
 export const StaffNoticesPanel = () => {
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Fetch the current staff member's eligible announcements.
+  // View Current Staff Announcements | Frontend Logic | Fetch the current staff member's eligible announcements.
   const loadNotices = async () => {
     setLoading(true);
     setError("");
     try {
+      // View Current Staff Announcements | Data Loading | Call e1Api.listCurrentAnnouncements for this feature and use the returned records
       const data = await e1Api.listCurrentAnnouncements();
       setNotices(Array.isArray(data) ? data : []);
     } catch (requestError) {

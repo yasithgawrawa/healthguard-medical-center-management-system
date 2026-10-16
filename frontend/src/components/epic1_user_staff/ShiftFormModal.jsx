@@ -9,10 +9,11 @@ import { Modal } from "../shared/Modal.jsx";
 import { optionalText, requiredFutureDateTime } from "../../utils/validationSchemas.js";
 import { roleLabel, staffName } from "./e1Constants.js";
 
-// Return the current UTC calendar date in YYYY-MM-DD format.
+// Create Shift | Frontend Logic | Return the current UTC calendar date in YYYY-MM-DD format.
+// Create Bulk Shifts | Frontend Logic | Return the current UTC calendar date in YYYY-MM-DD format.
 const today = () => new Date().toISOString().slice(0, 10);
 
-// Validate shift values including staff id, start time, end time, notes.
+// Create Shift | Frontend Validation | Validate shift values including staff id, start time, end time, notes.
 const shiftSchema = z
   .object({
     staffId: z.string().min(1, "Select an active staff member"),
@@ -25,7 +26,7 @@ const shiftSchema = z
     message: "End time must be after start time"
   });
 
-// Validate bulk shift values including staff ids, start date, end date, start time, end time.
+// Create Bulk Shifts | Frontend Validation | Validate bulk shift values including staff ids, start date, end date, start time, end time.
 const bulkShiftSchema = z
   .object({
     staffIds: z.array(z.string()).min(1, "Select at least one active staff member").max(50, "Select no more than 50 staff members"),
@@ -76,7 +77,8 @@ const shiftTemplates = [
   { label: "Full Day", start: "08:00", end: "17:00" }
 ];
 
-// Validate and submit individual or recurring bulk staff schedules.
+// Create Shift | Frontend Logic | Validate and submit individual or recurring bulk staff schedules.
+// Create Bulk Shifts | Frontend Logic | Validate and submit individual or recurring bulk staff schedules.
 export const ShiftFormModal = ({ open, staff = [], onClose, onSubmit, onBulkSubmit, busy }) => {
   const [mode, setMode] = useState("single");
   const [roleFilter, setRoleFilter] = useState("");
@@ -107,16 +109,20 @@ export const ShiftFormModal = ({ open, staff = [], onClose, onSubmit, onBulkSubm
   const selectedWeekdays = watch("weekdays") || [];
   const startDate = watch("startDate");
   const endDate = watch("endDate");
-  // Cache active staff until the listed source values change.
+  // Create Shift | Derived Data | Cache active staff until the listed source values change.
+  // Create Bulk Shifts | Derived Data | Cache active staff until the listed source values change.
   const activeStaff = useMemo(() => staff.filter((item) => item.status === "active"), [staff]);
-  // Cache visible staff until the listed source values change.
+  // Create Shift | Derived Data | Cache visible staff until the listed source values change.
+  // Create Bulk Shifts | Derived Data | Cache visible staff until the listed source values change.
   const visibleStaff = useMemo(
     () => activeStaff.filter((item) => !roleFilter || item.role === roleFilter),
     [activeStaff, roleFilter]
   );
-  // Cache roles until the listed source values change.
+  // Create Shift | Derived Data | Cache roles until the listed source values change.
+  // Create Bulk Shifts | Derived Data | Cache roles until the listed source values change.
   const roles = useMemo(() => [...new Set(activeStaff.map((item) => item.role).filter(Boolean))], [activeStaff]);
-  // Cache planned shift count until the listed source values change.
+  // Create Shift | Derived Data | Cache planned shift count until the listed source values change.
+  // Create Bulk Shifts | Derived Data | Cache planned shift count until the listed source values change.
   const plannedShiftCount = useMemo(() => {
     if (!startDate || !endDate || !selectedStaffIds.length || !selectedWeekdays.length) return 0;
     const start = new Date(`${startDate}T00:00:00`);
@@ -130,7 +136,8 @@ export const ShiftFormModal = ({ open, staff = [], onClose, onSubmit, onBulkSubm
     return matchingDays * selectedStaffIds.length;
   }, [startDate, endDate, selectedStaffIds, selectedWeekdays]);
 
-  // Submit the validated shift form form and show the resulting success or error feedback.
+  // Create Shift | Submit Logic | Submit the validated shift form form and show the resulting success or error feedback.
+  // Create Bulk Shifts | Submit Logic | Submit the validated shift form form and show the resulting success or error feedback.
   const submit = async (values) => {
     if (mode === "bulk") {
       await onBulkSubmit(values);
@@ -140,7 +147,7 @@ export const ShiftFormModal = ({ open, staff = [], onClose, onSubmit, onBulkSubm
     reset();
   };
 
-  // Add or remove one staff member from the bulk-shift selection.
+  // Create Bulk Shifts | Frontend Logic | Add or remove one staff member from the bulk-shift selection.
   const toggleStaff = (id) => {
     const next = selectedStaffIds.includes(id)
       ? selectedStaffIds.filter((item) => item !== id)
@@ -148,7 +155,7 @@ export const ShiftFormModal = ({ open, staff = [], onClose, onSubmit, onBulkSubm
     setValue("staffIds", next, { shouldValidate: true, shouldDirty: true });
   };
 
-  // Add or remove one weekday from the recurring shift selection.
+  // Create Bulk Shifts | Frontend Logic | Add or remove one weekday from the recurring shift selection.
   const toggleWeekday = (day) => {
     const next = selectedWeekdays.map(Number).includes(day)
       ? selectedWeekdays.filter((item) => Number(item) !== day)
@@ -156,13 +163,15 @@ export const ShiftFormModal = ({ open, staff = [], onClose, onSubmit, onBulkSubm
     setValue("weekdays", next, { shouldValidate: true, shouldDirty: true });
   };
 
-  // Fill shift time fields from the selected scheduling template.
+  // Create Shift | Frontend Logic | Fill shift time fields from the selected scheduling template.
+  // Create Bulk Shifts | Frontend Logic | Fill shift time fields from the selected scheduling template.
   const applyTemplate = (template) => {
     setValue("startTime", template.start, { shouldValidate: true, shouldDirty: true });
     setValue("endTime", template.end, { shouldValidate: true, shouldDirty: true });
   };
 
-  // Switch between single-shift and bulk-shift form modes.
+  // Create Shift | Frontend Logic | Switch between single-shift and bulk-shift form modes.
+  // Create Bulk Shifts | Frontend Logic | Switch between single-shift and bulk-shift form modes.
   const changeMode = (nextMode) => {
     setMode(nextMode);
     if (nextMode === "bulk") {
@@ -176,14 +185,18 @@ export const ShiftFormModal = ({ open, staff = [], onClose, onSubmit, onBulkSubm
     }
   };
 
-  // Select the staff members currently visible after filtering.
+  // Create Bulk Shifts | Frontend Logic | Select the staff members currently visible after filtering.
   const selectVisibleStaff = () => {
     setValue("staffIds", [...new Set([...selectedStaffIds, ...visibleStaff.map((item) => item._id)])], { shouldValidate: true, shouldDirty: true });
   };
 
   return (
     <Modal open={open} title="Create Shift" subtitle="All staff attendance is checked against the single Health Guard clinic location." onClose={onClose}>
+      {/* Create Shift | Dialog | Group the fields or record details for this feature. */}
+      {/* Create Bulk Shifts | Dialog | Group the fields or record details for this feature. */}
       <form onSubmit={handleSubmit(submit)}>
+        {/* Create Shift | Form | Render fields, validation feedback, and submission controls for this feature. */}
+        {/* Create Bulk Shifts | Form | Render fields, validation feedback, and submission controls for this feature. */}
         <div className="e1-tabbar" style={{ marginBottom: "16px" }}>
           <button className={mode === "single" ? "active" : ""} type="button" onClick={() => changeMode("single")}>
             <UserPlus size={15} /> Single Shift

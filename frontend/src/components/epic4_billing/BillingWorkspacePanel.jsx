@@ -21,18 +21,19 @@ import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
 import { ExpenseManagementPanel } from "./ExpenseManagementPanel.jsx";
 
-// Format a numeric amount as Sri Lankan rupees for display.
+// Billing Workspace | Frontend Logic | Format a numeric amount as Sri Lankan rupees for display.
 const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
-// Format a stored date for a date-only display, with a fallback for missing values.
+// Billing Workspace | Frontend Logic | Format a stored date for a date-only display, with a fallback for missing values.
 const dateOnly = (value) => (value ? new Date(value).toLocaleDateString() : "-");
-// Use the shared customer label helper for invoice displays.
+// Billing Workspace | Frontend Logic | Use the shared customer label helper for invoice displays.
 const getInvoiceClient = (item) => customerLabel(item);
-// Remove formatting and compare phone numbers using their last nine digits.
+// Billing Workspace | Frontend Logic | Remove formatting and compare phone numbers using their last nine digits.
 const normalizePhone = (value) => {
   const digits = String(value || "").replace(/\D/g, "");
   return digits.length > 9 ? digits.slice(-9) : digits;
 };
-// Group invoice item amounts into consultation, laboratory, and medicine charge summaries.
+// View Invoices | Frontend Logic | Group invoice item amounts into consultation, laboratory, and medicine charge summaries.
+// Record Payment | Frontend Logic | Group invoice item amounts into consultation, laboratory, and medicine charge summaries.
 const chargeSummary = (items = []) => items.reduce((summary, item) => {
   const description = (item.description || "").toLowerCase();
   const amount = Number(item.lineTotal || 0);
@@ -51,7 +52,7 @@ const chargeSummary = (items = []) => items.reduce((summary, item) => {
 // 1. Populated: { userId: { firstName, lastName } }
 // 2. Flat merged: { firstName, lastName } (userId fields hoisted)
 // 3. Fallback: employeeId string
-// Build the staff display name from populated user details with fallbacks.
+// Billing Workspace | Frontend Logic | Build the staff display name from populated user details with fallbacks.
 const staffName = (staff) => {
   if (!staff) return "Unknown";
   const u = staff.userId || {};
@@ -61,7 +62,7 @@ const staffName = (staff) => {
   if (fromFlat) return fromFlat;
   return staff.employeeId || "—";
 };
-// Trigger a browser download for a Blob and release its temporary object URL.
+// Billing Workspace | Submit Logic | Trigger a browser download for a Blob and release its temporary object URL.
 const saveBlob = (blob, filename) => {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -71,23 +72,23 @@ const saveBlob = (blob, filename) => {
   URL.revokeObjectURL(url);
 };
 
-// Validate invoice values including appointment id, description, quantity, unit price.
+// Create Invoice | Frontend Validation | Validate invoice values including appointment id, description, quantity, unit price.
 const invoiceSchema = z.object({
   appointmentId: z.string().min(1, "Select appointment"),
   description: z.string().trim().min(2, "Description is required").max(120, "Description is too long"),
   quantity: requiredQuantity(),
   unitPrice: requiredMoney("Unit price").min(0.01, "Unit price must be greater than 0")
 });
-// Validate payment values including amount, method.
+// Record Payment | Frontend Validation | Validate payment values including amount, method.
 const paymentSchema = z.object({
   amount: z.coerce.number({ invalid_type_error: "Amount is required" }).min(0.01, "Amount must be greater than 0").max(10000000, "Amount is too high"),
   method: z.string().min(1, "Payment method is required")
 });
-// Validate supplier bill values including method.
+// Pay Supplier Bill | Frontend Validation | Validate supplier bill values including method.
 const supplierBillSchema = z.object({
   method: z.string().min(1, "Payment method is required")
 });
-// Validate payroll values including staff id, month, daily pay, working days, allowances.
+// Create Salary Draft | Frontend Validation | Validate payroll values including staff id, month, daily pay, working days, allowances.
 const payrollSchema = z.object({
   staffId: z.string().min(1, "Select staff member"),
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Select payroll month")
@@ -98,7 +99,7 @@ const payrollSchema = z.object({
   deductions: requiredMoney("Deductions")
 });
 
-// Manage invoices, cashier payments, supplier bills, payroll, and financial summaries.
+// Billing Workspace | Frontend Logic | Manage invoices, cashier payments, supplier bills, payroll, and financial summaries.
 export const BillingWorkspacePanel = () => {
   const { user } = useAuth();
   const [invoices, setInvoices] = useState([]);
@@ -130,9 +131,10 @@ export const BillingWorkspacePanel = () => {
   const canCreatePayroll = [ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN].includes(user?.role);
   const canViewExpenses = [ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN].includes(user?.role);
 
-  // Select the validation schema for the active form and whether it is creating or editing a record.
+  // Billing Workspace | Frontend Validation | Select the validation schema for the active form and whether it is creating or editing a record.
   const schema = useMemo(() => {
     if (modal.type === "payment") {
+      // Record Payment | Frontend Validation | Handle the values for the selected form mode.
       const exactBal = modal.record?.outstandingAmount ? Number(modal.record.outstandingAmount) : 0;
       return z.object({
         amount: z.coerce.number({ invalid_type_error: "Amount is required" })
@@ -160,18 +162,22 @@ export const BillingWorkspacePanel = () => {
     payrollPreview && Number(selectedDeductions || 0) > Number(payrollPreview.baseSalary || 0) + Number(selectedAllowances || 0)
   );
 
-  // Load invoices, summary, payments, supplier bills and update the displayed state.
+  // Billing Workspace | Frontend Logic | Load invoices, summary, payments, supplier bills and update the displayed state.
   const load = async () => {
     try {
+      // View Invoices | Data Loading | Load invoices and the revenue summary for the billing workspace.
       const requests = [billingApi.invoices(), billingApi.summary()];
       if (isCashier || isManager) {
+        // View Payments | Data Loading | Load payments and supplier bills for the billing workspace.
         requests.push(billingApi.payments(), billingApi.supplierBills());
       } else {
         requests.push(Promise.resolve([]), Promise.resolve([]));
       }
       if (canManagePayroll) {
+        // View Appointments | Data Loading | Call clinicalApi.listAppointments for this feature and use the returned records
         requests.push(clinicalApi.listAppointments(), billingApi.payroll(), e1Api.listWorkforceStaff());
       } else {
+        // View Appointments | Data Loading | Call clinicalApi.listAppointments for this feature and use the returned records
         requests.push(isCashier ? clinicalApi.listAppointments() : Promise.resolve([]), Promise.resolve([]), Promise.resolve([]));
       }
       const [invoiceData, summaryData, paymentData, supplierBillData, appointmentData, payrollData, staffData] = await Promise.all(requests);
@@ -194,7 +200,7 @@ export const BillingWorkspacePanel = () => {
 
   // Register browser event listeners and remove them when this effect is cleaned up.
   useEffect(() => {
-    // Apply dashboard quick-action events to this workspace's tabs, filters, or forms.
+    // Billing Workspace | Frontend Logic | Apply dashboard quick-action events to this workspace's tabs, filters, or forms.
     const handleDashboardCommand = (event) => {
       const command = event.detail || {};
       if (command.workspace !== "billing") return;
@@ -242,6 +248,7 @@ export const BillingWorkspacePanel = () => {
       setPayrollPreviewLoading(true);
       setPayrollPreviewError("");
       try {
+        // Preview Salary | Submit Logic | Call billingApi.previewPayroll for this feature.
         const preview = await billingApi.previewPayroll({
           staffId: selectedStaffId,
           month: selectedPayrollMonth,
@@ -262,7 +269,7 @@ export const BillingWorkspacePanel = () => {
     return () => clearTimeout(timer);
   }, [modal.type, selectedStaffId, selectedPayrollMonth, selectedDailyPay, selectedWorkingDays, selectedAllowances, selectedDeductions]);
 
-  // Cache rows until the listed source values change.
+  // Billing Workspace | Derived Data | Cache rows until the listed source values change.
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return invoices.filter((item) => {
@@ -274,7 +281,7 @@ export const BillingWorkspacePanel = () => {
     });
   }, [invoices, search, statusFilter]);
 
-  // Cache checkout groups until the listed source values change.
+  // Consolidate Patient Invoices | Derived Data | Cache checkout groups until the listed source values change.
   const checkoutGroups = useMemo(() => {
     const groups = new Map();
     const payableInvoices = invoices.filter((invoice) => invoice.status !== "cancelled" && Number(invoice.outstandingAmount || 0) > 0);
@@ -321,30 +328,32 @@ export const BillingWorkspacePanel = () => {
     return Array.from(groups.values()).sort((a, b) => a.label.localeCompare(b.label));
   }, [invoices]);
 
-  // Cache selected checkout group until the listed source values change.
+  // Record Payment | Derived Data | Cache selected checkout group until the listed source values change.
   const selectedCheckoutGroup = useMemo(
     () => checkoutGroups.find((group) => group.key === checkoutKey),
     [checkoutGroups, checkoutKey]
   );
 
-  // Cache selected checkout summary until the listed source values change.
+  // Record Payment | Derived Data | Cache selected checkout summary until the listed source values change.
   const selectedCheckoutSummary = useMemo(
     () => chargeSummary(selectedCheckoutGroup?.items || []),
     [selectedCheckoutGroup]
   );
 
-  // Cache payroll rows until the listed source values change.
+  // View Salaries | Derived Data | Cache payroll rows until the listed source values change.
   const payrollRows = useMemo(() => payroll.filter((item) => (
     (payrollStatusFilter === "all" || item.status === payrollStatusFilter) &&
     (!payrollMonthFilter || item.month === payrollMonthFilter)
   )), [payroll, payrollStatusFilter, payrollMonthFilter]);
 
-  // Submit the validated billing workspace form and show the resulting success or error feedback.
+  // Billing Workspace | Submit Logic | Submit the validated billing workspace form and show the resulting success or error feedback.
   const submit = async (values) => {
     setBusy(true);
     try {
       if (modal.type === "invoice") {
+        // Create Invoice | Submit Logic | Handle the values for the selected form mode.
         const appointment = appointments.find((item) => item._id === values.appointmentId);
+        // Create Invoice | Submit Logic | Call billingApi.createInvoice for this feature.
         await billingApi.createInvoice({
           patientId: appointment.patientId?._id || appointment.patientId,
           appointmentId: appointment._id,
@@ -352,13 +361,16 @@ export const BillingWorkspacePanel = () => {
         });
       }
       if (modal.type === "payment") {
+        // Record Payment | Submit Logic | Handle the values for the selected form mode.
         await billingApi.recordPayment({ invoiceId: modal.record._id, amount: values.amount, method: values.method });
       }
       if (modal.type === "supplierBill") {
+        // Pay Supplier Bill | Submit Logic | Handle the values for the selected form mode.
         await billingApi.paySupplierBill(modal.record._id, values.method);
         setActiveTab("supplierBills");
       }
       if (modal.type === "payroll") {
+        // Create Salary Draft | Submit Logic | Handle the values for the selected form mode.
         await billingApi.createPayroll(values);
         setActiveTab("payroll");
         setPayrollMonthFilter(values.month);
@@ -374,10 +386,11 @@ export const BillingWorkspacePanel = () => {
     }
   };
 
-  // Submit a payment status change and reload billing data.
+  // Update Payment Status | Frontend Logic | Submit a payment status change and reload billing data.
   const changePaymentStatus = async (payment, status) => {
     setBusy(true);
     try {
+      // Update Payment Status | Submit Logic | Call billingApi.updatePaymentStatus for this feature.
       await billingApi.updatePaymentStatus(payment._id, status);
       setToast({ type: "success", message: `Payment ${status}` });
       await load();
@@ -388,10 +401,11 @@ export const BillingWorkspacePanel = () => {
     }
   };
 
-  // Submit the requested payroll workflow step and reload salary data.
+  // Update Salary Status | Frontend Logic | Submit the requested payroll workflow step and reload salary data.
   const changePayrollStatus = async (item, status) => {
     setBusy(true);
     try {
+      // Update Salary Status | Submit Logic | Call billingApi.updatePayrollStatus for this feature.
       await billingApi.updatePayrollStatus(item._id, status);
       setToast({ type: "success", message: `Salary ${status}` });
       await load();
@@ -402,10 +416,11 @@ export const BillingWorkspacePanel = () => {
     }
   };
 
-  // Download the selected salary record using the shared payslip download flow.
+  // Download Payslip | Frontend Logic | Download the selected salary record using the shared payslip download flow.
   const downloadPayslip = async (item) => {
     setBusy(true);
     try {
+      // Download Payslip | Submit Logic | Call billingApi.downloadPayslip for this feature.
       saveBlob(await billingApi.downloadPayslip(item._id), `healthguard-payslip-${item.month}-${item._id}.txt`);
     } catch (error) {
       setToast({ type: "error", message: error.response?.data?.message || "Unable to download payslip" });
@@ -414,7 +429,8 @@ export const BillingWorkspacePanel = () => {
     }
   };
 
-  // Load completed attendance days to prefill the salary form's working-day count.
+  // View Salary Attendance Days | Frontend Logic | Load completed attendance days to prefill the salary form's working-day count.
+  // Create Salary Draft | Frontend Logic | Load completed attendance days to prefill the salary form's working-day count.
   const useAttendanceDays = async () => {
     if (!selectedStaffId || !selectedPayrollMonth) {
       setToast({ type: "error", message: "Select staff and month first" });
@@ -422,6 +438,7 @@ export const BillingWorkspacePanel = () => {
     }
     setAttendanceDaysLoading(true);
     try {
+      // View Salary Attendance Days | Submit Logic | Call billingApi.salaryAttendanceDays for this feature.
       const result = await billingApi.salaryAttendanceDays({ staffId: selectedStaffId, month: selectedPayrollMonth });
       setValue("workingDays", result.workingDays || 0, { shouldValidate: true, shouldDirty: true });
       setToast({ type: "success", message: `Loaded ${result.workingDays || 0} attendance day(s)` });
@@ -432,10 +449,11 @@ export const BillingWorkspacePanel = () => {
     }
   };
 
-  // Download the selected paid invoice's receipt and save it in the browser.
+  // Download Invoice Receipt | Frontend Logic | Download the selected paid invoice's receipt and save it in the browser.
   const downloadReceipt = async (invoice) => {
     setBusy(true);
     try {
+      // Download Invoice Receipt | Submit Logic | Call billingApi.downloadReceipt for this feature.
       saveBlob(await billingApi.downloadReceipt(invoice._id), `healthguard-receipt-${invoice._id}.txt`);
     } catch (error) {
       setToast({ type: "error", message: error.response?.data?.message || "Unable to download receipt" });
@@ -444,7 +462,8 @@ export const BillingWorkspacePanel = () => {
     }
   };
 
-  // Consolidate the patient's invoices and prepare the combined balance for cashier payment.
+  // Consolidate Patient Invoices | Submit Logic | Consolidate the patient's invoices and prepare the combined balance for cashier payment.
+  // Record Payment | Submit Logic | Consolidate the patient's invoices and prepare the combined balance for cashier payment.
   const collectUnifiedCheckout = async () => {
     setCheckoutError("");
     if (!selectedCheckoutGroup) {
@@ -462,6 +481,7 @@ export const BillingWorkspacePanel = () => {
 
     setBusy(true);
     try {
+      // Consolidate Patient Invoices | Submit Logic | Call billingApi.consolidateInvoices for this feature.
       const unifiedInvoice = selectedCheckoutGroup.patientId
         ? await billingApi.consolidateInvoices(selectedCheckoutGroup.patientId)
         : selectedCheckoutGroup.invoices[0];
@@ -471,6 +491,7 @@ export const BillingWorkspacePanel = () => {
       }
 
       const amountDue = Number(unifiedInvoice.outstandingAmount || 0);
+      // Record Payment | Submit Logic | Call billingApi.recordPayment for this feature.
       const paymentResult = await billingApi.recordPayment({
         invoiceId: unifiedInvoice._id,
         amount: amountDue,
@@ -497,12 +518,12 @@ export const BillingWorkspacePanel = () => {
     }
   };
 
-  // Open the selected invoice using the shared printable invoice template.
+  // Print Invoice | Frontend Logic | Open the selected invoice using the shared printable invoice template.
   const printInvoice = (invoice) => {
     printInvoicePDF(invoice);
   };
 
-  // Open the selected salary record using the shared printable payslip template.
+  // Print Payslip | Frontend Logic | Open the selected salary record using the shared printable payslip template.
   const printPayslip = (item) => {
     printPayslipPDF(item);
   };
@@ -540,6 +561,8 @@ export const BillingWorkspacePanel = () => {
               }}
               style={{ border: "1px solid #dbeafe", borderRadius: "8px", background: "#ffffff", marginBottom: "12px", overflow: "hidden" }}
             >
+              {/* Consolidate Patient Invoices | Form | Render fields, validation feedback, and submission controls for this feature. */}
+              {/* Record Payment | Form | Render fields, validation feedback, and submission controls for this feature. */}
               <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "end", padding: "12px", background: "#f8fafc" }}>
                 <div style={{ flex: "1 1 280px" }}>
                   <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase", marginBottom: "5px" }}>
@@ -625,7 +648,7 @@ export const BillingWorkspacePanel = () => {
               {
                 key: "details",
                 header: "Invoice Charges",
-                // Format this table cell using the current row's data and available actions.
+                // Billing Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
                 render: (item) => {
                   const hasDoctor = item.items?.some((i) => i.description?.toLowerCase().includes("consultation") || i.description?.toLowerCase().includes("channelling"));
                   const hasLab = item.items?.some((i) => i.description?.toLowerCase().includes("lab") || i.description?.toLowerCase().includes("investigation"));
@@ -668,7 +691,7 @@ export const BillingWorkspacePanel = () => {
               {
                 key: "actions",
                 header: "Actions",
-                // Format this table cell using the current row's data and available actions.
+                // Billing Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
                 render: (item) => {
                   return (
                     <div className="inline-actions" style={{ flexWrap: "wrap", gap: "6px" }}>
@@ -728,7 +751,7 @@ export const BillingWorkspacePanel = () => {
             {
               key: "purchase",
               header: "Purchase",
-              // Format this table cell using the current row's data and available actions.
+              // Billing Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
               render: (item) => {
                 const purchase = item.purchaseId || {};
                 const medicine = purchase.medicineId?.name || "Medicine";
@@ -742,7 +765,7 @@ export const BillingWorkspacePanel = () => {
             {
               key: "actions",
               header: "Actions",
-              // Format this table cell using the current row's data and available actions.
+              // Billing Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
               render: (item) => (
                 <div className="inline-actions">
                   {isCashier && item.status === "pending" ? (
@@ -838,14 +861,23 @@ export const BillingWorkspacePanel = () => {
         }
         onClose={() => setModal({ type: null, record: null })}
       >
+        {/* Create Invoice | Dialog | Group the fields or record details for this feature. */}
+        {/* Record Payment | Dialog | Group the fields or record details for this feature. */}
+        {/* Pay Supplier Bill | Dialog | Group the fields or record details for this feature. */}
+        {/* Create Salary Draft | Dialog | Group the fields or record details for this feature. */}
         <form onSubmit={handleSubmit(submit)}>
+          {/* Create Invoice | Form | Render fields, validation feedback, and submission controls for this feature. */}
+          {/* Record Payment | Form | Render fields, validation feedback, and submission controls for this feature. */}
+          {/* Pay Supplier Bill | Form | Render fields, validation feedback, and submission controls for this feature. */}
+          {/* Create Salary Draft | Form | Render fields, validation feedback, and submission controls for this feature. */}
+          {/* Create Invoice | Form Section | Render the fields or actions for this form mode. */}
           {modal.type === "invoice" ? (
             <div className="form-grid">
               <FormSelect
                 label="Completed Appointment"
                 error={errors.appointmentId?.message}
                 {...register("appointmentId", {
-                  // Update the edited field and synchronize its dependent form values.
+                  // Billing Workspace | Frontend Logic | Update the edited field and synchronize its dependent form values.
                   onChange: (e) => {
                     if (e.target.value) {
                       setValue("description", "Doctor Consultation Fee", { shouldValidate: true });
@@ -869,6 +901,7 @@ export const BillingWorkspacePanel = () => {
               <FormInput label="Unit Price (Rs.)" placeholder="1500.00" type="number" min="0" step="0.01" error={errors.unitPrice?.message} {...register("unitPrice")} />
             </div>
           ) : null}
+          {/* Record Payment | Form Section | Render the fields or actions for this form mode. */}
           {modal.type === "payment" ? (
             <>
               {modal.record ? (
@@ -914,6 +947,7 @@ export const BillingWorkspacePanel = () => {
               </div>
             </>
           ) : null}
+          {/* Pay Supplier Bill | Form Section | Render the fields or actions for this form mode. */}
           {modal.type === "supplierBill" ? (
             <>
               {modal.record ? (
@@ -936,6 +970,7 @@ export const BillingWorkspacePanel = () => {
               </div>
             </>
           ) : null}
+          {/* Create Salary Draft | Form Section | Render the fields or actions for this form mode. */}
           {modal.type === "payroll" ? (
             <>
               <div className="form-grid">

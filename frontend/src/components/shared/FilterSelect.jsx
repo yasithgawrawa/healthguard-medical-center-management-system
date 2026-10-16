@@ -1,4 +1,4 @@
-// Render a labeled controlled select for filtering records.
+// Shared Filter Select | Frontend Logic | Render a labeled controlled select for filtering records.
 export const FilterSelect = ({ label, value, onChange, options = [] }) => (
   <label className="filter-select">
     <span>{label}</span>

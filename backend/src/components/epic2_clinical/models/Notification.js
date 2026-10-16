@@ -1,7 +1,10 @@
-// Define the MongoDB structure, constraints, and relationships for notification records.
+// Shared Notification Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
-// Define stored notification data with patient id, type, title, message, related model and database validation.
+// Create Lab Request | Database Model | Define stored notification data with patient id, type, title, message, related model and database validation.
+// Update Lab Report | Database Model | Define stored notification data with patient id, type, title, message, related model and database validation.
+// View Patient Notifications | Database Model | Define stored notification data with patient id, type, title, message, related model and database validation.
+// Mark Notification Read | Database Model | Define stored notification data with patient id, type, title, message, related model and database validation.
 const notificationSchema = new mongoose.Schema(
   {
     // Reference the shared User record by ID and require the relationship.

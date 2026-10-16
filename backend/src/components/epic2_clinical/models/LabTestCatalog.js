@@ -1,7 +1,10 @@
-// Define the MongoDB structure, constraints, and relationships for lab test catalog records.
+// Shared LabTestCatalog Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
-// Define stored lab test catalog data with test name, category, price, urgent price, description and database validation.
+// Add Lab Test | Database Model | Define stored lab test catalog data with test name, category, price, urgent price, description and database validation.
+// Update Lab Test Price | Database Model | Define stored lab test catalog data with test name, category, price, urgent price, description and database validation.
+// Create Lab Request | Database Model | Define stored lab test catalog data with test name, category, price, urgent price, description and database validation.
+// View Lab Tests | Database Model | Read the stored LabTestCatalog record and its linked IDs for this feature.
 const labTestCatalogSchema = new mongoose.Schema(
   {
     // Require a unique test name value through a MongoDB unique index.

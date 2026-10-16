@@ -5,7 +5,7 @@ import healthGuardLogo from "../../assets/logo.png";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { DASHBOARD_PATH_BY_ROLE } from "../../utils/roles.js";
 
-// Render public navigation or signed-in account links and logout controls.
+// Shared Navbar | Frontend Logic | Render public navigation or signed-in account links and logout controls.
 export const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -13,7 +13,7 @@ export const Navbar = () => {
 
   const dashboardPath = user ? DASHBOARD_PATH_BY_ROLE[user.role] : "/";
 
-  // Clear the authentication session and navigate to the public login flow.
+  // Shared Navbar | Frontend Logic | Clear the authentication session and navigate to the public login flow.
   const handleLogout = () => {
     logout();
     navigate("/", { replace: true });

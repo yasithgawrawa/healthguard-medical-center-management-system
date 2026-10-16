@@ -1,4 +1,4 @@
-// Handle staff HTTP requests and return consistent API responses.
+// Staff Management | Controller | Handle staff HTTP requests and return consistent API responses.
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { User } from "../models/User.js";
@@ -17,14 +17,15 @@ const ROLE_CODE_MAP = {
   lab_assistant: "LAB"
 };
 
-// Derive missing salary or shift-rate values using the existing 26-shift convention.
+// Add Staff | Business Logic | Derive missing salary or shift-rate values using the existing 26-shift convention.
+// Update Staff | Business Logic | Derive missing salary or shift-rate values using the existing 26-shift convention.
 const resolveShiftPay = (body) => {
   const shiftRate = Number(body.shiftRate ?? (body.baseSalary ? Number(body.baseSalary) / 26 : 0));
   const baseSalary = Number(body.baseSalary ?? (shiftRate ? shiftRate * 26 : 0));
   return { shiftRate, baseSalary };
 };
 
-// Use the supplied email or generate a unique clinic-only address for a walk-in patient.
+// Add Walk-in Patient | Business Logic | Use the supplied email or generate a unique clinic-only address for a walk-in patient.
 const buildPatientEmail = (body) => {
   if (body.email) return body.email;
   const phonePart = String(body.phone || "").replace(/\D/g, "") || "patient";
@@ -32,10 +33,10 @@ const buildPatientEmail = (body) => {
   return `walkin.${phonePart}.${suffix}@healthguard.local`;
 };
 
-// Generate a random temporary password before storing its bcrypt hash.
+// Add Walk-in Patient | Business Logic | Generate a random temporary password before storing its bcrypt hash.
 const buildTemporaryPassword = () => `Hg${crypto.randomBytes(8).toString("base64url")}@1`;
 
-// Validate account uniqueness, hash the password, and link the user account to a staff profile.
+// Add Staff | Controller | Validate account uniqueness, hash the password, and link the user account to a staff profile.
 export const createStaff = async (req, res) => {
   if (req.body.role === ROLES.DOCTOR) {
     throw new AppError("Only one clinic doctor is supported. The doctor account already exists.", 409, { role: "Doctor creation is disabled" });
@@ -98,7 +99,7 @@ export const createStaff = async (req, res) => {
   return successResponse(res, "Staff created successfully", { user: user.toSafeJSON(), staff }, 201);
 };
 
-// Return staff and send the result using the shared API response format.
+// View Staff | Controller | Return staff and send the result using the shared API response format.
 export const listStaff = async (req, res) => {
   const filter = {};
   if (req.query.role) filter.role = req.query.role;
@@ -107,7 +108,7 @@ export const listStaff = async (req, res) => {
   return successResponse(res, "Staff list loaded", staff);
 };
 
-// Update allowed staff and user fields while keeping role, status, and pay values synchronized.
+// Update Staff | Controller | Update allowed staff and user fields while keeping role, status, and pay values synchronized.
 export const updateStaff = async (req, res) => {
   const staff = await Staff.findById(req.params.id);
   if (!staff) throw new AppError("Staff not found", 404);
@@ -139,7 +140,7 @@ export const updateStaff = async (req, res) => {
   return successResponse(res, "Staff updated successfully", { staff, user });
 };
 
-// Create a walk-in patient with a generated password hash and portal access disabled.
+// Add Walk-in Patient | Controller | Create a walk-in patient with a generated password hash and portal access disabled.
 export const createQuickPatient = async (req, res) => {
   const email = buildPatientEmail(req.body);
   const existingUser = await User.findOne({ email }).select("_id");

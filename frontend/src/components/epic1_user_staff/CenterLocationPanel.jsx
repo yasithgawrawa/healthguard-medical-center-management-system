@@ -6,14 +6,14 @@ import { z } from "zod";
 import { e1Api } from "../../services/e1Api.js";
 import { FormInput } from "../shared/forms/FormInput.jsx";
 
-// Validate center values including latitude, longitude, radius meters.
+// Set Clinic Location | Frontend Validation | Validate center values including latitude, longitude, radius meters.
 const centerSchema = z.object({
   latitude: z.coerce.number().min(-90, "Latitude is required").max(90),
   longitude: z.coerce.number().min(-180, "Longitude is required").max(180),
   radiusMeters: z.coerce.number().int("Radius must be a whole number").min(10, "Minimum radius is 10m").max(1000, "Maximum radius is 1000m")
 });
 
-// Edit the clinic attendance point and optionally fill coordinates from browser geolocation.
+// Set Clinic Location | Frontend Logic | Edit the clinic attendance point and optionally fill coordinates from browser geolocation.
 export const CenterLocationPanel = ({ onToast }) => {
   const [busy, setBusy] = useState(false);
   const [locationMessage, setLocationMessage] = useState("");
@@ -32,6 +32,7 @@ export const CenterLocationPanel = ({ onToast }) => {
 
   // Reset the form when its selected record or dialog state changes.
   useEffect(() => {
+    // View Clinic Location | Data Loading | Call e1Api.getCenterLocation for this feature and use the returned records
     e1Api
       .getCenterLocation()
       .then((center) => {
@@ -44,7 +45,7 @@ export const CenterLocationPanel = ({ onToast }) => {
       .catch(() => {});
   }, [reset]);
 
-  // Read browser geolocation and fill the clinic attendance coordinates.
+  // Set Clinic Location | Frontend Logic | Read browser geolocation and fill the clinic attendance coordinates.
   const useCurrentLocation = () => {
     setLocationMessage("");
     if (!navigator.geolocation) {
@@ -62,10 +63,11 @@ export const CenterLocationPanel = ({ onToast }) => {
     );
   };
 
-  // Submit the validated center location form and show the resulting success or error feedback.
+  // Set Clinic Location | Submit Logic | Submit the validated center location form and show the resulting success or error feedback.
   const submit = async (values) => {
     setBusy(true);
     try {
+      // Set Clinic Location | Submit Logic | Call e1Api.saveCenterLocation for this feature.
       await e1Api.saveCenterLocation(values);
       onToast?.({ type: "success", message: "Clinic attendance point saved" });
     } catch (error) {
@@ -77,6 +79,7 @@ export const CenterLocationPanel = ({ onToast }) => {
 
   return (
     <form className="geo-section" onSubmit={handleSubmit(submit)}>
+      {/* Set Clinic Location | Form | Render fields, validation feedback, and submission controls for this feature. */}
       <div className="geo-section-header">
         <div>
           <strong>Single Clinic Attendance Point</strong>

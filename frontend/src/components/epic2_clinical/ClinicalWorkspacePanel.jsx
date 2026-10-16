@@ -40,13 +40,13 @@ import { printLabReportPDF } from "../../utils/invoicePrintTemplate.js";
 import { DASHBOARD_COMMAND_EVENT } from "../../utils/dashboardCommands.js";
 import { customerLabel, patientLabel } from "../../utils/personLabels.js";
 
-// Use the shared patient label for the record's populated patient.
+// Clinical Workspace | Frontend Logic | Use the shared patient label for the record's populated patient.
 const patientName = (item) => {
   const patient = item?.patientId || {};
   return patientLabel(patient);
 };
 
-// Return standard parameter names and units for the selected laboratory test.
+// Update Lab Report | Frontend Logic | Return standard parameter names and units for the selected laboratory test.
 const getStandardLabParameters = (testName = "") => {
   const t = String(testName || "").toLowerCase();
   if (t.includes("fasting blood sugar") || t.includes("fbs")) {
@@ -111,33 +111,33 @@ const getStandardLabParameters = (testName = "") => {
   ];
 };
 
-// Join the linked doctor's names and use Doctor when details are missing.
+// Clinical Workspace | Frontend Logic | Join the linked doctor's names and use Doctor when details are missing.
 const doctorName = (item) => {
   const doctor = item?.doctorId || {};
   return [doctor.firstName, doctor.lastName].filter(Boolean).join(" ") || "Doctor";
 };
 
-// Format a clinical timestamp with a missing-value fallback.
+// Clinical Workspace | Frontend Logic | Format a clinical timestamp with a missing-value fallback.
 const formatDateTime = (value) => (value ? new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "-");
-// Combine the appointment date and slot label into a readable display.
+// Clinical Workspace | Frontend Logic | Combine the appointment date and slot label into a readable display.
 const formatAppointmentDate = (appointmentDate, slotLabel) => {
   if (!appointmentDate) return "Not set";
   const dateOnly = new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(appointmentDate));
   return slotLabel ? `${dateOnly} — ${slotLabel}` : dateOnly;
 };
-// Format a date as a local calendar key for date comparisons.
+// Clinical Workspace | Frontend Logic | Format a date as a local calendar key for date comparisons.
 const localDateKey = (value) => {
   const date = value ? new Date(value) : new Date();
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
-// Check whether a calendar date is later than today in local time.
+// Clinical Workspace | Frontend Logic | Check whether a calendar date is later than today in local time.
 const isFutureLocalDate = (value) => localDateKey(value) > localDateKey();
-// Check whether a calendar date matches today in local time.
+// Clinical Workspace | Frontend Logic | Check whether a calendar date matches today in local time.
 const isTodayLocalDate = (value) => localDateKey(value) === localDateKey();
-// Check whether a calendar date is today or later in local time.
+// Clinical Workspace | Frontend Logic | Check whether a calendar date is today or later in local time.
 const isUpcomingLocalDate = (value) => localDateKey(value) > localDateKey();
 
-// Validate vitals values including temperature, blood pressure, heart rate, spo2.
+// Record Vitals | Frontend Validation | Validate vitals values including temperature, blood pressure, heart rate, spo2.
 const vitalsSchema = z.object({
   temperature: optionalVitalsNumber("Temperature", 25, 45),
   bloodPressure: z.string().trim().regex(bloodPressurePattern, "Use format like 120/80").optional().or(z.literal("")),
@@ -145,20 +145,20 @@ const vitalsSchema = z.object({
   spo2: optionalVitalsNumber("SpO2", 50, 100)
 });
 
-// Validate consultation values including diagnosis, clinical notes, finalized.
+// Save Consultation | Frontend Validation | Validate consultation values including diagnosis, clinical notes, finalized.
 const consultationSchema = z.object({
   diagnosis: z.string().trim().min(2, "Diagnosis is required").max(120, "Diagnosis cannot exceed 120 characters"),
   clinicalNotes: z.string().trim().min(3, "Clinical notes are required").max(1000, "Clinical notes cannot exceed 1000 characters"),
   finalized: z.boolean().optional()
 });
 
-// Validate lab request values including test name, priority.
+// Create Lab Request | Frontend Validation | Validate lab request values including test name, priority.
 const labRequestSchema = z.object({
   testName: z.string().trim().min(2, "Test name is required").max(120, "Test name is too long"),
   priority: z.string().min(1, "Priority is required")
 });
 
-// Validate lab update values including status, result summary, result url.
+// Update Lab Report | Frontend Validation | Validate lab update values including status, result summary, result url.
 const labUpdateSchema = z.object({
   status: z.string().min(1, "Status is required"),
   resultSummary: z.string().trim().max(1000, "Result summary is too long").optional().or(z.literal("")),
@@ -173,7 +173,7 @@ const labUpdateSchema = z.object({
   message: "Result summary is required when marking lab test as completed"
 });
 
-// Convert a nonempty form value to a number while preserving an omitted value.
+// Clinical Workspace | Frontend Logic | Convert a nonempty form value to a number while preserving an omitted value.
 const buildNumber = (value) => (value === "" || value === undefined ? undefined : Number(value));
 
 const initialScheduleForm = {
@@ -183,7 +183,7 @@ const initialScheduleForm = {
   slotLabel: ""
 };
 
-// Manage role-specific appointment, consultation, prescription, and laboratory workflows.
+// Clinical Workspace | Frontend Logic | Manage role-specific appointment, consultation, prescription, and laboratory workflows.
 export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
   const [appointments, setAppointments] = useState([]);
   const [labs, setLabs] = useState([]);
@@ -205,7 +205,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
   const [appointmentSlots, setAppointmentSlots] = useState([]);
   const [loadingAppointmentSlots, setLoadingAppointmentSlots] = useState(false);
 
-  // Append an empty laboratory result parameter row.
+  // Update Lab Report | Frontend Logic | Append an empty laboratory result parameter row.
   const addLabParamRow = () => {
     setLabParameters((prev) => [
       ...prev,
@@ -213,25 +213,25 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     ]);
   };
 
-  // Update one field of a laboratory result parameter row.
+  // Update Lab Report | Frontend Logic | Update one field of a laboratory result parameter row.
   const updateLabParamRow = (index, field, value) => {
     setLabParameters((prev) =>
       prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
     );
   };
 
-  // Remove a laboratory result parameter row by index.
+  // Update Lab Report | Frontend Logic | Remove a laboratory result parameter row by index.
   const removeLabParamRow = (index) => {
     setLabParameters((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Prefill laboratory result rows from the selected test's standard parameters.
+  // Update Lab Report | Frontend Logic | Prefill laboratory result rows from the selected test's standard parameters.
   const autoFillStandardParams = (testName) => {
     const standard = getStandardLabParameters(testName);
     setLabParameters(standard);
   };
 
-  // Print the currently selected laboratory report using the shared report template.
+  // Print Lab Report | Frontend Logic | Print the currently selected laboratory report using the shared report template.
   const handlePrintCurrentReport = () => {
     if (!modal.record) return;
     const currentStatus = watch("status") || modal.record.status || "completed";
@@ -265,7 +265,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     ? labUpdateSchema
     : z.object({});
 
-  // Choose the active clinical form schema and validate its values with Zod.
+  // Clinical Workspace | Frontend Logic | Choose the active clinical form schema and validate its values with Zod.
   const dynamicResolver = useCallback(
     (data, context, options) => {
       return zodResolver(activeSchemaRef.current)(data, context, options);
@@ -287,7 +287,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
   const selectedPriority = watch("priority");
   const selectedStatus = watch("status");
 
-  // Cache standard catalog list until the listed source values change.
+  // Clinical Workspace | Derived Data | Cache standard catalog list until the listed source values change.
   const standardCatalogList = useMemo(() => {
     if (labCatalog && labCatalog.length > 0) return labCatalog;
     return [
@@ -301,7 +301,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     ];
   }, [labCatalog]);
 
-  // Cache grouped catalog until the listed source values change.
+  // Clinical Workspace | Derived Data | Cache grouped catalog until the listed source values change.
   const groupedCatalog = useMemo(() => {
     return standardCatalogList.reduce((acc, item) => {
       const cat = item.category || "Routine Investigation";
@@ -311,16 +311,16 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     }, {});
   }, [standardCatalogList]);
 
-  // Cache catalog categories until the listed source values change.
+  // Clinical Workspace | Derived Data | Cache catalog categories until the listed source values change.
   const catalogCategories = useMemo(() => Object.keys(groupedCatalog), [groupedCatalog]);
 
-  // Cache selected catalog item until the listed source values change.
+  // Clinical Workspace | Derived Data | Cache selected catalog item until the listed source values change.
   const selectedCatalogItem = useMemo(() => {
     if (!selectedTestName || isCustomTest) return null;
     return standardCatalogList.find((t) => t.testName.toLowerCase() === selectedTestName.toLowerCase()) || null;
   }, [selectedTestName, isCustomTest, standardCatalogList]);
 
-  // Append a laboratory test selection to the request form.
+  // Create Lab Request | Frontend Logic | Append a laboratory test selection to the request form.
   const addLabOrderItem = (initialTestName = "") => {
     const defaultTest = initialTestName || standardCatalogList[0]?.testName || "Full Blood Count (FBC)";
     setOrderedLabTests((prev) => [
@@ -333,19 +333,19 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     ]);
   };
 
-  // Remove a laboratory test selection from the request form.
+  // Create Lab Request | Frontend Logic | Remove a laboratory test selection from the request form.
   const removeLabOrderItem = (index) => {
     setOrderedLabTests((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Update one selected laboratory test in the request form.
+  // Create Lab Request | Frontend Logic | Update one selected laboratory test in the request form.
   const updateLabOrderItem = (index, field, value) => {
     setOrderedLabTests((prev) =>
       prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
     );
   };
 
-  // Cache existing lab orders for appointment until the listed source values change.
+  // Clinical Workspace | Derived Data | Cache existing lab orders for appointment until the listed source values change.
   const existingLabOrdersForAppointment = useMemo(() => {
     if (!modal.record || modal.type !== "consultation") return [];
     const recId = modal.record._id?.toString();
@@ -355,13 +355,15 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     });
   }, [modal.record, modal.type, labs]);
 
-  // Load list lab requests, list appointments, list lab requests, list lab tests and update the displayed state.
+  // Clinical Workspace | Frontend Logic | Load list lab requests, list appointments, list lab requests, list lab tests and update the displayed state.
   const load = async () => {
     try {
       if (mode === "lab") {
+        // View Lab Requests | Data Loading | Call clinicalApi.listLabRequests for this feature and use the returned records
         setLabs(await clinicalApi.listLabRequests());
       } else {
         const [appointmentData, labData, catalogData] = await Promise.all([
+          // View Appointments | Data Loading | Load records through clinicalApi.listAppointments for this feature.
           clinicalApi.listAppointments(),
           mode === "doctor" ? clinicalApi.listLabRequests() : Promise.resolve([]),
           mode === "doctor" ? clinicalApi.listLabTests().catch(() => []) : Promise.resolve([])
@@ -378,7 +380,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
   // Register browser event listeners and remove them when this effect is cleaned up.
   useEffect(() => {
     load();
-    // Refresh displayed records when the browser window regains focus.
+    // Clinical Workspace | Frontend Logic | Refresh displayed records when the browser window regains focus.
     const handleFocus = () => load();
     window.addEventListener("focus", handleFocus);
     const interval = setInterval(load, 15000);
@@ -390,7 +392,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
 
   // Register browser event listeners and remove them when this effect is cleaned up.
   useEffect(() => {
-    // Apply dashboard quick-action events to this workspace's tabs, filters, or forms.
+    // Clinical Workspace | Frontend Logic | Apply dashboard quick-action events to this workspace's tabs, filters, or forms.
     const handleDashboardCommand = (event) => {
       const command = event.detail || {};
       if (command.workspace !== "clinical" || (command.mode && command.mode !== mode)) return;
@@ -421,6 +423,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     }
 
     setLoadingAppointmentSlots(true);
+    // View Appointment Slots | Data Loading | Call clinicalApi.getAppointmentSlots for this feature and use the returned records
     clinicalApi
       .getAppointmentSlots({ doctorId: scheduleForm.doctorId, date: scheduleForm.appointmentDay })
       .then((slots) => {
@@ -446,7 +449,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
       .finally(() => setLoadingAppointmentSlots(false));
   }, [mode, modal.type, modal.record, scheduleForm.doctorId, scheduleForm.appointmentDay]);
 
-  // Update a rescheduling field and clear dependent slot selections and field errors.
+  // Reschedule Appointment | Frontend Logic | Update a rescheduling field and clear dependent slot selections and field errors.
   const setScheduleField = (field, value) => {
     setScheduleForm((current) => {
       const next = { ...current, [field]: value };
@@ -459,7 +462,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     setScheduleErrors((current) => ({ ...current, [field]: "" }));
   };
 
-  // Choose an available rescheduling slot and store its timestamp and label.
+  // Reschedule Appointment | Frontend Logic | Choose an available rescheduling slot and store its timestamp and label.
   const selectAppointmentSlot = (slot) => {
     if (!slot.available) return;
     setScheduleForm((current) => ({
@@ -470,7 +473,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     setScheduleErrors((current) => ({ ...current, appointmentDate: "" }));
   };
 
-  // Validate the doctor, date, and slot before submitting a reschedule request.
+  // Reschedule Appointment | Frontend Validation | Validate the doctor, date, and slot before submitting a reschedule request.
   const validateReschedule = () => {
     const nextErrors = {};
     if (!scheduleForm.doctorId) nextErrors.doctorId = "Doctor is required";
@@ -480,13 +483,14 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     return Object.keys(nextErrors).length === 0;
   };
 
-  // Submit the selected appointment's new slot and reload the clinical workspace.
+  // Reschedule Appointment | Submit Logic | Submit the selected appointment's new slot and reload the clinical workspace.
   const submitReschedule = async (event) => {
     event.preventDefault();
     if (!modal.record || !validateReschedule()) return;
 
     setBusy(true);
     try {
+      // Reschedule Appointment | Submit Logic | Call clinicalApi.rescheduleAppointment for this feature.
       await clinicalApi.rescheduleAppointment(modal.record._id, {
         appointmentDate: scheduleForm.appointmentDate,
         slotLabel: scheduleForm.slotLabel
@@ -501,11 +505,12 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     }
   };
 
-  // Submit cancellation for the selected appointment and refresh the displayed records.
+  // Cancel Appointment | Frontend Logic | Submit cancellation for the selected appointment and refresh the displayed records.
   const cancelAppointment = async (appointment) => {
     if (!window.confirm(`Cancel appointment for ${patientName(appointment)}?`)) return;
     setBusy(true);
     try {
+      // Cancel Appointment | Submit Logic | Call clinicalApi.cancelAppointment for this feature.
       await clinicalApi.cancelAppointment(appointment._id);
       setToast({ type: "success", message: "Appointment cancelled" });
       await load();
@@ -516,7 +521,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     }
   };
 
-  // Select the form mode and reset fields from the chosen record.
+  // Clinical Workspace | Form Logic | Select the form mode and reset fields from the chosen record.
   const openModal = (type, record) => {
     if (type === "lab-update") {
       const initialParams = Array.isArray(record.parameters) && record.parameters.length > 0
@@ -584,7 +589,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     setModal({ type, record });
   };
 
-  // Move the selected appointment into consultation through the clinical API.
+  // Update Appointment Status | Frontend Logic | Move the selected appointment into consultation through the clinical API.
   const startConsultation = async (appointment) => {
     try {
       if (isFutureLocalDate(appointment.appointmentDate)) {
@@ -592,6 +597,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
         return;
       }
       if (appointment.status === "checked_in") {
+        // Update Appointment Status | Submit Logic | Call clinicalApi.updateAppointmentStatus for this feature.
         await clinicalApi.updateAppointmentStatus(appointment._id, "in_consultation");
         appointment.status = "in_consultation";
       }
@@ -614,13 +620,14 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     }
   };
 
-  // Mark an appointment as checked in and reload the clinical workspace.
+  // Update Appointment Status | Frontend Logic | Mark an appointment as checked in and reload the clinical workspace.
   const checkInPatient = async (appointment) => {
     try {
       if (isFutureLocalDate(appointment.appointmentDate)) {
         setToast({ type: "error", message: "Patients can only be checked in on or after their appointment date." });
         return;
       }
+      // Update Appointment Status | Submit Logic | Call clinicalApi.updateAppointmentStatus for this feature.
       await clinicalApi.updateAppointmentStatus(appointment._id, "checked_in");
       setToast({ type: "success", message: `${patientName(appointment)} checked in successfully` });
       await load();
@@ -630,7 +637,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     }
   };
 
-  // Fill consultation notes using the selected clinical preset.
+  // Save Consultation | Frontend Logic | Fill consultation notes using the selected clinical preset.
   const applyPreset = (preset) => {
     setValue("diagnosis", preset.diagnosis, { shouldValidate: true, shouldDirty: true });
     if (preset.chiefComplaints) setValue("chiefComplaints", preset.chiefComplaints, { shouldValidate: true, shouldDirty: true });
@@ -641,7 +648,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     if (preset.followUpPlan) setValue("followUpPlan", preset.followUpPlan, { shouldValidate: true, shouldDirty: true });
   };
 
-  // Copy available nursing observations into the consultation form.
+  // Save Consultation | Frontend Logic | Copy available nursing observations into the consultation form.
   const importTriageNotes = () => {
     if (!modal.record) return;
     const parts = [];
@@ -661,7 +668,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
   const todayStr = localDateKey();
 
   const sourceRows = mode === "lab" ? labs : appointments;
-  // Cache rows until the listed source values change.
+  // Clinical Workspace | Derived Data | Cache rows until the listed source values change.
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return sourceRows.filter((item) => {
@@ -726,12 +733,13 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     });
   }, [sourceRows, search, status, statusGroup, priorityFilter, queueTab, dateScope, mode, todayStr]);
 
-  // Submit the validated clinical workspace form and show the resulting success or error feedback.
+  // Clinical Workspace | Submit Logic | Submit the validated clinical workspace form and show the resulting success or error feedback.
   const submit = async (values) => {
     setBusy(true);
     try {
       const record = modal.record;
       if (modal.type === "vitals") {
+        // Record Vitals | Submit Logic | Handle the values for the selected form mode.
         await clinicalApi.recordVitals({
           appointmentId: record._id,
           temperature: buildNumber(values.temperature),
@@ -741,6 +749,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
         });
       }
       if (modal.type === "consultation") {
+        // Save Consultation | Submit Logic | Handle the values for the selected form mode.
         await clinicalApi.saveConsultation({ appointmentId: record._id, ...values });
 
         const validLabOrders = orderedLabTests.filter((t) => {
@@ -750,6 +759,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
 
         for (const labOrder of validLabOrders) {
           const finalName = labOrder.testName === "__custom__" ? labOrder.customName.trim() : labOrder.testName.trim();
+          // Create Lab Request | Submit Logic | Call clinicalApi.createLabRequest for this feature.
           await clinicalApi.createLabRequest({
             appointmentId: record._id,
             patientId: record.patientId?._id || record.patientId,
@@ -760,6 +770,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
       }
       if (modal.type === "lab-request") await clinicalApi.createLabRequest({ appointmentId: record._id, ...values });
       if (modal.type === "lab-update") {
+        // Update Lab Report | Submit Logic | Handle the values for the selected form mode.
         const filledParams = labParameters.filter((p) => p.parameter?.trim() && p.value?.trim());
         const incompleteParams = labParameters.filter((p) => (p.parameter?.trim() && !p.value?.trim()) || (!p.parameter?.trim() && p.value?.trim()));
 
@@ -774,6 +785,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
           return;
         }
 
+        // Update Lab Report | Submit Logic | Call clinicalApi.updateLabRequest for this feature.
         await clinicalApi.updateLabRequest(record._id, {
           ...values,
           parameters: filledParams,
@@ -783,12 +795,15 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
       const hasLab = modal.type === "consultation" && orderedLabTests.some((t) => (t.testName === "__custom__" ? t.customName : t.testName)?.trim());
       let successMessage = "Workflow updated successfully";
       if (modal.type === "consultation") {
+        // Save Consultation | Submit Logic | Handle the values for the selected form mode.
         successMessage = hasLab ? "Consultation and lab request saved successfully" : "Consultation saved successfully";
       }
       if (modal.type === "lab-update") {
+        // Update Lab Report | Submit Logic | Handle the values for the selected form mode.
         successMessage = "Laboratory result and parameters saved successfully";
       }
       if (modal.type === "vitals") {
+        // Record Vitals | Submit Logic | Handle the values for the selected form mode.
         successMessage = "Vital signs saved successfully";
       }
       setToast({ type: "success", message: successMessage });
@@ -806,7 +821,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     {
       key: "patient",
       header: "Patient",
-      // Format this table cell using the current row's data and available actions.
+      // Clinical Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
       render: (item) => {
         const p = item.patientId || {};
         return (
@@ -825,7 +840,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     {
       key: "date",
       header: "Schedule & Slot",
-      // Format this table cell using the current row's data and available actions.
+      // Clinical Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
       render: (item) => {
         const isToday = isTodayLocalDate(item.appointmentDate);
         return (
@@ -866,7 +881,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     {
       key: "reason",
       header: "Reason / Complaint",
-      // Format this table cell using the current row's data and available actions.
+      // Clinical Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
       render: (item) => (
         <div
           style={{
@@ -884,7 +899,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     {
       key: "vitals",
       header: "Triage Vitals",
-      // Format this table cell using the current row's data and available actions.
+      // Clinical Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
       render: (item) => {
         const v = item.vitals;
         if (!v || (!v.temperature && !v.bloodPressure && !v.heartRate && !v.spo2)) {
@@ -996,7 +1011,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     {
       key: "actions",
       header: "Actions",
-      // Format this table cell using the current row's data and available actions.
+      // Clinical Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
       render: (item) => {
         if (mode === "nurse") {
           const isTodayAppointment = isTodayLocalDate(item.appointmentDate);
@@ -1120,7 +1135,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
     {
       key: "actions",
       header: "Actions",
-      // Format this table cell using the current row's data and available actions.
+      // Clinical Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
       render: (item) => (
         <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
           <button className="table-link-button" type="button" onClick={() => openModal("lab-update", item)}>
@@ -1334,6 +1349,11 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
         subtitle={modal.record ? `${patientName(modal.record)} • ${modal.record.slotLabel || "Standard Visit"}` : ""}
         onClose={() => setModal({ type: null, record: null })}
       >
+        {/* Reschedule Appointment | Dialog | Group the fields or record details for this feature. */}
+        {/* Record Vitals | Dialog | Group the fields or record details for this feature. */}
+        {/* Save Consultation | Dialog | Group the fields or record details for this feature. */}
+        {/* Create Lab Request | Dialog | Group the fields or record details for this feature. */}
+        {/* Update Lab Report | Dialog | Group the fields or record details for this feature. */}
         <form
           onSubmit={
             modal.type === "reschedule"
@@ -1341,6 +1361,12 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
               : handleSubmit(submit)
           }
         >
+          {/* Reschedule Appointment | Form | Render fields, validation feedback, and submission controls for this feature. */}
+          {/* Record Vitals | Form | Render fields, validation feedback, and submission controls for this feature. */}
+          {/* Save Consultation | Form | Render fields, validation feedback, and submission controls for this feature. */}
+          {/* Create Lab Request | Form | Render fields, validation feedback, and submission controls for this feature. */}
+          {/* Update Lab Report | Form | Render fields, validation feedback, and submission controls for this feature. */}
+          {/* Reschedule Appointment | Form Section | Render the fields or actions for this form mode. */}
           {modal.type === "reschedule" ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               <div style={{ padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: "8px", background: "#f8fafc", color: "#334155", fontSize: "0.86rem" }}>
@@ -1384,6 +1410,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
             </div>
           ) : null}
 
+          {/* Record Vitals | Form Section | Render the fields or actions for this form mode. */}
           {modal.type === "vitals" ? (
             <div className="form-grid">
               <FormInput label="Temperature" placeholder="37.2" type="number" step="0.1" error={errors.temperature?.message} {...register("temperature")} />
@@ -1392,6 +1419,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
               <FormInput label="SpO2" placeholder="98" type="number" error={errors.spo2?.message} {...register("spo2")} />
             </div>
           ) : null}
+          {/* Save Consultation | Form Section | Render the fields or actions for this form mode. */}
           {modal.type === "consultation" ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
               {/* Patient & Visit Context Header Card */}
@@ -1599,6 +1627,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
               </label>
             </div>
           ) : null}
+          {/* Create Lab Request | Form Section | Render the fields or actions for this form mode. */}
           {modal.type === "lab-request" ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               <div
@@ -1711,6 +1740,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
               </div>
             </div>
           ) : null}
+          {/* Update Lab Report | Form Section | Render the fields or actions for this form mode. */}
           {modal.type === "lab-update" ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               {/* Patient & Test Header Card */}
@@ -2096,6 +2126,7 @@ export const ClinicalWorkspacePanel = ({ mode, refreshKey = 0 }) => {
           ) : null}
           <div className="modal-actions">
             <button className="button-secondary" type="button" onClick={() => setModal({ type: null, record: null })} disabled={busy}>Cancel</button>
+            {/* Update Lab Report | Form Section | Render the fields or actions for this form mode. */}
             {modal.type === "lab-update" ? (
               <button
                 className="button-secondary"

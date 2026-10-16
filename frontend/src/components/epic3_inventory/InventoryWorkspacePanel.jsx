@@ -66,23 +66,23 @@ const MEDICINE_UNITS = [
   "ointment"
 ];
 
-// Format a stored date for a date-only display, with a fallback for missing values.
+// Inventory Workspace | Frontend Logic | Format a stored date for a date-only display, with a fallback for missing values.
 const dateOnly = (value) => (value ? new Date(value).toISOString().slice(0, 10) : "-");
-// Build today's date input value without shifting the local date through UTC.
+// Inventory Workspace | Frontend Logic | Build today's date input value without shifting the local date through UTC.
 const todayStr = () => {
   const now = new Date();
   const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
   return localDate.toISOString().slice(0, 10);
 };
-// Format a numeric amount as Sri Lankan rupees for display.
+// Inventory Workspace | Frontend Logic | Format a numeric amount as Sri Lankan rupees for display.
 const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
-// Identify patient records created for in-clinic use without patient portal access.
+// Inventory Workspace | Frontend Logic | Identify patient records created for in-clinic use without patient portal access.
 const isWalkInPatientRecord = (patient) => (
   patient?.registrationSource === "walk_in" ||
   patient?.portalAccessEnabled === false ||
   /^walkin\..+@healthguard\.local$/i.test(patient?.email || "")
 );
-// Trigger a browser download for a Blob and release its temporary object URL.
+// Inventory Workspace | Submit Logic | Trigger a browser download for a Blob and release its temporary object URL.
 const saveBlob = (blob, filename) => {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -92,7 +92,8 @@ const saveBlob = (blob, filename) => {
   URL.revokeObjectURL(url);
 };
 
-// Derive a short medicine code for generated batch numbers.
+// Add Medicine Batch | Frontend Logic | Derive a short medicine code for generated batch numbers.
+// Record Medicine Purchase | Frontend Logic | Derive a short medicine code for generated batch numbers.
 const getMedicinePrefix = (medName) => {
   if (!medName) return "MED";
   const upper = medName.toUpperCase();
@@ -108,7 +109,8 @@ const getMedicinePrefix = (medName) => {
   return (clean.slice(0, 3) || "MED").padEnd(3, "X");
 };
 
-// Suggest a medicine-prefixed batch number that is absent from the currently loaded batches.
+// Add Medicine Batch | Frontend Logic | Suggest a medicine-prefixed batch number that is absent from the currently loaded batches.
+// Record Medicine Purchase | Frontend Logic | Suggest a medicine-prefixed batch number that is absent from the currently loaded batches.
 const generateBatchNumber = (med, existingBatches = [], excludeBatch = "") => {
   const prefix = getMedicinePrefix(med?.name);
   const yy = new Date().getFullYear().toString().slice(-2);
@@ -125,8 +127,10 @@ const generateBatchNumber = (med, existingBatches = [], excludeBatch = "") => {
 };
 
 
-// Define frontend validation rules for medicine, batch, supplier, and return forms.
+// Shared Inventory Forms | Frontend Validation | Define frontend validation rules for medicine, batch, supplier, and return forms.
 const schemas = {
+  // Add New Medicine | Frontend Validation | Validate the fields submitted by this inventory form.
+  // Update Medicine | Frontend Validation | Validate the fields submitted by this inventory form.
   medicine: z.object({
     name: z.string().trim().min(2, "Medicine name is required").max(120),
     category: z.string().min(1, "Select medicine category").refine((value) => MEDICINE_CATEGORIES.includes(value), "Select a valid medicine category"),
@@ -135,6 +139,8 @@ const schemas = {
     reorderLevel: z.coerce.number().int("Reorder level must be a whole number").min(0).max(100000),
     status: z.enum(["active", "inactive"]).default("active")
   }),
+  // Add Supplier | Frontend Validation | Validate the fields submitted by this inventory form.
+  // Update Supplier | Frontend Validation | Validate the fields submitted by this inventory form.
   supplier: z.object({
     name: requiredTextNoNumbers("Supplier name", 120),
     email: z.string().trim().email("Enter a valid email").optional().or(z.literal("")),
@@ -142,6 +148,7 @@ const schemas = {
     address: z.string().trim().min(5, "Address is required").max(250),
     status: z.enum(["active", "inactive"]).default("active")
   }),
+  // Add Medicine Batch | Frontend Validation | Validate the fields submitted by this inventory form.
   batch: z.object({
     medicineId: z.string().min(1, "Select medicine"),
     batchNumber: z.string().trim().min(2, "Batch number is required").max(40).regex(batchNumberPattern, "Batch number can only contain letters, numbers and hyphens"),
@@ -163,6 +170,7 @@ const schemas = {
     path: ["expiryDate"],
     message: "Expiry date must be after manufacture date"
   }),
+  // Update Medicine Batch | Frontend Validation | Validate the fields submitted by this inventory form.
   batchUpdate: z.object({
     medicineId: z.string().min(1, "Select medicine"),
     batchNumber: z.string().trim().min(2, "Batch number is required").max(40).regex(batchNumberPattern, "Batch number can only contain letters, numbers and hyphens"),
@@ -179,6 +187,8 @@ const schemas = {
     path: ["expiryDate"],
     message: "Expiry date must be after manufacture date"
   }),
+  // Create Medicine Return Draft | Frontend Validation | Validate the fields submitted by this inventory form.
+  // Update Medicine Return Draft | Frontend Validation | Validate the fields submitted by this inventory form.
   return: z.object({
     medicineId: z.string().min(1, "Select medicine"),
     batchId: z.string().min(1, "Select batch"),
@@ -194,7 +204,7 @@ const schemas = {
   })
 };
 
-// Manage medicine stock, procurement, supplier returns, dispensing, and pharmacy reports.
+// Inventory Workspace | Frontend Logic | Manage medicine stock, procurement, supplier returns, dispensing, and pharmacy reports.
 export const InventoryWorkspacePanel = () => {
   const { user } = useAuth();
   const isPharmacist = [ROLES.PHARMACIST, ROLES.ADMIN].includes(user?.role);
@@ -250,7 +260,7 @@ export const InventoryWorkspacePanel = () => {
   const [purchaseQty, setPurchaseQty] = useState(100);
   const [purchasePrice, setPurchasePrice] = useState("");
 
-  // Select the validation schema for the active form and whether it is creating or editing a record.
+  // Shared Inventory Forms | Frontend Validation | Select the validation schema for the active form and whether it is creating or editing a record.
   const formSchema = modal.type === "batch" && modal.record ? schemas.batchUpdate : schemas[modal.type] || schemas.medicine;
   // Connect form fields, validation errors, and submission handling through React Hook Form.
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({
@@ -263,24 +273,35 @@ export const InventoryWorkspacePanel = () => {
   const selectedReturnBatch = batches.find((batch) => batch._id === selectedReturnBatchId);
   // Offer only batches linked to the selected return medicine.
   const returnBatchesForMedicine = batches.filter((batch) => (batch.medicineId?._id || batch.medicineId) === selectedReturnMedicineId);
-  // Find the supplier attached to the first matching purchase in the loaded purchase list.
+  // Create Medicine Return Draft | Frontend Logic | Find the supplier attached to the first matching purchase in the loaded purchase list.
+  // Update Medicine Return Draft | Frontend Logic | Find the supplier attached to the first matching purchase in the loaded purchase list.
   const getSupplierForBatch = (batchId) => purchases.find((purchase) => (purchase.batchId?._id || purchase.batchId) === batchId)?.supplierId;
   const selectedReturnSupplier = getSupplierForBatch(selectedReturnBatchId);
 
-  // Load medicines, suppliers, batches, sales and update the displayed state.
+  // Inventory Workspace | Frontend Logic | Load medicines, suppliers, batches, sales and update the displayed state.
   const loadData = async () => {
     try {
       // Load independent inventory lists and reports concurrently to populate the workspace.
       const [meds, sups, bts, sls, prchs, rts, alrts, rpt, pts, rx] = await Promise.all([
+        // View Medicines | Data Loading | Load records through inventoryApi.medicines for this feature.
         inventoryApi.medicines(),
+        // View Suppliers | Data Loading | Load records through inventoryApi.suppliers for this feature.
         inventoryApi.suppliers(),
+        // View Medicine Batches | Data Loading | Load records through inventoryApi.batches for this feature.
         inventoryApi.batches(),
+        // View Pharmacy Sales | Data Loading | Load records through inventoryApi.sales for this feature.
         inventoryApi.sales(),
+        // View Medicine Purchases | Data Loading | Load records through inventoryApi.purchases for this feature.
         inventoryApi.purchases(),
+        // View Medicine Returns | Data Loading | Load records through inventoryApi.returns for this feature.
         inventoryApi.returns(),
+        // View Inventory Alerts | Data Loading | Load records through inventoryApi.alerts for this feature.
         inventoryApi.alerts(),
+        // View Pharmacy Sales Report | Data Loading | Load records through inventoryApi.salesReport for this feature.
         inventoryApi.salesReport(reportPeriod),
+        // View Pharmacy Patients | Data Loading | Load records through inventoryApi.patients for this feature.
         inventoryApi.patients().catch(() => []),
+        // View Active Prescriptions | Data Loading | Load records through inventoryApi.prescriptions for this feature.
         inventoryApi.prescriptions().catch(() => [])
       ]);
       setMedicines(meds || []);
@@ -304,7 +325,12 @@ export const InventoryWorkspacePanel = () => {
   }, [reportPeriod]);
 
   // Open Standard Modal (Medicine, Batch, Supplier)
-  // Reset the medicine, batch, or supplier form with new-record defaults or existing values.
+  // Add New Medicine | Form Logic | Reset the medicine, batch, or supplier form with new-record defaults or existing values.
+  // Update Medicine | Form Logic | Reset the medicine, batch, or supplier form with new-record defaults or existing values.
+  // Add Medicine Batch | Form Logic | Reset the medicine, batch, or supplier form with new-record defaults or existing values.
+  // Update Medicine Batch | Form Logic | Reset the medicine, batch, or supplier form with new-record defaults or existing values.
+  // Add Supplier | Form Logic | Reset the medicine, batch, or supplier form with new-record defaults or existing values.
+  // Update Supplier | Form Logic | Reset the medicine, batch, or supplier form with new-record defaults or existing values.
   const openStandardModal = (type, record = null) => {
     const defaults = record
       ? {
@@ -319,7 +345,7 @@ export const InventoryWorkspacePanel = () => {
   };
 
   // Open Purchase Modal
-  // Prepare purchase defaults and suggest a batch number for the selected medicine.
+  // Record Medicine Purchase | Form Logic | Prepare purchase defaults and suggest a batch number for the selected medicine.
   const openPurchaseModal = (prefillMed = null) => {
     setPurchaseSupplierId(suppliers[0]?._id || "");
     const medId = prefillMed?._id || medicines[0]?._id || "";
@@ -337,7 +363,8 @@ export const InventoryWorkspacePanel = () => {
     setModal({ type: "purchase", record: prefillMed });
   };
 
-  // Prepare a return draft form with matching medicine, batch, reason, and date values.
+  // Create Medicine Return Draft | Form Logic | Prepare a return draft form with matching medicine, batch, reason, and date values.
+  // Update Medicine Return Draft | Form Logic | Prepare a return draft form with matching medicine, batch, reason, and date values.
   const openReturnModal = (record = null) => {
     const medicineId = record?.medicineId?._id || record?.medicineId || medicines[0]?._id || "";
     const availableBatches = batches.filter((batch) => (batch.medicineId?._id || batch.medicineId) === medicineId);
@@ -360,7 +387,7 @@ export const InventoryWorkspacePanel = () => {
   };
 
   // Open POS / Dispense Modal
-  // Reset the dispensing cart and prefill patient or prescription details when supplied.
+  // Record Pharmacy Sale | Form Logic | Reset the dispensing cart and prefill patient or prescription details when supplied.
   const openPosModal = (prefillRx = null) => {
     setPosCart([]);
     if (prefillRx) {
@@ -384,7 +411,7 @@ export const InventoryWorkspacePanel = () => {
 
   // Register browser event listeners and remove them when this effect is cleaned up.
   useEffect(() => {
-    // Apply dashboard quick-action events to this workspace's tabs, filters, or forms.
+    // Inventory Workspace | Frontend Logic | Apply dashboard quick-action events to this workspace's tabs, filters, or forms.
     const handleDashboardCommand = (event) => {
       const command = event.detail || {};
       if (command.workspace !== "inventory") return;
@@ -417,30 +444,45 @@ export const InventoryWorkspacePanel = () => {
   }, [isPharmacist, reset, suppliers, medicines, batches, patients]);
 
   // Form Submits
-  // Save the selected inventory form, check return stock where needed, and reload workspace data.
+  // Inventory Workspace | Submit Logic | Save the selected inventory form, check return stock where needed, and reload workspace data.
   const submitStandard = async (values) => {
     setBusy(true);
     try {
       if (modal.type === "medicine") {
+        // Add New Medicine | Submit Logic | Handle the values for the selected form mode.
+        // Update Medicine | Submit Logic | Handle the values for the selected form mode.
         const medicineValues = { ...values, status: "active" };
+        // Update Medicine | Submit Logic | Call inventoryApi.updateMedicine for this feature.
         modal.record ? await inventoryApi.updateMedicine(modal.record._id, medicineValues) : await inventoryApi.createMedicine(medicineValues);
         setToast({ type: "success", message: `Medicine ${modal.record ? "updated" : "added"} successfully` });
       } else if (modal.type === "supplier") {
+        // Add Supplier | Submit Logic | Handle the values for the selected form mode.
+        // Update Supplier | Submit Logic | Handle the values for the selected form mode.
         modal.record ? await inventoryApi.updateSupplier(modal.record._id, values) : await inventoryApi.createSupplier(values);
         setToast({ type: "success", message: `Supplier ${modal.record ? "updated" : "added"} successfully` });
       } else if (modal.type === "batch") {
+        // Add Medicine Batch | Submit Logic | Handle the values for the selected form mode.
+        // Update Medicine Batch | Submit Logic | Handle the values for the selected form mode.
         modal.record ? await inventoryApi.updateBatch(modal.record._id, values) : await inventoryApi.createBatch(values);
         setToast({ type: "success", message: `Medicine batch ${modal.record ? "updated" : "received"} successfully` });
       } else if (modal.type === "return") {
+        // Create Medicine Return Draft | Submit Logic | Handle the values for the selected form mode.
+        // Update Medicine Return Draft | Submit Logic | Handle the values for the selected form mode.
         const batch = batches.find((item) => item._id === values.batchId);
+        // Create Medicine Return Draft | Frontend Validation | Reject invalid or incomplete values before the API request.
+        // Update Medicine Return Draft | Frontend Validation | Reject invalid or incomplete values before the API request.
         if (!batch || (batch.medicineId?._id || batch.medicineId) !== values.medicineId) {
           setToast({ type: "error", message: "Select a batch that belongs to the selected medicine" });
           return;
         }
+        // Create Medicine Return Draft | Frontend Validation | Reject invalid or incomplete values before the API request.
+        // Update Medicine Return Draft | Frontend Validation | Reject invalid or incomplete values before the API request.
         if (Number(values.quantity) > Number(batch.quantity || 0)) {
           setToast({ type: "error", message: `Return quantity cannot exceed available batch stock (${batch.quantity})` });
           return;
         }
+        // Create Medicine Return Draft | Frontend Validation | Reject invalid or incomplete values before the API request.
+        // Update Medicine Return Draft | Frontend Validation | Reject invalid or incomplete values before the API request.
         if (!getSupplierForBatch(values.batchId)) {
           setToast({ type: "error", message: "Supplier could not be found for this batch. Please check purchase history." });
           return;
@@ -452,6 +494,7 @@ export const InventoryWorkspacePanel = () => {
           returnReason: values.returnReason,
           returnDate: values.returnDate
         };
+        // Update Medicine Return Draft | Submit Logic | Call inventoryApi.updateReturn for this feature.
         modal.record ? await inventoryApi.updateReturn(modal.record._id, payload) : await inventoryApi.createReturn(payload);
         setToast({ type: "success", message: `Return draft ${modal.record ? "updated" : "created"} successfully` });
         setActiveTab("returns");
@@ -465,10 +508,11 @@ export const InventoryWorkspacePanel = () => {
     }
   };
 
-  // Fetch the selected medicine return and open its details dialog.
+  // View Medicine Return Details | Frontend Logic | Fetch the selected medicine return and open its details dialog.
   const handleViewReturn = async (item) => {
     setBusy(true);
     try {
+      // View Medicine Return Details | Data Loading | Call inventoryApi.getReturnDetails for this feature and use the returned records
       const details = await inventoryApi.getReturnDetails(item._id);
       setModal({ type: "returnDetails", record: details });
     } catch (error) {
@@ -478,11 +522,12 @@ export const InventoryWorkspacePanel = () => {
     }
   };
 
-  // Confirm deletion of a draft return and refresh the inventory data.
+  // Delete Medicine Return Draft | Frontend Logic | Confirm deletion of a draft return and refresh the inventory data.
   const handleDeleteReturn = async (item) => {
     if (!window.confirm(`Delete draft return ${item.returnId}? This cannot be undone.`)) return;
     setBusy(true);
     try {
+      // Delete Medicine Return Draft | Submit Logic | Call inventoryApi.deleteReturn for this feature.
       await inventoryApi.deleteReturn(item._id);
       setToast({ type: "success", message: `${item.returnId} deleted successfully` });
       await loadData();
@@ -493,11 +538,12 @@ export const InventoryWorkspacePanel = () => {
     }
   };
 
-  // Confirm completion of a draft return and reload stock after the server deducts it.
+  // Complete Medicine Return | Frontend Logic | Confirm completion of a draft return and reload stock after the server deducts it.
   const handleCompleteReturn = async (item) => {
     if (!window.confirm(`Complete ${item.returnId} and deduct ${item.quantity} unit(s) from batch ${item.batchId?.batchNumber || ""}?`)) return;
     setBusy(true);
     try {
+      // Complete Medicine Return | Submit Logic | Call inventoryApi.completeReturn for this feature.
       await inventoryApi.completeReturn(item._id);
       setToast({ type: "success", message: `${item.returnId} completed and stock deducted` });
       await loadData();
@@ -508,10 +554,11 @@ export const InventoryWorkspacePanel = () => {
     }
   };
 
-  // Confirm medicine deletion and refresh the catalog and related batch data.
+  // Delete Medicine | Frontend Logic | Confirm medicine deletion and refresh the catalog and related batch data.
   const handleDeleteMedicine = async (med) => {
     if (!window.confirm(`Permanently delete ${med.name} from the database? This cannot be undone.`)) return;
     try {
+      // Delete Medicine | Submit Logic | Call inventoryApi.deleteMedicine for this feature.
       await inventoryApi.deleteMedicine(med._id);
       setToast({ type: "success", message: `${med.name} deleted successfully` });
       await loadData();
@@ -520,10 +567,11 @@ export const InventoryWorkspacePanel = () => {
     }
   };
 
-  // Mark the selected supplier inactive and refresh the supplier list.
+  // Deactivate Supplier | Frontend Logic | Mark the selected supplier inactive and refresh the supplier list.
   const handleDeactivateSupplier = async (sup) => {
     if (!window.confirm(`Are you sure you want to deactivate supplier ${sup.name}?`)) return;
     try {
+      // Deactivate Supplier | Submit Logic | Call inventoryApi.deleteSupplier for this feature.
       await inventoryApi.deleteSupplier(sup._id);
       setToast({ type: "success", message: `${sup.name} marked as inactive` });
       await loadData();
@@ -533,7 +581,7 @@ export const InventoryWorkspacePanel = () => {
   };
 
   // Record Purchase Submit
-  // Validate purchase details and submit the stock receipt to the inventory API.
+  // Record Medicine Purchase | Submit Logic | Validate purchase details and submit the stock receipt to the inventory API.
   const handlePurchaseSubmit = async (e) => {
     e.preventDefault();
     if (!purchaseSupplierId) return setToast({ type: "error", message: "Please select a supplier" });
@@ -548,9 +596,11 @@ export const InventoryWorkspacePanel = () => {
       purchasePrice: Number(purchasePrice)
     };
 
+    // Record Medicine Purchase | Frontend Validation | Reject invalid or incomplete values before the API request.
     if (purchaseIsNewBatch) {
       if (!purchaseBatchNumber.trim()) return setToast({ type: "error", message: "Batch number is required for new batch" });
       if (!purchaseMfgDate || !purchaseExpDate) return setToast({ type: "error", message: "Dates are required for new batch" });
+      // Record Medicine Purchase | Frontend Validation | Reject invalid or incomplete values before the API request.
       if (new Date(purchaseExpDate) <= new Date(purchaseMfgDate)) {
         return setToast({ type: "error", message: "Expiry date must be after manufacture date" });
       }
@@ -564,6 +614,7 @@ export const InventoryWorkspacePanel = () => {
 
     setBusy(true);
     try {
+      // Record Medicine Purchase | Submit Logic | Call inventoryApi.createPurchase for this feature.
       await inventoryApi.createPurchase(payload);
       setToast({ type: "success", message: "Purchase recorded, stock updated, and supplier bill sent to cashier" });
       setModal({ type: null, record: null });
@@ -576,21 +627,24 @@ export const InventoryWorkspacePanel = () => {
   };
 
   // Add Item to POS Cart
-  // Validate the selected medicine, batch, and quantity before adding or merging a cart line.
+  // Record Pharmacy Sale | Frontend Logic | Validate the selected medicine, batch, and quantity before adding or merging a cart line.
   const handleAddToCart = () => {
     const med = medicines.find((m) => m._id === posMedId);
     const batch = batches.find((b) => b._id === posBatchId);
     if (!med || !batch) return setToast({ type: "error", message: "Please select both a valid medicine and batch" });
     if (batch.expiryStatus === "expired") return setToast({ type: "error", message: "Cannot dispense expired batch" });
+    // Record Pharmacy Sale | Frontend Validation | Reject invalid or incomplete values before the API request.
     if (posQty <= 0 || posQty > batch.quantity) {
       return setToast({ type: "error", message: `Quantity must be between 1 and available stock (${batch.quantity})` });
     }
 
     // Check if already in cart
     const existingIndex = posCart.findIndex((item) => item.batchId === batch._id);
+    // Record Pharmacy Sale | Frontend Validation | Reject invalid or incomplete values before the API request.
     if (existingIndex > -1) {
       const updated = [...posCart];
       const newQty = updated[existingIndex].quantity + Number(posQty);
+      // Record Pharmacy Sale | Frontend Validation | Reject invalid or incomplete values before the API request.
       if (newQty > batch.quantity) {
         return setToast({ type: "error", message: `Total cart quantity exceeds batch stock of ${batch.quantity}` });
       }
@@ -616,30 +670,34 @@ export const InventoryWorkspacePanel = () => {
     setPosQty(1);
   };
 
-  // Remove the cart line at the selected index.
+  // Record Pharmacy Sale | Frontend Logic | Remove the cart line at the selected index.
   const handleRemoveFromCart = (index) => {
     setPosCart(posCart.filter((_, i) => i !== index));
   };
 
-  // Cache pos grand total until the listed source values change.
+  // Record Pharmacy Sale | Derived Data | Cache pos grand total until the listed source values change.
   const posGrandTotal = useMemo(() => posCart.reduce((sum, item) => sum + item.lineTotal, 0), [posCart]);
 
   // Submit POS Sale
-  // Submit medicine and batch quantities for server-side pricing, stock updates, and billing.
+  // Record Pharmacy Sale | Submit Logic | Submit medicine and batch quantities for server-side pricing, stock updates, and billing.
   const handleCheckoutSale = async () => {
     if (posCart.length === 0) return setToast({ type: "error", message: "Cart is empty. Add at least one medicine item." });
+    // Record Pharmacy Sale | Frontend Validation | Reject invalid or incomplete values before the API request.
     if (posPatientType === "registered" && !posPatientId) {
       return setToast({ type: "error", message: "Please select a clinic patient record" });
     }
+    // Record Pharmacy Sale | Frontend Validation | Reject invalid or incomplete values before the API request.
     if (posPatientType === "walk_in" && !posCustomerName.trim()) {
       return setToast({ type: "error", message: "Walk-in customer name is required" });
     }
+    // Record Pharmacy Sale | Frontend Validation | Reject invalid or incomplete values before the API request.
     if (posPatientType === "walk_in" && !posCustomerPhone.trim()) {
       return setToast({ type: "error", message: "Walk-in customer phone number is required" });
     }
 
     setBusy(true);
     try {
+      // Record Pharmacy Sale | Submit Logic | Call inventoryApi.createSale for this feature.
       const sale = await inventoryApi.createSale({
         patientId: posPatientType === "registered" ? posPatientId : undefined,
         customerName: posPatientType === "walk_in" ? posCustomerName.trim() : undefined,
@@ -664,10 +722,11 @@ export const InventoryWorkspacePanel = () => {
   };
 
   // View & Download Bill
-  // Fetch the selected pharmacy sale and open its bill preview.
+  // View Pharmacy Sale Details | Frontend Logic | Fetch the selected pharmacy sale and open its bill preview.
   const handleViewBill = async (sale) => {
     setBusy(true);
     try {
+      // View Pharmacy Sale Details | Data Loading | Call inventoryApi.getSaleDetails for this feature and use the returned records
       const details = await inventoryApi.getSaleDetails(sale._id);
       setSelectedBill(details);
     } catch (error) {
@@ -677,10 +736,11 @@ export const InventoryWorkspacePanel = () => {
     }
   };
 
-  // Download the selected pharmacy sale's text bill through the API.
+  // Download Pharmacy Bill | Frontend Logic | Download the selected pharmacy sale's text bill through the API.
   const handleDownloadBillFile = async (sale) => {
     setBusy(true);
     try {
+      // Download Pharmacy Bill | Submit Logic | Call inventoryApi.downloadSaleBill for this feature.
       const billBlob = await inventoryApi.downloadSaleBill(sale._id);
       saveBlob(billBlob, `${sale.saleNumber || "pharmacy-bill"}.txt`);
     } catch (error) {
@@ -691,7 +751,7 @@ export const InventoryWorkspacePanel = () => {
   };
 
   // Filtered Rows for Catalog
-  // Cache catalog rows until the listed source values change.
+  // View Medicines | Derived Data | Cache catalog rows until the listed source values change.
   const catalogRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return medicines.filter((item) => {
@@ -703,14 +763,14 @@ export const InventoryWorkspacePanel = () => {
   }, [medicines, search, categoryFilter, stockStatusFilter]);
 
   // Filtered Suppliers
-  // Cache supplier rows until the listed source values change.
+  // View Suppliers | Derived Data | Cache supplier rows until the listed source values change.
   const supplierRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return suppliers.filter((s) => [s.name, s.phone, s.email, s.address, s.status].join(" ").toLowerCase().includes(q));
   }, [suppliers, search]);
 
   // Filtered Purchases
-  // Cache purchase rows until the listed source values change.
+  // View Medicine Purchases | Derived Data | Cache purchase rows until the listed source values change.
   const purchaseRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return purchases.filter((p) => {
@@ -721,7 +781,7 @@ export const InventoryWorkspacePanel = () => {
     });
   }, [purchases, search]);
 
-  // Cache return rows until the listed source values change.
+  // View Medicine Returns | Derived Data | Cache return rows until the listed source values change.
   const returnRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return returns.filter((item) => {
@@ -739,7 +799,7 @@ export const InventoryWorkspacePanel = () => {
   }, [returns, search, returnStatusFilter]);
 
   // Filtered Sales
-  // Cache sales rows until the listed source values change.
+  // View Pharmacy Sales | Derived Data | Cache sales rows until the listed source values change.
   const salesRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return sales.filter((s) => {
@@ -867,7 +927,7 @@ export const InventoryWorkspacePanel = () => {
               {
                 key: "totalStock",
                 header: "Available Stock",
-                // Format this table cell using the current row's data and available actions.
+                // Inventory Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
                 render: (item) => (
                   <span style={{ fontWeight: 600, color: item.totalStock === 0 ? "var(--danger)" : item.totalStock <= item.reorderLevel ? "var(--warning)" : "var(--success)" }}>
                     {item.totalStock} {item.unit}s
@@ -878,7 +938,7 @@ export const InventoryWorkspacePanel = () => {
               {
                 key: "stockStatus",
                 header: "Stock Status",
-                // Format this table cell using the current row's data and available actions.
+                // Inventory Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
                 render: (item) => {
                   if (item.totalStock === 0) return <span style={{ color: "var(--danger)", fontWeight: 600, background: "var(--danger-bg)", padding: "2px 8px", borderRadius: "12px", fontSize: "12px" }}>Out of Stock</span>;
                   if (item.totalStock <= item.reorderLevel) return <span style={{ color: "var(--warning)", fontWeight: 600, background: "var(--warning-bg)", padding: "2px 8px", borderRadius: "12px", fontSize: "12px" }}>Low Stock</span>;
@@ -891,7 +951,7 @@ export const InventoryWorkspacePanel = () => {
                     {
                       key: "actions",
                       header: "Actions",
-                      // Format this table cell using the current row's data and available actions.
+                      // Inventory Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
                       render: (item) => (
                         <div style={{ display: "flex", gap: "8px" }}>
                           <button className="table-link-button" type="button" onClick={() => openStandardModal("medicine", item)}>
@@ -936,7 +996,7 @@ export const InventoryWorkspacePanel = () => {
                     {
                       key: "actions",
                       header: "Actions",
-                      // Format this table cell using the current row's data and available actions.
+                      // Inventory Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
                       render: (item) => (
                         <div style={{ display: "flex", gap: "8px" }}>
                           <button className="table-link-button" type="button" onClick={() => openStandardModal("supplier", item)}>
@@ -1023,7 +1083,7 @@ export const InventoryWorkspacePanel = () => {
               {
                 key: "actions",
                 header: "Actions",
-                // Format this table cell using the current row's data and available actions.
+                // Inventory Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
                 render: (item) => (
                   <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                     <button className="table-link-button" type="button" onClick={() => handleViewReturn(item)}>
@@ -1094,7 +1154,7 @@ export const InventoryWorkspacePanel = () => {
                   {
                     key: "currentStock",
                     header: "Available Stock",
-                    // Format this table cell using the current row's data and available actions.
+                    // Inventory Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
                     render: (item) => (
                       <span style={{ fontWeight: 700, color: item.isOutOfStock ? "var(--danger)" : "var(--warning)" }}>
                         {item.currentStock} {item.unit}s
@@ -1105,7 +1165,7 @@ export const InventoryWorkspacePanel = () => {
                   {
                     key: "deficit",
                     header: "Deficit",
-                    // Format this table cell using the current row's data and available actions.
+                    // Inventory Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
                     render: (item) => (
                       <span style={{ color: "var(--danger)", fontWeight: 600 }}>
                         -{item.deficit} {item.unit}s
@@ -1115,7 +1175,7 @@ export const InventoryWorkspacePanel = () => {
                   {
                     key: "severity",
                     header: "Shortage Level",
-                    // Format this table cell using the current row's data and available actions.
+                    // Inventory Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
                     render: (item) => (
                       item.isOutOfStock ? (
                         <span style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "3px 10px", borderRadius: "12px", fontWeight: 700, fontSize: "12px" }}>
@@ -1131,7 +1191,7 @@ export const InventoryWorkspacePanel = () => {
                   {
                     key: "action",
                     header: isPharmacist ? "Action" : "Procurement Status",
-                    // Format this table cell using the current row's data and available actions.
+                    // Inventory Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
                     render: (item) =>
                       isPharmacist ? (
                         <button className="button-primary" type="button" onClick={() => openPurchaseModal(item)} style={{ padding: "4px 10px", fontSize: "12px" }}>
@@ -1173,7 +1233,7 @@ export const InventoryWorkspacePanel = () => {
                   {
                     key: "daysRemaining",
                     header: "Time to Expiry",
-                    // Format this table cell using the current row's data and available actions.
+                    // Inventory Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
                     render: (item) => (
                       item.daysRemaining <= 0 ? (
                         <span style={{ color: "var(--danger)", fontWeight: 700, background: "var(--danger-bg)", padding: "2px 8px", borderRadius: "12px", fontSize: "12px" }}>
@@ -1193,7 +1253,7 @@ export const InventoryWorkspacePanel = () => {
                   {
                     key: "actions",
                     header: isPharmacist ? "Action" : "Status",
-                    // Format this table cell using the current row's data and available actions.
+                    // Inventory Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
                     render: (item) =>
                       isPharmacist ? (
                         <button className="table-link-button" type="button" onClick={() => openStandardModal("batch", item)}>
@@ -1231,7 +1291,7 @@ export const InventoryWorkspacePanel = () => {
               {
                 key: "patient",
                 header: "Patient / Customer",
-                // Format this table cell using the current row's data and available actions.
+                // Inventory Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
                 render: (item) => customerLabel(item)
               },
               { key: "phone", header: "Phone", render: (item) => item.customerPhone || item.patientId?.phone || "-" },
@@ -1240,7 +1300,7 @@ export const InventoryWorkspacePanel = () => {
               {
                 key: "paymentStatus",
                 header: "Cashier Status",
-                // Format this table cell using the current row's data and available actions.
+                // Inventory Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
                 render: (item) =>
                   item.paymentStatus === "paid" ? (
                     <span style={{ color: "var(--success)", fontWeight: 700, background: "var(--success-bg)", padding: "2px 8px", borderRadius: "12px", fontSize: "12px" }}>
@@ -1255,7 +1315,7 @@ export const InventoryWorkspacePanel = () => {
               {
                 key: "actions",
                 header: "Actions",
-                // Format this table cell using the current row's data and available actions.
+                // Inventory Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
                 render: (item) => (
                   <div style={{ display: "flex", gap: "8px" }}>
                     <button className="table-link-button" type="button" onClick={() => handleViewBill(item)}>
@@ -1336,7 +1396,7 @@ export const InventoryWorkspacePanel = () => {
                   {
                     key: "sharePercentage",
                     header: "Revenue Share",
-                    // Format this table cell using the current row's data and available actions.
+                    // Inventory Workspace | Frontend Logic | Format this table cell using the current row's data and available actions.
                     render: (item) => (
                       <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: "140px" }}>
                         <div style={{ flex: 1, height: "8px", background: "var(--line-light)", borderRadius: "4px", overflow: "hidden" }}>
@@ -1362,7 +1422,11 @@ export const InventoryWorkspacePanel = () => {
         subtitle={modal.record ? "Modify pharmaceutical specifications, pricing, and stock thresholds." : "Register a new medicine item in the dispensary catalog."}
         onClose={() => setModal({ type: null, record: null })}
       >
+        {/* Add New Medicine | Dialog | Group the fields or record details for this feature. */}
+        {/* Update Medicine | Dialog | Group the fields or record details for this feature. */}
         <form onSubmit={handleSubmit(submitStandard)}>
+          {/* Add New Medicine | Form | Render fields, validation feedback, and submission controls for this feature. */}
+          {/* Update Medicine | Form | Render fields, validation feedback, and submission controls for this feature. */}
           <div className="form-section-title" style={{ marginTop: 0 }}>Medicine Specifications</div>
           <div className="form-grid">
             <FormInput label="Medicine Name" placeholder="e.g. Paracetamol 500mg" error={errors.name?.message} {...register("name")} />
@@ -1407,7 +1471,11 @@ export const InventoryWorkspacePanel = () => {
         subtitle={modal.record ? "Update batch quantity, batch identifier, or expiration date." : "Batch information."}
         onClose={() => setModal({ type: null, record: null })}
       >
+        {/* Add Medicine Batch | Dialog | Group the fields or record details for this feature. */}
+        {/* Update Medicine Batch | Dialog | Group the fields or record details for this feature. */}
         <form onSubmit={handleSubmit(submitStandard)}>
+          {/* Add Medicine Batch | Form | Render fields, validation feedback, and submission controls for this feature. */}
+          {/* Update Medicine Batch | Form | Render fields, validation feedback, and submission controls for this feature. */}
           <div className="form-section-title" style={{ marginTop: 0 }}>Batch Identification</div>
           <div className="form-grid">
             <FormSelect label="Medicine" disabled={Boolean(modal.record)} error={errors.medicineId?.message} {...register("medicineId")}>
@@ -1445,7 +1513,11 @@ export const InventoryWorkspacePanel = () => {
         subtitle={modal.record ? "Update supplier contact information and active vendor status." : "Register an authorized pharmaceutical distributor for procurement."}
         onClose={() => setModal({ type: null, record: null })}
       >
+        {/* Add Supplier | Dialog | Group the fields or record details for this feature. */}
+        {/* Update Supplier | Dialog | Group the fields or record details for this feature. */}
         <form onSubmit={handleSubmit(submitStandard)}>
+          {/* Add Supplier | Form | Render fields, validation feedback, and submission controls for this feature. */}
+          {/* Update Supplier | Form | Render fields, validation feedback, and submission controls for this feature. */}
           <div className="form-section-title" style={{ marginTop: 0 }}>Supplier Profile</div>
           <div className="form-grid">
             <FormInput label="Supplier / Company Name" placeholder="State Pharmaceuticals Corp" sanitize={stripDigits} error={errors.name?.message} {...register("name")} />
@@ -1478,7 +1550,9 @@ export const InventoryWorkspacePanel = () => {
         subtitle="Log newly received stock deliveries from verified pharmaceutical suppliers."
         onClose={() => setModal({ type: null, record: null })}
       >
+        {/* Record Medicine Purchase | Dialog | Group the fields or record details for this feature. */}
         <form onSubmit={handlePurchaseSubmit}>
+          {/* Record Medicine Purchase | Form | Render fields, validation feedback, and submission controls for this feature. */}
           <div className="form-section-title" style={{ marginTop: 0 }}>Vendor & Drug Selection</div>
           <div className="form-grid">
             <FormSelect
@@ -1647,14 +1721,18 @@ export const InventoryWorkspacePanel = () => {
         subtitle="Draft returns do not change stock. Complete the return when the medicine is physically returned or disposed."
         onClose={() => setModal({ type: null, record: null })}
       >
+        {/* Create Medicine Return Draft | Dialog | Group the fields or record details for this feature. */}
+        {/* Update Medicine Return Draft | Dialog | Group the fields or record details for this feature. */}
         <form onSubmit={handleSubmit(submitStandard)}>
+          {/* Create Medicine Return Draft | Form | Render fields, validation feedback, and submission controls for this feature. */}
+          {/* Update Medicine Return Draft | Form | Render fields, validation feedback, and submission controls for this feature. */}
           <div className="form-section-title" style={{ marginTop: 0 }}>Return Details</div>
           <div className="form-grid">
             <FormSelect
               label="Medicine"
               error={errors.medicineId?.message}
               {...register("medicineId", {
-                // Update the edited field and synchronize its dependent form values.
+                // Inventory Workspace | Frontend Logic | Update the edited field and synchronize its dependent form values.
                 onChange: (event) => {
                   const firstBatch = batches.find((batch) => (batch.medicineId?._id || batch.medicineId) === event.target.value);
                   setValue("batchId", firstBatch?._id || "", { shouldValidate: true });
@@ -1726,6 +1804,7 @@ export const InventoryWorkspacePanel = () => {
         subtitle="Return record summary and stock impact status."
         onClose={() => setModal({ type: null, record: null })}
       >
+        {/* View Medicine Return Details | Dialog | Group the fields or record details for this feature. */}
         {modal.record ? (
           <div style={{ display: "grid", gap: "12px" }}>
             {[
@@ -1760,6 +1839,7 @@ export const InventoryWorkspacePanel = () => {
         subtitle="Dispense prescribed medicines from active inventory and attach charges to cashier checkout."
         onClose={() => setModal({ type: null, record: null })}
       >
+        {/* Record Pharmacy Sale | Form | Render patient selection, medicine batch inputs, cart, and checkout controls. */}
         <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
           {/* Patient & Prescription Link Section */}
           <div className="pos-card pos-card-highlight">
@@ -2012,6 +2092,8 @@ export const InventoryWorkspacePanel = () => {
         subtitle="Official dispensary order. Payment collection is processed at the Cashier counter."
         onClose={() => setSelectedBill(null)}
       >
+        {/* View Pharmacy Sale Details | Dialog | Group the fields or record details for this feature. */}
+        {/* Download Pharmacy Bill | Dialog | Group the fields or record details for this feature. */}
         {selectedBill ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
             {/* Printable Receipt Box */}

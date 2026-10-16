@@ -1,7 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import { dispatchDashboardCommand } from "../../utils/dashboardCommands.js";
 
-// Dispatch a workspace command or follow the quick action's link.
+// Shared Dashboard Quick Actions | Frontend Logic | Dispatch a workspace command or follow the quick action's link.
 const handleQuickAction = (href, command) => (event) => {
   if (href?.startsWith("#")) {
     event.preventDefault();
@@ -11,7 +11,7 @@ const handleQuickAction = (href, command) => (event) => {
   dispatchDashboardCommand(command);
 };
 
-// Render configured dashboard shortcuts that navigate or dispatch workspace commands.
+// Shared Dashboard Quick Actions | Frontend Logic | Render configured dashboard shortcuts that navigate or dispatch workspace commands.
 export const DashboardQuickActions = ({ title = "Quick Actions", actions = [] }) => (
   <section className="quick-actions-panel" id="work">
     <div className="quick-actions-header">

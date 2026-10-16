@@ -1,7 +1,10 @@
-// Define the MongoDB structure, constraints, and relationships for leave request records.
+// Shared LeaveRequest Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
-// Define stored leave request data with staff id, leave type, start date, end date, reason and database validation.
+// Request Leave | Database Model | Define stored leave request data with staff id, leave type, start date, end date, reason and database validation.
+// Review Leave | Database Model | Define stored leave request data with staff id, leave type, start date, end date, reason and database validation.
+// View Leave Requests | Database Model | Read the stored LeaveRequest record and its linked IDs for this feature.
+// View My Leave | Database Model | Read the stored LeaveRequest record and its linked IDs for this feature.
 const leaveRequestSchema = new mongoose.Schema(
   {
     // Reference the shared Staff record by ID and require the relationship.

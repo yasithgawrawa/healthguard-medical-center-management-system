@@ -1,11 +1,12 @@
-// Validate and normalize expense request fields before business logic runs.
+// Expense Management | Backend Validation | Validate and normalize expense request fields before business logic runs.
 import { z } from "zod";
 import { idParamSchema } from "../../../shared/validators/commonSchemas.js";
 import { EXPENSE_CATEGORIES } from "../models/Expense.js";
 
 const MAX_AMOUNT_CENTS = 1000000000;
 
-// Validate expense date values.
+// Create Expense | Backend Validation | Validate expense date values.
+// Update Expense | Backend Validation | Validate expense date values.
 const expenseDateSchema = z.preprocess(
   (value) => String(value ?? "").trim(),
   z.string()
@@ -18,7 +19,8 @@ const expenseDateSchema = z.preprocess(
     .transform((value) => new Date(`${value}T00:00:00.000Z`))
 );
 
-// Validate amount values.
+// Create Expense | Backend Validation | Validate amount values.
+// Update Expense | Backend Validation | Validate amount values.
 const amountSchema = z.preprocess(
   (value) => String(value ?? "").trim(),
   z.string()
@@ -47,12 +49,12 @@ const expenseFields = {
   notes: z.string().trim().max(500, "Notes cannot exceed 500 characters").optional().default("")
 };
 
-// Validate create expense values.
+// Create Expense | Backend Validation | Validate create expense values.
 export const createExpenseSchema = z.object({
   body: z.object(expenseFields)
 });
 
-// Validate update expense values including title, category, amount, expense date, notes.
+// Update Expense | Backend Validation | Validate update expense values including title, category, amount, expense date, notes.
 export const updateExpenseSchema = z.object({
   params: idParamSchema.shape.params,
   body: z.object({
@@ -64,13 +66,13 @@ export const updateExpenseSchema = z.object({
   }).refine((data) => Object.keys(data).length > 0, "Provide at least one field to update")
 });
 
-// Allow an omitted query value or coerce a number within the supplied limits.
+// Expense Management | Backend Validation | Allow an omitted query value or coerce a number within the supplied limits.
 const optionalQueryNumber = (min, max, label) => z.preprocess(
   (value) => (value === "" || value === undefined ? undefined : Number(value)),
   z.number({ invalid_type_error: `${label} is invalid` }).int().min(min).max(max).optional()
 );
 
-// Validate expense list query values including search, category, month, year.
+// View Expenses | Backend Validation | Validate expense list query values including search, category, month, year.
 export const expenseListQuerySchema = z.object({
   query: z.object({
     search: z.string().trim().max(120, "Search is too long").optional(),

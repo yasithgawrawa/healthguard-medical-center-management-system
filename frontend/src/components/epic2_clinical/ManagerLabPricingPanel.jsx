@@ -8,10 +8,12 @@ import { Toast } from "../shared/Toast.jsx";
 import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
 
-// Format a numeric amount as Sri Lankan rupees for display.
+// Lab Pricing | Frontend Logic | Format a numeric amount as Sri Lankan rupees for display.
+// Doctor Fees | Frontend Logic | Format a numeric amount as Sri Lankan rupees for display.
 const money = (val) => `Rs. ${Number(val || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-// Manage laboratory catalog prices and the doctor's consultation fee.
+// Lab Pricing | Frontend Logic | Manage laboratory catalog prices and the doctor's consultation fee.
+// Doctor Fees | Frontend Logic | Manage laboratory catalog prices and the doctor's consultation fee.
 export const ManagerLabPricingPanel = () => {
   const [labTests, setLabTests] = useState([]);
   const [doctors, setDoctors] = useState([]);
@@ -28,11 +30,14 @@ export const ManagerLabPricingPanel = () => {
   const [newTestName, setNewTestName] = useState("");
   const [editDoctorFee, setEditDoctorFee] = useState("");
 
-  // Load list lab tests, list doctors and update the displayed state.
+  // Lab Pricing | Frontend Logic | Load list lab tests, list doctors and update the displayed state.
+  // Doctor Fees | Frontend Logic | Load list lab tests, list doctors and update the displayed state.
   const load = async () => {
     try {
       const [tests, docs] = await Promise.all([
+        // View Lab Tests | Data Loading | Load records through clinicalApi.listLabTests for this feature.
         clinicalApi.listLabTests().catch(() => []),
+        // View Doctors | Data Loading | Load records through clinicalApi.listDoctors for this feature.
         clinicalApi.listDoctors().catch(() => [])
       ]);
       setLabTests(tests || []);
@@ -47,7 +52,8 @@ export const ManagerLabPricingPanel = () => {
     load();
   }, []);
 
-  // Open the laboratory pricing form with the selected test's current values.
+  // Add Lab Test | Form Logic | Open the laboratory pricing form with the selected test's current values.
+  // Update Lab Test Price | Form Logic | Open the laboratory pricing form with the selected test's current values.
   const openLabModal = (test) => {
     setEditPrice(test ? test.price : "");
     setEditUrgentPrice(test ? test.urgentPrice || Math.round(test.price * 1.4) : "");
@@ -56,23 +62,26 @@ export const ManagerLabPricingPanel = () => {
     setModal({ type: test ? "edit-lab" : "new-lab", record: test });
   };
 
-  // Open the consultation-fee form with the selected doctor's current fee.
+  // Update Doctor Fee | Form Logic | Open the consultation-fee form with the selected doctor's current fee.
   const openDoctorModal = (doc) => {
     setEditDoctorFee(doc.consultationFee || 1500);
     setModal({ type: "edit-doctor", record: doc });
   };
 
-  // Validate and save a laboratory test price, then refresh pricing data.
+  // Add Lab Test | Submit Logic | Validate and save a laboratory test price, then refresh pricing data.
+  // Update Lab Test Price | Submit Logic | Validate and save a laboratory test price, then refresh pricing data.
   const saveLabPrice = async (e) => {
     e.preventDefault();
     setBusy(true);
     try {
       if (modal.type === "new-lab") {
+        // Add Lab Test | Frontend Validation | Reject invalid or incomplete values before the API request.
         if (!newTestName || !editPrice) {
           setToast({ type: "error", message: "Test name and price are required" });
           setBusy(false);
           return;
         }
+        // Add Lab Test | Submit Logic | Call clinicalApi.createLabTest for this feature.
         await clinicalApi.createLabTest({
           testName: newTestName,
           category: editCategory,
@@ -81,6 +90,7 @@ export const ManagerLabPricingPanel = () => {
         });
         setToast({ type: "success", message: `Added ${newTestName} to laboratory pricing catalog` });
       } else {
+        // Update Lab Test Price | Submit Logic | Call clinicalApi.updateLabTestPrice for this feature.
         await clinicalApi.updateLabTestPrice(modal.record._id, {
           price: Number(editPrice),
           urgentPrice: Number(editUrgentPrice || Math.round(Number(editPrice) * 1.4)),
@@ -97,17 +107,19 @@ export const ManagerLabPricingPanel = () => {
     }
   };
 
-  // Validate and save the selected doctor's consultation fee.
+  // Update Doctor Fee | Submit Logic | Validate and save the selected doctor's consultation fee.
   const saveDoctorFee = async (e) => {
     e.preventDefault();
     setBusy(true);
     try {
       const fee = Number(editDoctorFee);
+      // Update Doctor Fee | Frontend Validation | Reject invalid or incomplete values before the API request.
       if (isNaN(fee) || fee < 0) {
         setToast({ type: "error", message: "Please enter a valid consultation fee" });
         setBusy(false);
         return;
       }
+      // Update Doctor Fee | Submit Logic | Call clinicalApi.updateDoctorFee for this feature.
       await clinicalApi.updateDoctorFee({
         doctorId: modal.record._id,
         consultationFee: fee
@@ -122,13 +134,15 @@ export const ManagerLabPricingPanel = () => {
     }
   };
 
-  // Cache filtered lab tests until the listed source values change.
+  // Lab Pricing | Derived Data | Cache filtered lab tests until the listed source values change.
+  // Doctor Fees | Derived Data | Cache filtered lab tests until the listed source values change.
   const filteredLabTests = useMemo(() => {
     const q = search.trim().toLowerCase();
     return labTests.filter((t) => !q || t.testName.toLowerCase().includes(q) || (t.category || "").toLowerCase().includes(q));
   }, [labTests, search]);
 
-  // Cache filtered doctors until the listed source values change.
+  // Lab Pricing | Derived Data | Cache filtered doctors until the listed source values change.
+  // Doctor Fees | Derived Data | Cache filtered doctors until the listed source values change.
   const filteredDoctors = useMemo(() => {
     const q = search.trim().toLowerCase();
     return doctors.filter((d) => !q || [d.firstName, d.lastName, d.email].join(" ").toLowerCase().includes(q));
@@ -171,7 +185,8 @@ export const ManagerLabPricingPanel = () => {
             {
               key: "testName",
               header: "Investigation / Test Name",
-              // Format this table cell using the current row's data and available actions.
+              // Lab Pricing | Frontend Logic | Format this table cell using the current row's data and available actions.
+              // Doctor Fees | Frontend Logic | Format this table cell using the current row's data and available actions.
               render: (item) => (
                 <div>
                   <strong style={{ color: "#0f172a", fontSize: "0.86rem" }}>{item.testName}</strong>
@@ -182,7 +197,8 @@ export const ManagerLabPricingPanel = () => {
             {
               key: "category",
               header: "Category",
-              // Format this table cell using the current row's data and available actions.
+              // Lab Pricing | Frontend Logic | Format this table cell using the current row's data and available actions.
+              // Doctor Fees | Frontend Logic | Format this table cell using the current row's data and available actions.
               render: (item) => (
                 <span style={{ fontSize: "0.76rem", background: "#f1f5f9", padding: "2px 8px", borderRadius: "12px", color: "#334155", fontWeight: 500 }}>
                   {item.category || "Routine"}
@@ -192,7 +208,8 @@ export const ManagerLabPricingPanel = () => {
             {
               key: "price",
               header: "Standard Price",
-              // Format this table cell using the current row's data and available actions.
+              // Lab Pricing | Frontend Logic | Format this table cell using the current row's data and available actions.
+              // Doctor Fees | Frontend Logic | Format this table cell using the current row's data and available actions.
               render: (item) => (
                 <span style={{ fontWeight: 700, color: "#166534", fontSize: "0.88rem" }}>
                   {money(item.price)}
@@ -202,7 +219,8 @@ export const ManagerLabPricingPanel = () => {
             {
               key: "urgentPrice",
               header: "Urgent / Priority Price",
-              // Format this table cell using the current row's data and available actions.
+              // Lab Pricing | Frontend Logic | Format this table cell using the current row's data and available actions.
+              // Doctor Fees | Frontend Logic | Format this table cell using the current row's data and available actions.
               render: (item) => (
                 <span style={{ fontWeight: 600, color: "#ea580c", fontSize: "0.85rem" }}>
                   {money(item.urgentPrice || Math.round(item.price * 1.4))}
@@ -212,7 +230,8 @@ export const ManagerLabPricingPanel = () => {
             {
               key: "actions",
               header: "Actions",
-              // Format this table cell using the current row's data and available actions.
+              // Lab Pricing | Frontend Logic | Format this table cell using the current row's data and available actions.
+              // Doctor Fees | Frontend Logic | Format this table cell using the current row's data and available actions.
               render: (item) => (
                 <button
                   type="button"
@@ -235,7 +254,8 @@ export const ManagerLabPricingPanel = () => {
             {
               key: "doctor",
               header: "Doctor",
-              // Format this table cell using the current row's data and available actions.
+              // Lab Pricing | Frontend Logic | Format this table cell using the current row's data and available actions.
+              // Doctor Fees | Frontend Logic | Format this table cell using the current row's data and available actions.
               render: (item) => (
                 <div>
                   <strong style={{ color: "#0f172a", fontSize: "0.88rem" }}>Dr. {item.firstName} {item.lastName}</strong>
@@ -246,7 +266,8 @@ export const ManagerLabPricingPanel = () => {
             {
               key: "fee",
               header: "Current Channelling Fee",
-              // Format this table cell using the current row's data and available actions.
+              // Lab Pricing | Frontend Logic | Format this table cell using the current row's data and available actions.
+              // Doctor Fees | Frontend Logic | Format this table cell using the current row's data and available actions.
               render: (item) => (
                 <span style={{ fontWeight: 700, color: "#0284c7", fontSize: "0.9rem" }}>
                   {money(item.consultationFee || 1500)}
@@ -256,7 +277,8 @@ export const ManagerLabPricingPanel = () => {
             {
               key: "status",
               header: "Status",
-              // Format this table cell using the current row's data and available actions.
+              // Lab Pricing | Frontend Logic | Format this table cell using the current row's data and available actions.
+              // Doctor Fees | Frontend Logic | Format this table cell using the current row's data and available actions.
               render: (item) => (
                 <span style={{ fontSize: "0.75rem", color: item.status === "active" ? "#16a34a" : "#dc2626", fontWeight: 600 }}>
                   {item.status === "active" ? "Active Practicing" : "Inactive"}
@@ -266,7 +288,8 @@ export const ManagerLabPricingPanel = () => {
             {
               key: "actions",
               header: "Actions",
-              // Format this table cell using the current row's data and available actions.
+              // Lab Pricing | Frontend Logic | Format this table cell using the current row's data and available actions.
+              // Doctor Fees | Frontend Logic | Format this table cell using the current row's data and available actions.
               render: (item) => (
                 <button
                   type="button"
@@ -296,8 +319,13 @@ export const ManagerLabPricingPanel = () => {
         subtitle={modal.type === "edit-doctor" ? "This consultation charge will be billed to patient appointments." : "Configured rate will automatically apply to doctor test requests."}
         onClose={() => setModal({ type: null, record: null })}
       >
+        {/* Add Lab Test | Dialog | Group the fields or record details for this feature. */}
+        {/* Update Lab Test Price | Dialog | Group the fields or record details for this feature. */}
+        {/* Update Doctor Fee | Dialog | Group the fields or record details for this feature. */}
         {modal.type === "new-lab" || modal.type === "edit-lab" ? (
           <form onSubmit={saveLabPrice} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {/* Add Lab Test | Form | Render fields, validation feedback, and submission controls for this feature. */}
+            {/* Update Lab Test Price | Form | Render fields, validation feedback, and submission controls for this feature. */}
             {modal.type === "new-lab" ? (
               <div className="form-grid">
                 <FormInput
@@ -358,6 +386,7 @@ export const ManagerLabPricingPanel = () => {
 
         {modal.type === "edit-doctor" ? (
           <form onSubmit={saveDoctorFee} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {/* Update Doctor Fee | Form | Render fields, validation feedback, and submission controls for this feature. */}
             <div className="form-grid">
               <FormInput
                 label="Doctor Consultation / Channelling Fee (Rs.)"

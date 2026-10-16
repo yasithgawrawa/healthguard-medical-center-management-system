@@ -1,7 +1,11 @@
-// Define the MongoDB structure, constraints, and relationships for shift records.
+// Shared Shift Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
-// Define stored shift data with staff id, start time, end time, location, geo fence and database validation.
+// Create Shift | Database Model | Define stored shift data with staff id, start time, end time, location, geo fence and database validation.
+// Create Bulk Shifts | Database Model | Define stored shift data with staff id, start time, end time, location, geo fence and database validation.
+// Update Shift Status | Database Model | Define stored shift data with staff id, start time, end time, location, geo fence and database validation.
+// View Shifts | Database Model | Read the stored Shift record and its linked IDs for this feature.
+// View My Shifts | Database Model | Read the stored Shift record and its linked IDs for this feature.
 const shiftSchema = new mongoose.Schema(
   {
     // Reference the shared Staff record by ID and require the relationship.

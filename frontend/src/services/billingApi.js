@@ -1,54 +1,54 @@
-// Provide billing API calls through the shared HTTP client.
+// Billing Workspace | API Request | Provide billing API calls through the shared HTTP client.
 import { apiClient } from "./apiClient.js";
 
-// Extract the payload from the shared API success response.
+// Billing Workspace | API Request | Extract the payload from the shared API success response.
 const unwrap = ({ data }) => data.data;
-// Fetch a file as a Blob so the browser can save it.
+// Billing Workspace | API Request | Fetch a file as a Blob so the browser can save it.
 const download = async (url) => (await apiClient.get(url, { responseType: "blob" })).data;
 
 export const billingApi = {
-  // Send GET /e4/billing/summary and return the response payload.
+  // View Revenue Summary | API Request | Send GET /e4/billing/summary and return the response payload.
   summary: async () => unwrap(await apiClient.get("/e4/billing/summary")),
-  // Send GET /e4/billing/invoices and return the response payload.
+  // View Invoices | API Request | Send GET /e4/billing/invoices and return the response payload.
   invoices: async () => unwrap(await apiClient.get("/e4/billing/invoices")),
-  // Send POST /e4/billing/invoices and return the response payload.
+  // Create Invoice | API Request | Send POST /e4/billing/invoices and return the response payload.
   createInvoice: async (payload) => unwrap(await apiClient.post("/e4/billing/invoices", payload)),
-  // Send GET /e4/billing/payments and return the response payload.
+  // View Payments | API Request | Send GET /e4/billing/payments and return the response payload.
   payments: async () => unwrap(await apiClient.get("/e4/billing/payments")),
-  // Send POST /e4/billing/payments and return the response payload.
+  // Record Payment | API Request | Send POST /e4/billing/payments and return the response payload.
   recordPayment: async (payload) => unwrap(await apiClient.post("/e4/billing/payments", payload)),
-  // Send PATCH /e4/billing/payments/${id}/status and return the response payload.
+  // Update Payment Status | API Request | Send PATCH /e4/billing/payments/${id}/status and return the response payload.
   updatePaymentStatus: async (id, status) => unwrap(await apiClient.patch(`/e4/billing/payments/${id}/status`, { status })),
-  // Send GET /e4/billing/supplier-bills and return the response payload.
+  // View Supplier Bills | API Request | Send GET /e4/billing/supplier-bills and return the response payload.
   supplierBills: async () => unwrap(await apiClient.get("/e4/billing/supplier-bills")),
-  // Send PATCH /e4/billing/supplier-bills/${id}/pay and return the response payload.
+  // Pay Supplier Bill | API Request | Send PATCH /e4/billing/supplier-bills/${id}/pay and return the response payload.
   paySupplierBill: async (id, method) => unwrap(await apiClient.patch(`/e4/billing/supplier-bills/${id}/pay`, { method })),
-  // Send GET /e4/billing/expenses and return the response payload.
+  // View Expenses | API Request | Send GET /e4/billing/expenses and return the response payload.
   expenses: async (params = {}) => unwrap(await apiClient.get("/e4/billing/expenses", { params })),
-  // Send GET /e4/billing/expenses/${id} and return the response payload.
+  // View Expense Details | API Request | Send GET /e4/billing/expenses/${id} and return the response payload.
   getExpense: async (id) => unwrap(await apiClient.get(`/e4/billing/expenses/${id}`)),
-  // Send POST /e4/billing/expenses and return the response payload.
+  // Create Expense | API Request | Send POST /e4/billing/expenses and return the response payload.
   createExpense: async (payload) => unwrap(await apiClient.post("/e4/billing/expenses", payload)),
-  // Send PATCH /e4/billing/expenses/${id} and return the response payload.
+  // Update Expense | API Request | Send PATCH /e4/billing/expenses/${id} and return the response payload.
   updateExpense: async (id, payload) => unwrap(await apiClient.patch(`/e4/billing/expenses/${id}`, payload)),
-  // Send DELETE /e4/billing/expenses/${id} and return the response payload.
+  // Delete Expense | API Request | Send DELETE /e4/billing/expenses/${id} and return the response payload.
   deleteExpense: async (id) => unwrap(await apiClient.delete(`/e4/billing/expenses/${id}`)),
-  // Send GET /e4/billing/payroll and return the response payload.
+  // View Salaries | API Request | Send GET /e4/billing/payroll and return the response payload.
   payroll: async () => unwrap(await apiClient.get("/e4/billing/payroll")),
-  // Send GET /e4/billing/payroll/attendance-days and return the response payload.
+  // View Salary Attendance Days | API Request | Send GET /e4/billing/payroll/attendance-days and return the response payload.
   salaryAttendanceDays: async (params) => unwrap(await apiClient.get("/e4/billing/payroll/attendance-days", { params })),
-  // Send POST /e4/billing/payroll/preview and return the response payload.
+  // Preview Salary | API Request | Send POST /e4/billing/payroll/preview and return the response payload.
   previewPayroll: async (payload) => unwrap(await apiClient.post("/e4/billing/payroll/preview", payload)),
-  // Send POST /e4/billing/payroll and return the response payload.
+  // Create Salary Draft | API Request | Send POST /e4/billing/payroll and return the response payload.
   createPayroll: async (payload) => unwrap(await apiClient.post("/e4/billing/payroll", payload)),
-  // Send PATCH /e4/billing/payroll/${id}/status and return the response payload.
+  // Update Salary Status | API Request | Send PATCH /e4/billing/payroll/${id}/status and return the response payload.
   updatePayrollStatus: async (id, status) => unwrap(await apiClient.patch(`/e4/billing/payroll/${id}/status`, { status })),
-  // Download the selected paid invoice's receipt and save it in the browser.
+  // Download Invoice Receipt | API Request | Download the selected paid invoice's receipt and save it in the browser.
   downloadReceipt: async (id) => download(`/e4/billing/invoices/${id}/receipt`),
-  // Download the selected salary record using the shared payslip download flow.
+  // Download Payslip | API Request | Download the selected salary record using the shared payslip download flow.
   downloadPayslip: async (id) => download(`/e4/billing/payroll/${id}/payslip`),
-  // Send POST /e4/billing/invoices/consolidate and return the response payload.
+  // Consolidate Patient Invoices | API Request | Send POST /e4/billing/invoices/consolidate and return the response payload.
   consolidateInvoices: async (patientId) => unwrap(await apiClient.post("/e4/billing/invoices/consolidate", { patientId })),
-  // Send GET /e4/billing/doctor-earnings and return the response payload.
+  // View Doctor Earnings | API Request | Send GET /e4/billing/doctor-earnings and return the response payload.
   doctorEarnings: async (doctorId) => unwrap(await apiClient.get("/e4/billing/doctor-earnings", { params: doctorId ? { doctorId } : {} }))
 };

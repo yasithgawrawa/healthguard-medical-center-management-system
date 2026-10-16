@@ -1,4 +1,4 @@
-// Display the doctor dashboard and its role-specific actions.
+// Doctor Dashboard | Frontend Logic | Display the doctor dashboard and its role-specific actions.
 import { CalendarCheck, CheckCircle2, ClipboardPlus, DollarSign, Edit3, FlaskConical, Stethoscope, UserCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ClinicalWorkspacePanel } from "../../components/epic2_clinical/ClinicalWorkspacePanel.jsx";
@@ -13,10 +13,10 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import { clinicalApi } from "../../services/clinicalApi.js";
 import { billingApi } from "../../services/billingApi.js";
 
-// Format a numeric amount as Sri Lankan rupees for display.
+// Doctor Dashboard | Frontend Logic | Format a numeric amount as Sri Lankan rupees for display.
 const money = (val) => `Rs. ${Number(val || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-// Load doctor summary data and render the role's dashboard cards and workspaces.
+// Doctor Dashboard | Frontend Logic | Load doctor summary data and render the role's dashboard cards and workspaces.
 export const DoctorDashboard = () => {
   const { user } = useAuth();
   const [metrics, setMetrics] = useState({
@@ -39,12 +39,16 @@ export const DoctorDashboard = () => {
   const [busyFee, setBusyFee] = useState(false);
   const [toast, setToast] = useState(null);
 
-  // Load list appointments, list lab requests, list doctors, doctor earnings and update the displayed state.
+  // Doctor Dashboard | Frontend Logic | Load list appointments, list lab requests, list doctors, doctor earnings and update the displayed state.
   const loadData = () => {
     Promise.all([
+      // View Appointments | Data Loading | Load records through clinicalApi.listAppointments for this feature.
       clinicalApi.listAppointments().catch(() => []),
+      // View Lab Requests | Data Loading | Load records through clinicalApi.listLabRequests for this feature.
       clinicalApi.listLabRequests().catch(() => []),
+      // View Doctors | Data Loading | Load records through clinicalApi.listDoctors for this feature.
       clinicalApi.listDoctors().catch(() => []),
+      // View Doctor Earnings | Data Loading | Load records through billingApi.doctorEarnings for this feature.
       billingApi.doctorEarnings().catch(() => null)
     ]).then(([appointments, labRequests, doctors, earningsData]) => {
       const apptList = Array.isArray(appointments) ? appointments : [];
@@ -77,7 +81,7 @@ export const DoctorDashboard = () => {
   // Register browser event listeners and remove them when this effect is cleaned up.
   useEffect(() => {
     loadData();
-    // Refresh displayed records when the browser window regains focus.
+    // Doctor Dashboard | Frontend Logic | Refresh displayed records when the browser window regains focus.
     const handleFocus = () => loadData();
     window.addEventListener("focus", handleFocus);
     const interval = setInterval(loadData, 15000);
@@ -87,7 +91,7 @@ export const DoctorDashboard = () => {
     };
   }, [user]);
 
-  // Save the current doctor's edited consultation fee and refresh the dashboard.
+  // Update Doctor Fee | Submit Logic | Save the current doctor's edited consultation fee and refresh the dashboard.
   const handleSaveFee = async (e) => {
     e.preventDefault();
     setBusyFee(true);
@@ -98,6 +102,7 @@ export const DoctorDashboard = () => {
         setBusyFee(false);
         return;
       }
+      // Update Doctor Fee | Submit Logic | Call clinicalApi.updateDoctorFee for this feature.
       await clinicalApi.updateDoctorFee({ consultationFee: val });
       setMyFee(val);
       setToast({ type: "success", message: `Consultation fee updated to ${money(val)}` });
@@ -252,7 +257,9 @@ export const DoctorDashboard = () => {
         subtitle="This fee will automatically apply to patient appointments booked with you."
         onClose={() => setFeeModalOpen(false)}
       >
+        {/* Doctor Dashboard | Dialog | Group the fields or record details for this feature. */}
         <form onSubmit={handleSaveFee} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Doctor Dashboard | Form | Render fields, validation feedback, and submission controls for this feature. */}
           <div className="form-grid">
             <FormInput
               label="Consultation Fee (Rs.)"

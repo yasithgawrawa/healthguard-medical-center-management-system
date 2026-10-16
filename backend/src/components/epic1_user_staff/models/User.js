@@ -1,9 +1,15 @@
-// Define the MongoDB structure, constraints, and relationships for user records.
+// Shared User Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 import { ROLE_VALUES, ROLES } from "../../../shared/constants/roles.js";
 
-// Define stored user data with first name, last name, email, phone, address and database validation.
+// Patient Registration | Database Model | Define stored user data with first name, last name, email, phone, address and database validation.
+// Login | Database Model | Define stored user data with first name, last name, email, phone, address and database validation.
+// Add Staff | Database Model | Define stored user data with first name, last name, email, phone, address and database validation.
+// Add Walk-in Patient | Database Model | Define stored user data with first name, last name, email, phone, address and database validation.
+// Update Doctor Fee | Database Model | Define stored user data with first name, last name, email, phone, address and database validation.
+// View Profile | Database Model | Read the stored User record and its linked IDs for this feature.
+// View Doctors | Database Model | Read the stored User record and its linked IDs for this feature.
 const userSchema = new mongoose.Schema(
   {
     firstName: {

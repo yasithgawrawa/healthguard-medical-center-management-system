@@ -1,8 +1,8 @@
-// Validate and normalize auth request fields before business logic runs.
+// Shared Application Support | Backend Validation | Validate and normalize auth request fields before business logic runs.
 import { z } from "zod";
 import { nameSchema, phoneSchema } from "../../../shared/validators/fieldSchemas.js";
 
-// Validate password values.
+// Patient Registration | Backend Validation | Validate password values.
 const passwordSchema = z
   .string({ required_error: "Password is required" })
   .min(8, "Password must be at least 8 characters")
@@ -11,7 +11,7 @@ const passwordSchema = z
   .regex(/[0-9]/, "Password must include a number")
   .regex(/[^A-Za-z0-9]/, "Password must include a special character");
 
-// Validate register patient values including first name, last name, email, phone, address.
+// Patient Registration | Backend Validation | Validate register patient values including first name, last name, email, phone, address.
 export const registerPatientSchema = z.object({
   body: z
     .object({
@@ -40,7 +40,7 @@ export const registerPatientSchema = z.object({
         message: "Date of birth cannot be in the future"
       })),
       gender: z.enum(["female", "male", "other", "prefer_not_to_say"], {
-        // Provide a readable validation message for an unsupported field value.
+        // Shared Application Support | Backend Validation | Provide a readable validation message for an unsupported field value.
         errorMap: () => ({ message: "Please select a valid gender" })
       }),
       password: passwordSchema,
@@ -52,7 +52,7 @@ export const registerPatientSchema = z.object({
     })
 });
 
-// Validate login values including email, password.
+// Login | Backend Validation | Validate login values including email, password.
 export const loginSchema = z.object({
   body: z.object({
     email: z.string().trim().email().toLowerCase(),

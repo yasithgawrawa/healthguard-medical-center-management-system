@@ -1,7 +1,11 @@
-// Define the MongoDB structure, constraints, and relationships for attendance records.
+// Shared Attendance Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
-// Define stored attendance data with staff id, work date, check in at, check out at, status and database validation.
+// Attendance Check In | Database Model | Define stored attendance data with staff id, work date, check in at, check out at, status and database validation.
+// Attendance Check Out | Database Model | Define stored attendance data with staff id, work date, check in at, check out at, status and database validation.
+// View Salary Attendance Days | Database Model | Define stored attendance data with staff id, work date, check in at, check out at, status and database validation.
+// View Attendance | Database Model | Read the stored Attendance record and its linked IDs for this feature.
+// View My Attendance | Database Model | Read the stored Attendance record and its linked IDs for this feature.
 const attendanceSchema = new mongoose.Schema(
   {
     // Reference the shared Staff record by ID and require the relationship.

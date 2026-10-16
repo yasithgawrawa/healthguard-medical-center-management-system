@@ -36,7 +36,8 @@ const yearOptions = Array.from({ length: 11 }, (_, index) => {
   return { value: String(year), label: String(year) };
 });
 
-// Validate expense values including title, category, amount, expense date, notes.
+// Create Expense | Frontend Validation | Validate expense values including title, category, amount, expense date, notes.
+// Update Expense | Frontend Validation | Validate expense values including title, category, amount, expense date, notes.
 const expenseSchema = z.object({
   title: z.string().trim().min(2, "Title must be at least 2 characters").max(120, "Title cannot exceed 120 characters"),
   category: z.enum(categories.map((category) => category.value)),
@@ -49,35 +50,36 @@ const expenseSchema = z.object({
   notes: z.string().trim().max(500, "Notes cannot exceed 500 characters").optional()
 });
 
-// Build today's local date input value.
+// Expense Management | Frontend Logic | Build today's local date input value.
 const localDateInput = () => {
   const now = new Date();
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 };
 
-// Convert a stored record date into the value expected by a date input.
+// Expense Management | Frontend Logic | Convert a stored record date into the value expected by a date input.
 const dateInputValue = (value) => value ? String(value).slice(0, 10) : localDateInput();
-// Translate an expense category value into its display label.
+// Expense Management | Frontend Logic | Translate an expense category value into its display label.
 const categoryLabel = (value) => categories.find((category) => category.value === value)?.label || value;
-// Format an expense date for display using the Sri Lankan locale.
+// Expense Management | Frontend Logic | Format an expense date for display using the Sri Lankan locale.
 const dateLabel = (value) => value ? new Date(value).toLocaleDateString("en-LK") : "-";
-// Join a populated user's names with a fallback for missing user details.
+// Expense Management | Frontend Logic | Join a populated user's names with a fallback for missing user details.
 const userLabel = (value) => [value?.firstName, value?.lastName].filter(Boolean).join(" ") || "-";
 
-// Convert stored integer cents into a formatted rupee display.
+// View Expenses | Frontend Logic | Convert stored integer cents into a formatted rupee display.
 const moneyFromCents = (value) => {
   const cents = Number.isSafeInteger(Number(value)) ? Number(value) : 0;
   const whole = Math.trunc(cents / 100).toLocaleString("en-LK");
   return `Rs. ${whole}.${String(Math.abs(cents % 100)).padStart(2, "0")}`;
 };
 
-// Convert stored cents into the decimal amount expected by the expense form.
+// Update Expense | Frontend Logic | Convert stored cents into the decimal amount expected by the expense form.
 const amountInputValue = (value) => {
   const cents = Number(value || 0);
   return `${Math.trunc(cents / 100)}.${String(Math.abs(cents % 100)).padStart(2, "0")}`;
 };
 
-// Map a stored record into the values expected by its editing form.
+// Create Expense | Form Logic | Map a stored record into the values expected by its editing form.
+// Update Expense | Form Logic | Map a stored record into the values expected by its editing form.
 const formValuesFor = (expense) => ({
   title: expense?.title || "",
   category: expense?.category || "electricity",
@@ -86,7 +88,7 @@ const formValuesFor = (expense) => ({
   notes: expense?.notes || ""
 });
 
-// Manage filtered expense records, expense forms, details, and summary totals.
+// Expense Management | Frontend Logic | Manage filtered expense records, expense forms, details, and summary totals.
 export const ExpenseManagementPanel = ({ embedded = false }) => {
   const { user } = useAuth();
   const canManage = user?.role === ROLES.CASHIER;
@@ -127,6 +129,7 @@ export const ExpenseManagementPanel = ({ embedded = false }) => {
       setLoading(true);
       try {
         const params = Object.fromEntries(Object.entries({ search: search.trim(), category, month, year }).filter(([, value]) => value));
+        // View Expenses | Data Loading | Call billingApi.expenses for this feature.
         const result = await billingApi.expenses(params);
         if (thisRequest !== requestNumber.current) return;
         setExpenses(Array.isArray(result?.expenses) ? result.expenses : []);
@@ -142,18 +145,20 @@ export const ExpenseManagementPanel = ({ embedded = false }) => {
     return () => window.clearTimeout(timer);
   }, [search, category, month, year]);
 
-  // Fetch expenses with the current filters and update records and summary totals.
+  // View Expenses | Frontend Logic | Fetch expenses with the current filters and update records and summary totals.
   const refreshExpenses = async () => {
     const params = Object.fromEntries(Object.entries({ search: search.trim(), category, month, year }).filter(([, value]) => value));
+    // View Expenses | Data Loading | Call billingApi.expenses for this feature.
     const result = await billingApi.expenses(params);
     setExpenses(Array.isArray(result?.expenses) ? result.expenses : []);
     setTotalAmountCents(result?.totalAmountCents || 0);
   };
 
-  // Fetch the selected record and open its details dialog.
+  // View Expense Details | Frontend Logic | Fetch the selected record and open its details dialog.
   const openDetails = async (expense) => {
     setBusy(true);
     try {
+      // View Expense Details | Data Loading | Call billingApi.getExpense for this feature and use the returned records
       const details = await billingApi.getExpense(expense._id);
       setModal({ type: "view", expense: details });
     } catch (error) {
@@ -163,7 +168,8 @@ export const ExpenseManagementPanel = ({ embedded = false }) => {
     }
   };
 
-  // Save a validated expense and refresh the filtered expense list.
+  // Create Expense | Submit Logic | Save a validated expense and refresh the filtered expense list.
+  // Update Expense | Submit Logic | Save a validated expense and refresh the filtered expense list.
   const saveExpense = async (values) => {
     setBusy(true);
     try {
@@ -175,9 +181,11 @@ export const ExpenseManagementPanel = ({ embedded = false }) => {
         notes: values.notes?.trim() || ""
       };
       if (modal.type === "edit") {
+        // Update Expense | Submit Logic | Call billingApi.updateExpense for this feature.
         await billingApi.updateExpense(modal.expense._id, payload);
         setToast({ type: "success", message: "Expense updated successfully" });
       } else {
+        // Create Expense | Submit Logic | Call billingApi.createExpense for this feature.
         await billingApi.createExpense(payload);
         setToast({ type: "success", message: "Expense created successfully" });
       }
@@ -194,10 +202,11 @@ export const ExpenseManagementPanel = ({ embedded = false }) => {
     }
   };
 
-  // Confirm expense deletion and refresh the displayed expenses.
+  // Delete Expense | Frontend Logic | Confirm expense deletion and refresh the displayed expenses.
   const removeExpense = async () => {
     setBusy(true);
     try {
+      // Delete Expense | Submit Logic | Call billingApi.deleteExpense for this feature.
       await billingApi.deleteExpense(modal.expense._id);
       setToast({ type: "success", message: "Expense deleted successfully" });
       setModal({ type: null, expense: null });
@@ -219,7 +228,7 @@ export const ExpenseManagementPanel = ({ embedded = false }) => {
     {
       key: "actions",
       header: "Actions",
-      // Format this table cell using the current row's data and available actions.
+      // Expense Management | Frontend Logic | Format this table cell using the current row's data and available actions.
       render: (item) => (
         <div className="expense-row-actions">
           <button type="button" title="View expense" aria-label={`View ${item.title}`} onClick={() => openDetails(item)} disabled={busy}>
@@ -307,7 +316,11 @@ export const ExpenseManagementPanel = ({ embedded = false }) => {
         subtitle="Expense records remain separate from invoices, medicine purchases, and payroll."
         onClose={() => setModal({ type: null, expense: null })}
       >
+        {/* Create Expense | Dialog | Group the fields or record details for this feature. */}
+        {/* Update Expense | Dialog | Group the fields or record details for this feature. */}
         <form onSubmit={handleSubmit(saveExpense)}>
+          {/* Create Expense | Form | Render fields, validation feedback, and submission controls for this feature. */}
+          {/* Update Expense | Form | Render fields, validation feedback, and submission controls for this feature. */}
           <div className="form-grid">
             <FormInput label="Expense Title" maxLength={120} required error={errors.title?.message} {...register("title")} />
             <FormSelect label="Category" required error={errors.category?.message} {...register("category")}>
@@ -333,6 +346,7 @@ export const ExpenseManagementPanel = ({ embedded = false }) => {
         subtitle={modal.expense?.expenseId || ""}
         onClose={() => setModal({ type: null, expense: null })}
       >
+        {/* View Expense Details | Dialog | Group the fields or record details for this feature. */}
         {modal.expense ? (
           <div className="detail-grid">
             <div><span>Category</span><strong>{categoryLabel(modal.expense.category)}</strong></div>
@@ -346,6 +360,7 @@ export const ExpenseManagementPanel = ({ embedded = false }) => {
         ) : null}
       </Modal>
 
+      {/* Delete Expense | Dialog | Connect this feature to its shared dialog and action handlers. */}
       <ConfirmDialog
         open={modal.type === "delete"}
         title={`Delete ${modal.expense?.expenseId || "expense"}?`}

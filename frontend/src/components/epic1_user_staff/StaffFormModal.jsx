@@ -18,7 +18,7 @@ export const ROLE_PREFIX_MAP = {
   lab_assistant: "LAB"
 };
 
-// Suggest the next role-prefixed employee ID from the currently loaded staff list.
+// Add Staff | Frontend Logic | Suggest the next role-prefixed employee ID from the currently loaded staff list.
 export const generateNextEmployeeId = (role, staffList = []) => {
   if (!role) return "";
   const prefix = ROLE_PREFIX_MAP[role] || "EMP";
@@ -35,7 +35,8 @@ export const generateNextEmployeeId = (role, staffList = []) => {
   return `HG-${prefix}-${String(maxNum + 1).padStart(3, "0")}`;
 };
 
-// Validate base values including first name, last name, email, phone, employee id.
+// Add Staff | Frontend Validation | Validate base values including first name, last name, email, phone, employee id.
+// Update Staff | Frontend Validation | Validate base values including first name, last name, email, phone, employee id.
 const baseSchema = z.object({
   firstName: requiredName("First name"),
   lastName: requiredName("Last name"),
@@ -59,7 +60,7 @@ const baseSchema = z.object({
   password: z.string().optional()
 });
 
-// Validate create values including password.
+// Add Staff | Frontend Validation | Validate create values including password.
 const createSchema = baseSchema.extend({
   password: z
     .string({ required_error: "Temporary password is required" })
@@ -70,14 +71,15 @@ const createSchema = baseSchema.extend({
     .regex(/[^A-Za-z0-9]/, "Must include at least one special character (e.g. @, #, $, !)")
 });
 
-// Validate edit values including email, employee id, password.
+// Update Staff | Frontend Validation | Validate edit values including email, employee id, password.
 const editSchema = baseSchema.omit({ email: true, employeeId: true }).extend({
   email: z.string().optional(),
   employeeId: z.string().optional(),
   password: z.string().optional()
 });
 
-// Convert a staff record and populated user details into editable form values.
+// Add Staff | Form Logic | Convert a staff record and populated user details into editable form values.
+// Update Staff | Form Logic | Convert a staff record and populated user details into editable form values.
 const toFormValues = (staff) => ({
   firstName: staff?.userId?.firstName || "",
   lastName: staff?.userId?.lastName || "",
@@ -93,7 +95,8 @@ const toFormValues = (staff) => ({
   password: ""
 });
 
-// Validate and submit staff creation or editing with role-based employee ID defaults.
+// Add Staff | Frontend Logic | Validate and submit staff creation or editing with role-based employee ID defaults.
+// Update Staff | Frontend Logic | Validate and submit staff creation or editing with role-based employee ID defaults.
 export const StaffFormModal = ({ open, mode = "create", staff, existingStaff = [], serverErrors, onClose, onSubmit, busy }) => {
   const isEdit = mode === "edit";
   const roleOptions = isEdit && staff?.role === "doctor"
@@ -139,7 +142,8 @@ export const StaffFormModal = ({ open, mode = "create", staff, existingStaff = [
     }
   }, [selectedRole, isEdit, open, existingStaff, setValue]);
 
-  // Submit the validated staff form form and show the resulting success or error feedback.
+  // Add Staff | Submit Logic | Submit the validated staff form form and show the resulting success or error feedback.
+  // Update Staff | Submit Logic | Submit the validated staff form form and show the resulting success or error feedback.
   const submit = (values) => {
     const payload = { ...values };
     if (!payload.employeeId && !isEdit) {
@@ -163,7 +167,11 @@ export const StaffFormModal = ({ open, mode = "create", staff, existingStaff = [
       subtitle={isEdit ? "Update staff profile and role details." : "Create staff profile and temporary login access."}
       onClose={onClose}
     >
+      {/* Add Staff | Dialog | Group the fields or record details for this feature. */}
+      {/* Update Staff | Dialog | Group the fields or record details for this feature. */}
       <form onSubmit={handleSubmit(submit)}>
+        {/* Add Staff | Form | Render fields, validation feedback, and submission controls for this feature. */}
+        {/* Update Staff | Form | Render fields, validation feedback, and submission controls for this feature. */}
         <div className="form-section-title">Personal Information</div>
         <div className="form-grid">
           <FormInput label="First Name" placeholder="Amara" sanitize={stripDigits} error={errors.firstName?.message} {...register("firstName")} />
@@ -178,7 +186,8 @@ export const StaffFormModal = ({ open, mode = "create", staff, existingStaff = [
             label="Role"
             error={errors.role?.message}
             {...register("role", {
-              // Update the edited field and synchronize its dependent form values.
+              // Add Staff | Frontend Logic | Update the edited field and synchronize its dependent form values.
+              // Update Staff | Frontend Logic | Update the edited field and synchronize its dependent form values.
               onChange: (e) => {
                 if (!isEdit && e.target.value) {
                   const nextId = generateNextEmployeeId(e.target.value, existingStaff);

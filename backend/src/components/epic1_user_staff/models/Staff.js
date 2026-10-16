@@ -1,8 +1,11 @@
-// Define the MongoDB structure, constraints, and relationships for staff records.
+// Shared Staff Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 import { ROLE_VALUES } from "../../../shared/constants/roles.js";
 
-// Define stored staff data with user id, employee id, department, role, employment date and database validation.
+// Add Staff | Database Model | Define stored staff data with user id, employee id, department, role, employment date and database validation.
+// Update Staff | Database Model | Define stored staff data with user id, employee id, department, role, employment date and database validation.
+// Deactivate Staff | Database Model | Define stored staff data with user id, employee id, department, role, employment date and database validation.
+// View Staff | Database Model | Read the stored Staff record and its linked IDs for this feature.
 const staffSchema = new mongoose.Schema(
   {
     // Reference the shared User record by ID and require the relationship.
@@ -16,7 +19,9 @@ const staffSchema = new mongoose.Schema(
       type: Date,
       required: true,
       validate: {
-        // Reject employment dates later than the end of today.
+        // Add Staff | Database Model | Reject employment dates later than the end of today.
+        // Update Staff | Database Model | Reject employment dates later than the end of today.
+        // Deactivate Staff | Database Model | Reject employment dates later than the end of today.
         validator: (val) => {
           const endOfToday = new Date();
           endOfToday.setHours(23, 59, 59, 999);

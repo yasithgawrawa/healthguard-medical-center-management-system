@@ -1,4 +1,4 @@
-// Display the manager dashboard and its role-specific actions.
+// Manager Dashboard | Frontend Logic | Display the manager dashboard and its role-specific actions.
 import { AlertTriangle, ClipboardCheck, ClipboardList, DollarSign, FlaskConical, Megaphone, ReceiptText, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { PatientNotificationManagementPanel } from "../../components/epic2_clinical/PatientNotificationManagementPanel.jsx";
@@ -14,10 +14,10 @@ import { billingApi } from "../../services/billingApi.js";
 import { e1Api } from "../../services/e1Api.js";
 import { inventoryApi } from "../../services/inventoryApi.js";
 
-// Format a numeric amount as Sri Lankan rupees for display.
+// Manager Dashboard | Frontend Logic | Format a numeric amount as Sri Lankan rupees for display.
 const money = (val) => `Rs. ${Number(val || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-// Load manager summary data and render the role's dashboard cards and workspaces.
+// Manager Dashboard | Frontend Logic | Load manager summary data and render the role's dashboard cards and workspaces.
 export const ManagerDashboard = () => {
   const [metrics, setMetrics] = useState({
     onDutyStaff: 0,
@@ -29,9 +29,13 @@ export const ManagerDashboard = () => {
   // Synchronize component state or external data when the listed dependencies change.
   useEffect(() => {
     Promise.all([
+      // View Attendance | Data Loading | Load records through e1Api.listAttendance for this feature.
       e1Api.listAttendance().catch(() => []),
+      // View Leave Requests | Data Loading | Load records through e1Api.listLeave for this feature.
       e1Api.listLeave().catch(() => []),
+      // View Revenue Summary | Data Loading | Load records through billingApi.summary for this feature.
       billingApi.summary().catch(() => ({ collected: 0 })),
+      // View Inventory Alerts | Data Loading | Load records through inventoryApi.alerts for this feature.
       inventoryApi.alerts().catch(() => ({ lowStock: [], expiring: [] }))
     ]).then(([attendanceData, leaveData, summaryData, alertsData]) => {
       const today = new Date().toISOString().slice(0, 10);

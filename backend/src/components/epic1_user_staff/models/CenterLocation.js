@@ -1,7 +1,8 @@
-// Define the MongoDB structure, constraints, and relationships for center location records.
+// Shared CenterLocation Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
-// Define stored center location data with key, name, latitude, longitude, radius meters and database validation.
+// Set Clinic Location | Database Model | Define stored center location data with key, name, latitude, longitude, radius meters and database validation.
+// View Clinic Location | Database Model | Define stored center location data with key, name, latitude, longitude, radius meters and database validation.
 const centerLocationSchema = new mongoose.Schema(
   {
     // Require a unique key value through a MongoDB unique index.

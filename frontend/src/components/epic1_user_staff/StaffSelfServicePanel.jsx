@@ -16,7 +16,7 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import { printPayslipPDF } from "../../utils/invoicePrintTemplate.js";
 import { formatDate, formatTime, LEAVE_TYPES } from "./e1Constants.js";
 
-// Validate leave request values including leave type, start date, end date, reason.
+// Request Leave | Frontend Validation | Validate leave request values including leave type, start date, end date, reason.
 const leaveRequestSchema = z
   .object({
     leaveType: z.string().min(1, "Leave type is required"),
@@ -29,13 +29,13 @@ const leaveRequestSchema = z
     message: "End date must be on or after start date"
   });
 
-// Calculate elapsed hours only when both attendance timestamps are available.
+// View My Attendance | Frontend Logic | Calculate elapsed hours only when both attendance timestamps are available.
 const workedHours = (item) => {
   if (!item.checkInAt || !item.checkOutAt) return "-";
   return `${Math.max((new Date(item.checkOutAt) - new Date(item.checkInAt)) / 36e5, 0).toFixed(1)}h`;
 };
 
-// Show the signed-in staff member's shifts, attendance, salary, and leave actions.
+// Staff Self-Service | Frontend Logic | Show the signed-in staff member's shifts, attendance, salary, and leave actions.
 export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
   const { user } = useAuth();
   const location = useLocation();
@@ -68,12 +68,15 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
     defaultValues: { leaveType: "", startDate: "", endDate: "", reason: "" }
   });
 
-  // Load list my attendance, list my leave, payroll and update the displayed state.
+  // Staff Self-Service | Frontend Logic | Load list my attendance, list my leave, payroll and update the displayed state.
   const load = async () => {
     try {
       const [attendanceData, leaveData, payrollData] = await Promise.all([
+        // View My Attendance | Data Loading | Load records through e1Api.listMyAttendance for this feature.
         e1Api.listMyAttendance(),
+        // View My Leave | Data Loading | Load records through e1Api.listMyLeave for this feature.
         e1Api.listMyLeave(),
+        // View Salaries | Data Loading | Load records through billingApi.payroll for this feature.
         billingApi.payroll()
       ]);
       setAttendance(Array.isArray(attendanceData) ? attendanceData : []);
@@ -98,7 +101,7 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
     }
   }, [isAttendanceActive]);
 
-  // Close the self-service panel and clear its related navigation state.
+  // Staff Self-Service | Frontend Logic | Close the self-service panel and clear its related navigation state.
   const handleClose = () => {
     if (onClose) {
       onClose();
@@ -111,20 +114,23 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
   };
 
   const today = new Date().toISOString().slice(0, 10);
-  // Cache today attendance until the listed source values change.
+  // Staff Self-Service | Derived Data | Cache today attendance until the listed source values change.
   const todayAttendance = useMemo(
     () => attendance.find((item) => item.workDate === today) || attendance.find((item) => item.status === "checked_in"),
     [attendance, today]
   );
 
-  // Submit a self-service check-in or check-out action and reload attendance.
+  // Attendance Check In | Frontend Logic | Submit a self-service check-in or check-out action and reload attendance.
+  // Attendance Check Out | Frontend Logic | Submit a self-service check-in or check-out action and reload attendance.
   const runAttendance = async (action) => {
     setBusy(true);
     try {
       if (action === "in") {
+        // Attendance Check In | Submit Logic | Call e1Api.checkIn for this feature.
         await e1Api.checkIn({});
         setToast({ type: "success", message: "Checked in successfully" });
       } else {
+        // Attendance Check Out | Submit Logic | Call e1Api.checkOut for this feature.
         await e1Api.checkOut();
         setToast({ type: "success", message: "Checked out successfully" });
       }
@@ -136,10 +142,11 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
     }
   };
 
-  // Submit the signed-in staff member's validated leave request.
+  // Request Leave | Submit Logic | Submit the signed-in staff member's validated leave request.
   const requestLeave = async (values) => {
     setBusy(true);
     try {
+      // Request Leave | Submit Logic | Call e1Api.requestLeave for this feature.
       await e1Api.requestLeave(values);
       setToast({ type: "success", message: "Leave request submitted" });
       setLeaveOpen(false);
@@ -291,7 +298,9 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
       )}
 
       <Modal open={leaveOpen} title="Request Leave" subtitle="Submit your leave request for manager review." onClose={() => setLeaveOpen(false)}>
+        {/* Request Leave | Dialog | Group the fields or record details for this feature. */}
         <form onSubmit={handleSubmit(requestLeave)}>
+          {/* Request Leave | Form | Render fields, validation feedback, and submission controls for this feature. */}
           <div className="form-grid">
             <FormSelect label="Type" error={errors.leaveType?.message} {...register("leaveType")}>
               <option value="">Select type</option>

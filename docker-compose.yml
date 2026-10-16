@@ -1,4 +1,4 @@
-# Define the local development services managed by Docker Compose.
+# Shared Database Setup | Docker Configuration | Define the local MongoDB development service.
 services:
   mongo:
     # Run the MongoDB 7 database image.

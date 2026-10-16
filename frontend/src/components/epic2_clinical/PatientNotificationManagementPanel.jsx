@@ -12,9 +12,10 @@ import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
 import { FormTextarea } from "../shared/forms/FormTextarea.jsx";
 
-// Format a date using the Asia/Colombo calendar date.
+// Patient Notifications | Frontend Logic | Format a date using the Asia/Colombo calendar date.
 const clinicDate = date => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Colombo", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
-// Validate fields values including title, recipient, patient id, expiry date.
+// Create Patient Notification | Frontend Validation | Validate fields values including title, recipient, patient id, expiry date.
+// Update Patient Notification | Frontend Validation | Validate fields values including title, recipient, patient id, expiry date.
 const fieldsSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(120),
   message: z.string().trim().min(1, "Message is required").max(1000),
@@ -22,15 +23,16 @@ const fieldsSchema = z.object({
   patientId: z.string(),
   expiryDate: z.string().refine(value => !value || (/^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value && value >= clinicDate(new Date())), "Choose today or a future expiry date")
 });
-// Validate this form's values.
+// Create Patient Notification | Frontend Validation | Validate this form's values.
+// Update Patient Notification | Frontend Validation | Validate this form's values.
 const schema = fieldsSchema.refine(value => value.recipient !== "one" || /^[a-f0-9]{24}$/i.test(value.patientId), { path: ["patientId"], message: "Select a patient" });
 const defaults = { title: "", message: "", recipient: "all", patientId: "", expiryDate: "" };
-// Display the clinic-local timestamp or indicate that the notice has no expiry.
+// Patient Notifications | Frontend Logic | Display the clinic-local timestamp or indicate that the notice has no expiry.
 const displayDate = value => value ? new Date(value).toLocaleString("en-LK", { timeZone: "Asia/Colombo" }) : "No expiry";
-// Build a patient label using available identity and registration details.
+// Patient Notifications | Frontend Logic | Build a patient label using available identity and registration details.
 const patientLabel = patient => `${patient.firstName} ${patient.lastName} (${patient._id})`;
 
-// Create, edit, and delete manager-owned patient notices.
+// Patient Notifications | Frontend Logic | Create, edit, and delete manager-owned patient notices.
 export const PatientNotificationManagementPanel = () => {
   const [notices, setNotices] = useState([]);
   const [patients, setPatients] = useState([]);
@@ -45,7 +47,7 @@ export const PatientNotificationManagementPanel = () => {
   const { register, handleSubmit, reset, watch, setError, formState: { errors } } = useForm({ resolver: zodResolver(modal?.type === "edit" ? fieldsSchema.pick({ title: true, message: true, expiryDate: true }) : schema), defaultValues: defaults });
   const recipient = watch("recipient");
   const selectedPatientId = watch("patientId");
-  // Load list and update the displayed state.
+  // View Managed Notifications | Frontend Logic | Load list and update the displayed state.
   const load = async () => {
     setLoading(true);
     setLoadError("");
@@ -62,6 +64,7 @@ export const PatientNotificationManagementPanel = () => {
     const timer = setTimeout(async () => {
       setPatientError("");
       try {
+        // Search Patients | Data Loading | Call patientNoticeApi.patients for this feature.
         const results = await patientNoticeApi.patients(search);
         if (active) setPatients(previous => {
           const selected = previous.find(patient => patient._id === selectedPatientId);
@@ -71,15 +74,17 @@ export const PatientNotificationManagementPanel = () => {
     }, 250);
     return () => { active = false; clearTimeout(timer); };
   }, [search, modal?.type, recipient, selectedPatientId]);
-  // Close the active record dialog and clear its selected record.
+  // Shared Patient Notification Dialog | Frontend Logic | Close the active record dialog and clear its selected record.
   const close = () => { if (!busy) setModal(null); };
-  // Open the create or edit dialog with the appropriate form values.
+  // Create Patient Notification | Frontend Logic | Open the create or edit dialog with the appropriate form values.
+  // Update Patient Notification | Frontend Logic | Open the create or edit dialog with the appropriate form values.
   const open = (type, notice = null) => {
     reset(notice ? { ...defaults, ...notice, patientId: notice.patientId?._id || "", expiryDate: notice.expiryDate ? clinicDate(new Date(notice.expiryDate)) : "" } : defaults);
     setSearch("");
     setModal({ type, notice });
   };
-  // Save the validated notice form and refresh the notice list.
+  // Create Patient Notification | Submit Logic | Save the validated notice form and refresh the notice list.
+  // Update Patient Notification | Submit Logic | Save the validated notice form and refresh the notice list.
   const save = async values => {
     setBusy(true);
     try {
@@ -94,10 +99,11 @@ export const PatientNotificationManagementPanel = () => {
       setToast({ type: "error", message: error.response?.data?.message || "Unable to save notification" });
     } finally { setBusy(false); }
   };
-  // Delete the selected notice and refresh the notice list.
+  // Delete Patient Notification | Frontend Logic | Delete the selected notice and refresh the notice list.
   const remove = async () => {
     setBusy(true);
     try {
+      // Delete Patient Notification | Submit Logic | Call patientNoticeApi.remove for this feature.
       await patientNoticeApi.remove(modal.notice._id);
       setModal(null);
       setToast({ type: "success", message: "Notification deleted" });
@@ -127,7 +133,11 @@ export const PatientNotificationManagementPanel = () => {
       <DataTable columns={columns} rows={notices} emptyText={loading ? "Loading..." : loadError ? "Notifications unavailable" : "No notifications"} />
     </section>
     <Modal open={modal?.type === "create" || modal?.type === "edit"} title={modal?.type === "edit" ? "Edit Notification" : "Create Notification"} onClose={close}>
+      {/* Create Patient Notification | Dialog | Group the fields or record details for this feature. */}
+      {/* Update Patient Notification | Dialog | Group the fields or record details for this feature. */}
       <form onSubmit={handleSubmit(save)}>
+        {/* Create Patient Notification | Form | Render fields, validation feedback, and submission controls for this feature. */}
+        {/* Update Patient Notification | Form | Render fields, validation feedback, and submission controls for this feature. */}
         <FormInput label="Title" required maxLength={120} error={errors.title?.message} {...register("title")} />
         {modal?.type === "create" ? <>
           <FormSelect label="Recipient" error={errors.recipient?.message} {...register("recipient")}><option value="all">All Patients</option><option value="one">One Patient</option></FormSelect>
@@ -144,9 +154,12 @@ export const PatientNotificationManagementPanel = () => {
       </form>
     </Modal>
     <Modal open={modal?.type === "view"} title={modal?.notice?.title || "Notification"} onClose={close}>
+      {/* View Managed Notifications | Dialog | Group the fields or record details for this feature. */}
       <p>{modal?.notice?.notificationId}</p><p className="notice-message">{modal?.notice?.message}</p>
       <p>Created: {displayDate(modal?.notice?.createdAt)}</p><p>Expiry: {displayDate(modal?.notice?.expiryDate)}</p>
     </Modal>
+    {/* Create Patient Notification | Dialog | Connect this feature to its shared dialog and action handlers. */}
+    {/* Update Patient Notification | Dialog | Connect this feature to its shared dialog and action handlers. */}
     <ConfirmDialog open={modal?.type === "delete"} title="Delete notification?" message={`Delete “${modal?.notice?.title || ""}”? Patients will no longer be able to access this notice.`} confirmLabel="Delete Notification" busy={busy} onCancel={close} onConfirm={remove} />
   </>;
 };

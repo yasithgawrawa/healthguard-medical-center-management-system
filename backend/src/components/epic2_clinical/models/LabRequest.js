@@ -1,7 +1,10 @@
-// Define the MongoDB structure, constraints, and relationships for lab request records.
+// Shared LabRequest Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
-// Define stored lab request data with appointment id, patient id, doctor id, test name, priority and database validation.
+// Create Lab Request | Database Model | Define stored lab request data with appointment id, patient id, doctor id, test name, priority and database validation.
+// Update Lab Report | Database Model | Define stored lab request data with appointment id, patient id, doctor id, test name, priority and database validation.
+// Print Lab Report | Database Model | Define stored lab request data with appointment id, patient id, doctor id, test name, priority and database validation.
+// View Lab Requests | Database Model | Read the stored LabRequest record and its linked IDs for this feature.
 const labRequestSchema = new mongoose.Schema(
   {
     // Reference the shared Appointment record by ID and require the relationship.

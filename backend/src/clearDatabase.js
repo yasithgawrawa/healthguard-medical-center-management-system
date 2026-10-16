@@ -1,4 +1,4 @@
-// Delete every document from every collection in the connected database.
+// Database Cleanup | Shared Logic | Delete every document from every collection in the connected database.
 import mongoose from "mongoose";
 import { connectDatabase } from "./shared/config/database.js";
 

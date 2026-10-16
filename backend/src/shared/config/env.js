@@ -1,4 +1,4 @@
-// Load environment configuration and supply defaults for server and authentication settings.
+// Shared Environment Settings | Shared Logic | Load environment configuration and supply defaults for server and authentication settings.
 import dotenv from "dotenv";
 
 dotenv.config();

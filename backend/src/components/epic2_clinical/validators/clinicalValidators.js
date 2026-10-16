@@ -1,9 +1,9 @@
-// Validate and normalize clinical request fields before business logic runs.
+// Clinical Workspace | Backend Validation | Validate and normalize clinical request fields before business logic runs.
 import { z } from "zod";
 import { bloodPressurePattern } from "../../../shared/validators/fieldSchemas.js";
 import { idParamSchema, objectIdSchema } from "../../../shared/validators/commonSchemas.js";
 
-// Validate slot query values including doctor id, date.
+// View Appointment Slots | Backend Validation | Validate slot query values including doctor id, date.
 export const slotQuerySchema = z.object({
   query: z.object({
     doctorId: objectIdSchema,
@@ -11,7 +11,7 @@ export const slotQuerySchema = z.object({
   })
 });
 
-// Validate appointment values including patient id, doctor id, appointment date, slot label, reason.
+// Book Appointment | Backend Validation | Validate appointment values including patient id, doctor id, appointment date, slot label, reason.
 export const appointmentSchema = z.object({
   body: z.object({
     patientId: objectIdSchema.optional(),
@@ -22,13 +22,13 @@ export const appointmentSchema = z.object({
   })
 });
 
-// Validate appointment status values.
+// Update Appointment Status | Backend Validation | Validate appointment status values.
 export const appointmentStatusSchema = z.object({
   params: idParamSchema.shape.params,
   body: z.object({ status: z.enum(["checked_in", "in_consultation", "completed", "cancelled"]) })
 });
 
-// Validate appointment reschedule values including appointment date, slot label.
+// Reschedule Appointment | Backend Validation | Validate appointment reschedule values including appointment date, slot label.
 export const appointmentRescheduleSchema = z.object({
   params: idParamSchema.shape.params,
   body: z.object({
@@ -37,7 +37,7 @@ export const appointmentRescheduleSchema = z.object({
   })
 });
 
-// Validate vitals values including appointment id, patient id, temperature, blood pressure, heart rate.
+// Record Vitals | Backend Validation | Validate vitals values including appointment id, patient id, temperature, blood pressure, heart rate.
 export const vitalsSchema = z.object({
   body: z.object({
     appointmentId: objectIdSchema,
@@ -51,7 +51,7 @@ export const vitalsSchema = z.object({
   })
 });
 
-// Validate consultation values including appointment id, patient id, doctor id, diagnosis, clinical notes.
+// Save Consultation | Backend Validation | Validate consultation values including appointment id, patient id, doctor id, diagnosis, clinical notes.
 export const consultationSchema = z.object({
   body: z.object({
     appointmentId: objectIdSchema,
@@ -70,7 +70,7 @@ export const consultationSchema = z.object({
   })
 });
 
-// Validate prescription values including appointment id, patient id, doctor id, items, medicine name.
+// Create Prescription | Backend Validation | Validate prescription values including appointment id, patient id, doctor id, items, medicine name.
 export const prescriptionSchema = z.object({
   body: z.object({
     appointmentId: objectIdSchema,
@@ -86,7 +86,7 @@ export const prescriptionSchema = z.object({
   })
 });
 
-// Validate lab request values including appointment id, patient id, doctor id, test name, priority.
+// Create Lab Request | Backend Validation | Validate lab request values including appointment id, patient id, doctor id, test name, priority.
 export const labRequestSchema = z.object({
   body: z.object({
     appointmentId: objectIdSchema,
@@ -97,7 +97,7 @@ export const labRequestSchema = z.object({
   })
 });
 
-// Validate lab update values including status, result summary, result url, parameters, parameter.
+// Update Lab Report | Backend Validation | Validate lab update values including status, result summary, result url, parameters, parameter.
 export const labUpdateSchema = z.object({
   params: idParamSchema.shape.params,
   body: z.object({

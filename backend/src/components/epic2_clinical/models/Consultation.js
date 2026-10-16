@@ -1,7 +1,7 @@
-// Define the MongoDB structure, constraints, and relationships for consultation records.
+// Shared Consultation Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
-// Define stored consultation data with appointment id, patient id, doctor id, diagnosis, clinical notes and database validation.
+// Save Consultation | Database Model | Define stored consultation data with appointment id, patient id, doctor id, diagnosis, clinical notes and database validation.
 const consultationSchema = new mongoose.Schema(
   {
     // Reference the shared Appointment record by ID and require the relationship.

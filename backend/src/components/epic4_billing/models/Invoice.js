@@ -1,7 +1,11 @@
-// Define the MongoDB structure, constraints, and relationships for invoice records.
+// Shared Invoice Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
-// Define stored invoice item data with description, quantity, unit price, line total and database validation.
+// Create Invoice | Database Model | Define stored invoice item data with description, quantity, unit price, line total and database validation.
+// Record Payment | Database Model | Define stored invoice item data with description, quantity, unit price, line total and database validation.
+// Consolidate Patient Invoices | Database Model | Define stored invoice item data with description, quantity, unit price, line total and database validation.
+// Download Invoice Receipt | Database Model | Define stored invoice item data with description, quantity, unit price, line total and database validation.
+// View Invoices | Database Model | Read the stored Invoice record and its linked IDs for this feature.
 const invoiceItemSchema = new mongoose.Schema(
   {
     description: { type: String, required: true, trim: true },
@@ -12,7 +16,10 @@ const invoiceItemSchema = new mongoose.Schema(
   { _id: false }
 );
 
-// Define stored invoice data with patient id, customer name, customer phone, appointment id, invoice type and database validation.
+// Create Invoice | Database Model | Define stored invoice data with patient id, customer name, customer phone, appointment id, invoice type and database validation.
+// Record Payment | Database Model | Define stored invoice data with patient id, customer name, customer phone, appointment id, invoice type and database validation.
+// Consolidate Patient Invoices | Database Model | Define stored invoice data with patient id, customer name, customer phone, appointment id, invoice type and database validation.
+// Download Invoice Receipt | Database Model | Define stored invoice data with patient id, customer name, customer phone, appointment id, invoice type and database validation.
 const invoiceSchema = new mongoose.Schema(
   {
     // Reference the shared User record by ID.

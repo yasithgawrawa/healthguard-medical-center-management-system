@@ -1,7 +1,12 @@
-// Define the MongoDB structure, constraints, and relationships for medicine return records.
+// Shared MedicineReturn Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
-// Define stored medicine return data with return id, medicine id, batch id, supplier id, quantity and database validation.
+// Create Medicine Return Draft | Database Model | Define stored medicine return data with return id, medicine id, batch id, supplier id, quantity and database validation.
+// Update Medicine Return Draft | Database Model | Define stored medicine return data with return id, medicine id, batch id, supplier id, quantity and database validation.
+// Delete Medicine Return Draft | Database Model | Define stored medicine return data with return id, medicine id, batch id, supplier id, quantity and database validation.
+// Complete Medicine Return | Database Model | Define stored medicine return data with return id, medicine id, batch id, supplier id, quantity and database validation.
+// View Medicine Returns | Database Model | Read the stored MedicineReturn record and its linked IDs for this feature.
+// View Medicine Return Details | Database Model | Read the stored MedicineReturn record and its linked IDs for this feature.
 const medicineReturnSchema = new mongoose.Schema(
   {
     // Require a unique return id value through a MongoDB unique index.

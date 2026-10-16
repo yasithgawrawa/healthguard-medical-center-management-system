@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 
-// Render a reusable select with options, a forwarded ref, and field validation feedback.
+// Shared Form Select | Frontend Logic | Render a reusable select with options, a forwarded ref, and field validation feedback.
 export const FormSelect = forwardRef(({
   label,
   error,

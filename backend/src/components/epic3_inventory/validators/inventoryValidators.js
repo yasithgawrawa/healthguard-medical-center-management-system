@@ -1,10 +1,11 @@
-// Validate and normalize inventory request fields before business logic runs.
+// Inventory Workspace | Backend Validation | Validate and normalize inventory request fields before business logic runs.
 import { z } from "zod";
 import { batchNumberPattern, moneySchema, phoneSchema, quantitySchema, textNoNumbersSchema } from "../../../shared/validators/fieldSchemas.js";
 import { idParamSchema, objectIdSchema } from "../../../shared/validators/commonSchemas.js";
 import { MEDICINE_CATEGORIES } from "../constants/medicineCategories.js";
 
-// Validate medicine values including name, category, unit, price, reorder level.
+// Add New Medicine | Backend Validation | Validate medicine values including name, category, unit, price, reorder level.
+// Update Medicine | Backend Validation | Validate medicine values including name, category, unit, price, reorder level.
 const medicineBodySchema = z.object({
   name: z.string().trim().min(2, "Medicine name is required").max(120),
   category: z.string().min(1, "Select medicine category").refine((value) => MEDICINE_CATEGORIES.includes(value), "Select a valid medicine category"),
@@ -14,28 +15,29 @@ const medicineBodySchema = z.object({
   status: z.enum(["active", "inactive"]).optional()
 });
 
-// Allow dates up to the end of today in the server local timezone.
+// Inventory Workspace | Backend Validation | Allow dates up to the end of today in the server local timezone.
 const isPastOrToday = (date) => {
   const end = new Date();
   end.setHours(23, 59, 59, 999);
   return date <= end;
 };
 
-// Require a timestamp after the start of today in the server local timezone.
+// Inventory Workspace | Backend Validation | Require a timestamp after the start of today in the server local timezone.
 const isFutureDate = (date) => {
   const start = new Date();
   start.setHours(0, 0, 0, 0);
   return date > start;
 };
 
-// Allow dates from the start of today onward in the server local timezone.
+// Inventory Workspace | Backend Validation | Allow dates from the start of today onward in the server local timezone.
 const isTodayOrFuture = (date) => {
   const start = new Date();
   start.setHours(0, 0, 0, 0);
   return date >= start;
 };
 
-// Validate batch values including medicine id, batch number, quantity, purchase price, manufacture date.
+// Add Medicine Batch | Backend Validation | Validate batch values including medicine id, batch number, quantity, purchase price, manufacture date.
+// Update Medicine Batch | Backend Validation | Validate batch values including medicine id, batch number, quantity, purchase price, manufacture date.
 const batchBodySchema = z.object({
   medicineId: objectIdSchema,
   batchNumber: z.string().trim().min(2, "Batch number is required").max(40).regex(batchNumberPattern, "Batch number can only contain letters, numbers and hyphens"),
@@ -45,22 +47,23 @@ const batchBodySchema = z.object({
   expiryDate: z.coerce.date().refine(isFutureDate, "Expiry date must be in the future for newly received stock")
 });
 
-// Require the batch expiry date to be later than its manufacture date.
+// Inventory Workspace | Backend Validation | Require the batch expiry date to be later than its manufacture date.
 const batchDateOrder = (data) => data.expiryDate > data.manufactureDate;
 
-// Validate medicine values.
+// Add New Medicine | Backend Validation | Validate medicine values.
 export const medicineSchema = z.object({
   body: medicineBodySchema
 });
 
-// Validate update medicine values while allowing omitted fields for updates.
+// Update Medicine | Backend Validation | Validate update medicine values while allowing omitted fields for updates.
 export const updateMedicineSchema = z.object({
   params: idParamSchema.shape.params,
   // Partial updates validate supplied medicine fields while allowing other fields to remain unchanged.
   body: medicineBodySchema.partial()
 });
 
-// Validate supplier values including name, email, phone, address, status.
+// Add Supplier | Backend Validation | Validate supplier values including name, email, phone, address, status.
+// Update Supplier | Backend Validation | Validate supplier values including name, email, phone, address, status.
 const supplierBodySchema = z.object({
   name: textNoNumbersSchema("Supplier name", 120),
   email: z.string().trim().email().optional().or(z.literal("")),
@@ -69,18 +72,18 @@ const supplierBodySchema = z.object({
   status: z.enum(["active", "inactive"]).optional()
 });
 
-// Validate supplier values.
+// Add Supplier | Backend Validation | Validate supplier values.
 export const supplierSchema = z.object({
   body: supplierBodySchema
 });
 
-// Validate update supplier values while allowing omitted fields for updates.
+// Update Supplier | Backend Validation | Validate update supplier values while allowing omitted fields for updates.
 export const updateSupplierSchema = z.object({
   params: idParamSchema.shape.params,
   body: supplierBodySchema.partial()
 });
 
-// Validate batch values.
+// Add Medicine Batch | Backend Validation | Validate batch values.
 export const batchSchema = z.object({
   body: batchBodySchema.refine(batchDateOrder, {
     path: ["expiryDate"],
@@ -88,7 +91,7 @@ export const batchSchema = z.object({
   })
 });
 
-// Validate update batch values including quantity while allowing omitted fields for updates.
+// Update Medicine Batch | Backend Validation | Validate update batch values including quantity while allowing omitted fields for updates.
 export const updateBatchSchema = z.object({
   params: idParamSchema.shape.params,
   body: batchBodySchema.partial().extend({
@@ -103,7 +106,7 @@ export const updateBatchSchema = z.object({
   })
 });
 
-// Validate purchase values including supplier id, medicine id, batch id, batch number, manufacture date.
+// Record Medicine Purchase | Backend Validation | Validate purchase values including supplier id, medicine id, batch id, batch number, manufacture date.
 export const purchaseSchema = z.object({
   body: z.object({
     supplierId: objectIdSchema,
@@ -126,7 +129,8 @@ export const purchaseSchema = z.object({
   })
 });
 
-// Validate medicine return values including medicine id, batch id, quantity, return reason, return date.
+// Create Medicine Return Draft | Backend Validation | Validate medicine return values including medicine id, batch id, quantity, return reason, return date.
+// Update Medicine Return Draft | Backend Validation | Validate medicine return values including medicine id, batch id, quantity, return reason, return date.
 const medicineReturnBodySchema = z.object({
   medicineId: objectIdSchema,
   batchId: objectIdSchema,
@@ -139,18 +143,18 @@ const medicineReturnBodySchema = z.object({
   returnDate: z.coerce.date().refine(isTodayOrFuture, "Return date cannot be in the past")
 });
 
-// Validate medicine return values.
+// Create Medicine Return Draft | Backend Validation | Validate medicine return values.
 export const medicineReturnSchema = z.object({
   body: medicineReturnBodySchema
 });
 
-// Validate update medicine return values while allowing omitted fields for updates.
+// Update Medicine Return Draft | Backend Validation | Validate update medicine return values while allowing omitted fields for updates.
 export const updateMedicineReturnSchema = z.object({
   params: idParamSchema.shape.params,
   body: medicineReturnBodySchema.partial()
 });
 
-// Validate sale values including prescription id, patient id, customer name, customer phone, items.
+// Record Pharmacy Sale | Backend Validation | Validate sale values including prescription id, patient id, customer name, customer phone, items.
 export const saleSchema = z.object({
   body: z.object({
     prescriptionId: objectIdSchema.optional(),

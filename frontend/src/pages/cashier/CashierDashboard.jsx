@@ -1,4 +1,4 @@
-// Display the cashier dashboard and its role-specific actions.
+// Cashier Dashboard | Frontend Logic | Display the cashier dashboard and its role-specific actions.
 import { CheckCircle, CreditCard, DollarSign, FileCheck, Receipt, ReceiptText } from "lucide-react";
 import { useEffect, useState } from "react";
 import { StaffSelfServicePanel } from "../../components/epic1_user_staff/StaffSelfServicePanel.jsx";
@@ -9,10 +9,10 @@ import { DashboardQuickActions } from "../../components/shared/DashboardQuickAct
 import { billingApi } from "../../services/billingApi.js";
 import { clinicalApi } from "../../services/clinicalApi.js";
 
-// Format a numeric amount as Sri Lankan rupees for display.
+// Cashier Dashboard | Frontend Logic | Format a numeric amount as Sri Lankan rupees for display.
 const money = (val) => `Rs. ${Number(val || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-// Load cashier summary data and render the role's dashboard cards and workspaces.
+// Cashier Dashboard | Frontend Logic | Load cashier summary data and render the role's dashboard cards and workspaces.
 export const CashierDashboard = () => {
   const [metrics, setMetrics] = useState({
     pendingInvoicesCount: 0,
@@ -25,8 +25,11 @@ export const CashierDashboard = () => {
   // Synchronize component state or external data when the listed dependencies change.
   useEffect(() => {
     Promise.all([
+      // View Invoices | Data Loading | Load records through billingApi.invoices for this feature.
       billingApi.invoices().catch(() => []),
+      // View Payments | Data Loading | Load records through billingApi.payments for this feature.
       billingApi.payments().catch(() => []),
+      // View Appointments | Data Loading | Load records through clinicalApi.listAppointments for this feature.
       clinicalApi.listAppointments().catch(() => [])
     ]).then(([invoiceList, paymentList, apptList]) => {
       const invoices = invoiceList || [];

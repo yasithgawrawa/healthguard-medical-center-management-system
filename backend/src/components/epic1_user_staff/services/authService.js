@@ -1,4 +1,4 @@
-// Implement auth business rules and coordinate database operations.
+// Shared Authentication | Business Logic | Implement auth business rules and coordinate database operations.
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { ROLES } from "../../../shared/constants/roles.js";
@@ -6,7 +6,8 @@ import { env } from "../../../shared/config/env.js";
 import { AppError } from "../../../shared/utils/AppError.js";
 import { User } from "../models/User.js";
 
-// Sign an expiring JWT containing the user ID and role.
+// Login | Business Logic | Sign an expiring JWT containing the user ID and role.
+// Patient Registration | Business Logic | Sign an expiring JWT containing the user ID and role.
 const signToken = (user) =>
   jwt.sign(
     {
@@ -17,10 +18,10 @@ const signToken = (user) =>
     { expiresIn: env.JWT_EXPIRES_IN }
   );
 
-// Identify generated clinic-only email addresses that cannot access the portal.
+// Login | Business Logic | Identify generated clinic-only email addresses that cannot access the portal.
 const isGeneratedWalkInEmail = (email = "") => /^walkin\..+@healthguard\.local$/i.test(email);
 
-// Reject duplicate email, hash the password, create a patient, and return a safe user and JWT.
+// Patient Registration | Business Logic | Reject duplicate email, hash the password, create a patient, and return a safe user and JWT.
 export const registerPatient = async (payload) => {
   const existingUser = await User.findOne({ email: payload.email }).select("_id");
   if (existingUser) {
@@ -49,7 +50,7 @@ export const registerPatient = async (payload) => {
   };
 };
 
-// Verify the password and account access, then return a safe user and JWT.
+// Login | Business Logic | Verify the password and account access, then return a safe user and JWT.
 export const login = async ({ email, password }) => {
   // Explicitly select the normally hidden password hash only for credential verification.
   const user = await User.findOne({ email }).select("+passwordHash");

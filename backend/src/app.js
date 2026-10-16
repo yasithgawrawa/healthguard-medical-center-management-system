@@ -1,4 +1,4 @@
-// Configure Express middleware, API route prefixes, health checks, and centralized error handling.
+// API Setup | Shared Logic | Configure Express middleware, API route prefixes, health checks, and centralized error handling.
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
@@ -17,7 +17,7 @@ import { env } from "./shared/config/env.js";
 
 let announcementRoutesPromise;
 
-// Load and cache the announcement router on its first request.
+// API Setup | Shared Logic | Load and cache the announcement router on its first request.
 const loadAnnouncementRoutes = async (req, res, next) => {
   try {
     announcementRoutesPromise ||= import("./components/epic1_user_staff/routes/announcementRoutes.js")
@@ -38,7 +38,7 @@ const allowedOrigins = new Set([
   "http://127.0.0.1:5173"
 ].filter(Boolean));
 
-// Accept HTTPS origins whose hostname ends with .vercel.app.
+// API Setup | Shared Logic | Accept HTTPS origins whose hostname ends with .vercel.app.
 const isAllowedVercelPreview = (origin) => {
   try {
     const { hostname, protocol } = new URL(origin);
@@ -48,7 +48,7 @@ const isAllowedVercelPreview = (origin) => {
   }
 };
 
-// Accept local HTTP development origins on ports from 5100 to 5199.
+// API Setup | Shared Logic | Accept local HTTP development origins on ports from 5100 to 5199.
 const isAllowedLocalDevelopment = (origin) => {
   try {
     const { hostname, port, protocol } = new URL(origin);
@@ -62,7 +62,7 @@ const isAllowedLocalDevelopment = (origin) => {
 
 app.use(helmet());
 app.use(cors({
-  // Allow configured frontend origins and supported preview or development origins through CORS.
+  // API Setup | Shared Logic | Allow configured frontend origins and supported preview or development origins through CORS.
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.has(origin) || isAllowedVercelPreview(origin) || isAllowedLocalDevelopment(origin)) {
       return callback(null, true);

@@ -1,4 +1,4 @@
-// Display the nurse dashboard and its role-specific actions.
+// Nurse Dashboard | Frontend Logic | Display the nurse dashboard and its role-specific actions.
 import { Activity, CalendarPlus, Thermometer, UserCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ClinicalWorkspacePanel } from "../../components/epic2_clinical/ClinicalWorkspacePanel.jsx";
@@ -8,7 +8,7 @@ import { StaffNoticesPanel } from "../../components/epic1_user_staff/StaffNotice
 import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
 import { clinicalApi } from "../../services/clinicalApi.js";
 
-// Load nurse summary data and render the role's dashboard cards and workspaces.
+// Nurse Dashboard | Frontend Logic | Load nurse summary data and render the role's dashboard cards and workspaces.
 export const NurseDashboard = () => {
   const [metrics, setMetrics] = useState({
     awaitingArrival: 0,
@@ -20,6 +20,7 @@ export const NurseDashboard = () => {
 
   // Synchronize component state or external data when the listed dependencies change.
   useEffect(() => {
+    // View Appointments | Data Loading | Call clinicalApi.listAppointments for this feature and use the returned records
     clinicalApi.listAppointments().catch(() => []).then((appointments) => {
       const today = new Date().toLocaleDateString("en-CA");
       const todayAppointments = (appointments || []).filter((appointment) => (

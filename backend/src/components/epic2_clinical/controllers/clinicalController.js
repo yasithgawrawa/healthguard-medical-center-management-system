@@ -1,4 +1,4 @@
-// Handle clinical HTTP requests and return consistent API responses.
+// Clinical Workspace | Controller | Handle clinical HTTP requests and return consistent API responses.
 import { Appointment } from "../models/Appointment.js";
 import { Consultation } from "../models/Consultation.js";
 import { LabRequest } from "../models/LabRequest.js";
@@ -12,14 +12,15 @@ import { AppError } from "../../../shared/utils/AppError.js";
 import { User } from "../../epic1_user_staff/models/User.js";
 import { Invoice } from "../../epic4_billing/models/Invoice.js";
 
-// Check whether an appointment falls on a calendar day after today.
+// Update Appointment Status | Business Logic | Check whether an appointment falls on a calendar day after today.
+// Save Consultation | Business Logic | Check whether an appointment falls on a calendar day after today.
 const isFutureAppointmentDate = (value) => {
   const startOfTomorrow = new Date();
   startOfTomorrow.setHours(24, 0, 0, 0);
   return new Date(value) >= startOfTomorrow;
 };
 
-// Check whether an appointment falls on today's calendar date.
+// Update Appointment Status | Business Logic | Check whether an appointment falls on today's calendar date.
 const isTodayAppointmentDate = (value) => {
   const appointmentDate = new Date(value);
   const startOfToday = new Date();
@@ -29,7 +30,7 @@ const isTodayAppointmentDate = (value) => {
   return appointmentDate >= startOfToday && appointmentDate < startOfTomorrow;
 };
 
-// Validate patient and doctor eligibility and slot availability before booking and adding consultation billing.
+// Book Appointment | Controller | Validate patient and doctor eligibility and slot availability before booking and adding consultation billing.
 export const createAppointment = async (req, res) => {
   const payload = {
     ...req.body,
@@ -102,7 +103,7 @@ export const createAppointment = async (req, res) => {
   return successResponse(res, "Appointment booked successfully", appointment, 201);
 };
 
-// Build the doctor's daily time slots and mark slots already occupied by appointments.
+// View Appointment Slots | Controller | Build the doctor's daily time slots and mark slots already occupied by appointments.
 export const listAppointmentSlots = async (req, res) => {
   const { doctorId, date } = req.validatedQuery || req.query;
   const doctor = await User.findOne({ _id: doctorId, role: ROLES.DOCTOR, status: "active" });
@@ -143,7 +144,7 @@ export const listAppointmentSlots = async (req, res) => {
   return successResponse(res, "Available appointment slots loaded", slots);
 };
 
-// Scope appointments to the patient or doctor and attach matching vitals and consultation notes.
+// View Appointments | Controller | Scope appointments to the patient or doctor and attach matching vitals and consultation notes.
 export const listAppointments = async (req, res) => {
   const filter = {};
   if (req.user.role === ROLES.PATIENT) filter.patientId = req.user._id;
@@ -174,7 +175,7 @@ export const listAppointments = async (req, res) => {
   return successResponse(res, "Appointment list loaded", enriched);
 };
 
-// Return doctors and send the result using the shared API response format.
+// View Doctors | Controller | Return doctors and send the result using the shared API response format.
 export const listDoctors = async (req, res) => {
   const doctors = await User.find({ role: ROLES.DOCTOR, status: "active" })
     .select("firstName lastName email consultationFee")
@@ -183,7 +184,7 @@ export const listDoctors = async (req, res) => {
   return successResponse(res, "Doctor list loaded", doctors);
 };
 
-// Check patient ownership and workflow restrictions before cancelling an appointment.
+// Cancel Appointment | Controller | Check patient ownership and workflow restrictions before cancelling an appointment.
 export const cancelAppointment = async (req, res) => {
   const appointment = await Appointment.findById(req.params.id);
   if (!appointment) throw new AppError("Appointment not found", 404);
@@ -201,7 +202,7 @@ export const cancelAppointment = async (req, res) => {
   return successResponse(res, "Appointment cancelled", appointment);
 };
 
-// Verify appointment ownership and slot availability before saving its replacement date and time.
+// Reschedule Appointment | Controller | Verify appointment ownership and slot availability before saving its replacement date and time.
 export const rescheduleAppointment = async (req, res) => {
   const appointment = await Appointment.findById(req.params.id);
   if (!appointment) throw new AppError("Appointment not found", 404);
@@ -263,7 +264,7 @@ export const rescheduleAppointment = async (req, res) => {
   return successResponse(res, "Appointment date and time updated", appointment);
 };
 
-// Check the appointment workflow and user role before applying the requested status.
+// Update Appointment Status | Controller | Check the appointment workflow and user role before applying the requested status.
 export const updateAppointmentStatus = async (req, res) => {
   const appointment = await Appointment.findById(req.params.id);
   if (!appointment) throw new AppError("Appointment not found", 404);
@@ -284,7 +285,7 @@ export const updateAppointmentStatus = async (req, res) => {
   return successResponse(res, "Appointment status updated", appointment);
 };
 
-// Store nursing observations against the linked appointment and patient.
+// Record Vitals | Controller | Store nursing observations against the linked appointment and patient.
 export const recordVitals = async (req, res) => {
   const appointment = await Appointment.findById(req.body.appointmentId);
   if (!appointment) throw new AppError("Appointment not found", 404);
@@ -299,7 +300,7 @@ export const recordVitals = async (req, res) => {
   return successResponse(res, "Vitals recorded successfully", vitals, 201);
 };
 
-// Save the doctor's clinical notes and synchronize the appointment workflow.
+// Save Consultation | Controller | Save the doctor's clinical notes and synchronize the appointment workflow.
 export const saveConsultation = async (req, res) => {
   const appointment = await Appointment.findById(req.body.appointmentId);
   if (!appointment) throw new AppError("Appointment not found", 404);
@@ -322,7 +323,7 @@ export const saveConsultation = async (req, res) => {
   return successResponse(res, "Consultation saved successfully", consultation, 201);
 };
 
-// Save prescribed medicine instructions using shared appointment, patient, and doctor IDs.
+// Create Prescription | Controller | Save prescribed medicine instructions using shared appointment, patient, and doctor IDs.
 export const createPrescription = async (req, res) => {
   const appointment = await Appointment.findById(req.body.appointmentId);
   if (!appointment) throw new AppError("Appointment not found", 404);
@@ -334,7 +335,7 @@ export const createPrescription = async (req, res) => {
   return successResponse(res, "Prescription created successfully", prescription, 201);
 };
 
-// Scope prescriptions to the current patient or doctor before returning the newest records.
+// View Prescriptions | Controller | Scope prescriptions to the current patient or doctor before returning the newest records.
 export const listPrescriptions = async (req, res) => {
   const filter = {};
   if (req.user.role === ROLES.PATIENT) filter.patientId = req.user._id;
@@ -345,7 +346,7 @@ export const listPrescriptions = async (req, res) => {
   return successResponse(res, "Prescription list loaded", prescriptions);
 };
 
-// Create a lab request, notify the patient, and attempt to add catalog-priced charges to an invoice.
+// Create Lab Request | Controller | Create a lab request, notify the patient, and attempt to add catalog-priced charges to an invoice.
 export const createLabRequest = async (req, res) => {
   const appointment = await Appointment.findById(req.body.appointmentId);
   if (!appointment) throw new AppError("Appointment not found", 404);
@@ -409,7 +410,7 @@ export const createLabRequest = async (req, res) => {
   return successResponse(res, "Lab request created successfully", labRequest, 201);
 };
 
-// Scope lab requests by user role and populate the patient, doctor, verifier, and appointment.
+// View Lab Requests | Controller | Scope lab requests by user role and populate the patient, doctor, verifier, and appointment.
 export const listLabRequests = async (req, res) => {
   const filter = {};
   if (req.user.role === ROLES.PATIENT) filter.patientId = req.user._id;
@@ -423,7 +424,7 @@ export const listLabRequests = async (req, res) => {
   return successResponse(res, "Lab request list loaded", requests);
 };
 
-// Update the laboratory workflow and save submitted report details.
+// Update Lab Report | Controller | Update the laboratory workflow and save submitted report details.
 export const updateLabRequest = async (req, res) => {
   const request = await LabRequest.findById(req.params.id);
   if (!request) throw new AppError("Lab request not found", 404);
@@ -460,13 +461,13 @@ export const updateLabRequest = async (req, res) => {
   return successResponse(res, "Lab request updated successfully", populated);
 };
 
-// Return notifications and send the result using the shared API response format.
+// View Patient Notifications | Controller | Return notifications and send the result using the shared API response format.
 export const listNotifications = async (req, res) => {
   const notifications = await Notification.find({ patientId: req.user._id }).sort({ createdAt: -1 }).limit(25);
   return successResponse(res, "Patient notifications loaded", notifications);
 };
 
-// Record that the current patient has read an eligible notification.
+// Mark Notification Read | Controller | Record that the current patient has read an eligible notification.
 export const markNotificationRead = async (req, res) => {
   const notification = await Notification.findOne({ _id: req.params.id, patientId: req.user._id });
   if (!notification) throw new AppError("Notification not found", 404);
@@ -475,7 +476,7 @@ export const markNotificationRead = async (req, res) => {
   return successResponse(res, "Notification marked as read", notification);
 };
 
-// Load laboratory tests, optionally restricting the catalog to active entries.
+// View Lab Tests | Controller | Load laboratory tests, optionally restricting the catalog to active entries.
 export const listLabTestCatalog = async (req, res) => {
   let tests = await LabTestCatalog.find().sort({ category: 1, testName: 1 });
   if (tests.length === 0) {
@@ -495,9 +496,10 @@ export const listLabTestCatalog = async (req, res) => {
   return successResponse(res, "Lab test catalog loaded", tests);
 };
 
-// Create lab test catalog and send the result using the shared API response format.
+// Add Lab Test | Controller | Create lab test catalog and send the result using the shared API response format.
 export const createLabTestCatalog = async (req, res) => {
   const { testName, category, price, urgentPrice, description } = req.body;
+  // Add Lab Test | Backend Validation | Require a test name and price before creating the catalog entry.
   if (!testName || price === undefined) throw new AppError("Test name and price are required", 400);
   const item = await LabTestCatalog.create({
     testName: testName.trim(),
@@ -510,7 +512,7 @@ export const createLabTestCatalog = async (req, res) => {
   return successResponse(res, "Lab test added to catalog", item, 201);
 };
 
-// Update an existing laboratory test's price and active status.
+// Update Lab Test Price | Controller | Update an existing laboratory test's price and active status.
 export const updateLabTestPrice = async (req, res) => {
   const { price, urgentPrice, category, description } = req.body;
   const item = await LabTestCatalog.findById(req.params.id);
@@ -526,12 +528,13 @@ export const updateLabTestPrice = async (req, res) => {
   return successResponse(res, `Price updated for ${item.testName}`, item);
 };
 
-// Update the selected doctor's consultation fee.
+// Update Doctor Fee | Controller | Update the selected doctor's consultation fee.
 export const updateDoctorFee = async (req, res) => {
   const targetDoctorId = req.user.role === ROLES.DOCTOR ? req.user._id : req.body.doctorId;
   if (!targetDoctorId) throw new AppError("Doctor ID is required", 400);
 
   const fee = Number(req.body.consultationFee);
+  // Update Doctor Fee | Backend Validation | Require a numeric consultation fee that is zero or greater.
   if (isNaN(fee) || fee < 0) throw new AppError("A valid consultation fee is required", 400);
 
   const doctor = await User.findOneAndUpdate(

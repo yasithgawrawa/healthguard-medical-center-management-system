@@ -1,7 +1,9 @@
-// Define the MongoDB structure, constraints, and relationships for payment records.
+// Shared Payment Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
-// Define stored payment data with invoice id, amount, method, status, recorded by and database validation.
+// Record Payment | Database Model | Define stored payment data with invoice id, amount, method, status, recorded by and database validation.
+// Update Payment Status | Database Model | Define stored payment data with invoice id, amount, method, status, recorded by and database validation.
+// View Payments | Database Model | Define stored payment data with invoice id, amount, method, status, recorded by and database validation.
 const paymentSchema = new mongoose.Schema(
   {
     // Reference the shared Invoice record by ID and require the relationship.

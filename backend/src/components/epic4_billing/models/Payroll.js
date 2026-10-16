@@ -1,7 +1,12 @@
-// Define the MongoDB structure, constraints, and relationships for payroll records.
+// Shared Payroll Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
-// Define stored payroll data with staff id, month, base salary, daily pay, working days and database validation.
+// Create Salary Draft | Database Model | Define stored payroll data with staff id, month, base salary, daily pay, working days and database validation.
+// Preview Salary | Database Model | Define stored payroll data with staff id, month, base salary, daily pay, working days and database validation.
+// Update Salary Status | Database Model | Define stored payroll data with staff id, month, base salary, daily pay, working days and database validation.
+// Download Payslip | Database Model | Define stored payroll data with staff id, month, base salary, daily pay, working days and database validation.
+// View Salaries | Database Model | Read the stored Payroll record and its linked IDs for this feature.
+// View Salary Attendance Days | Database Model | Read the stored Payroll record and its linked IDs for this feature.
 const payrollSchema = new mongoose.Schema(
   {
     // Reference the shared Staff record by ID and require the relationship.

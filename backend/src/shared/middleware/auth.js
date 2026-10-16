@@ -1,10 +1,12 @@
-// Provide shared auth behavior for the application.
+// Shared Authentication | Shared Logic | Provide shared auth behavior for the application.
+// Role Authorization | Shared Logic | Provide shared auth behavior for the application.
 import jwt from "jsonwebtoken";
 import { User } from "../../components/epic1_user_staff/models/User.js";
 import { env } from "../config/env.js";
 import { AppError } from "../utils/AppError.js";
 
-// Verify the JWT, load the active user, and attach that user to the request.
+// Shared Authentication | Shared Logic | Verify the JWT, load the active user, and attach that user to the request.
+// Role Authorization | Shared Logic | Verify the JWT, load the active user, and attach that user to the request.
 export const authenticate = async (req, res, next) => {
   try {
     const header = req.headers.authorization;
@@ -34,7 +36,8 @@ export const authenticate = async (req, res, next) => {
   }
 };
 
-// Allow the request only when the authenticated user has one of the permitted roles.
+// Shared Authentication | Shared Logic | Allow the request only when the authenticated user has one of the permitted roles.
+// Role Authorization | Shared Logic | Allow the request only when the authenticated user has one of the permitted roles.
 export const authorizeRoles = (...allowedRoles) => (req, res, next) => {
   if (!req.user) {
     return next(new AppError("Not authenticated", 401));

@@ -15,10 +15,10 @@ const REASON_MIN = 5;
 const REASON_MAX = 300;
 const ALERT_DISMISS_MS = 6000;
 
-// Format a numeric amount as Sri Lankan rupees for display.
+// Book Appointment | Frontend Logic | Format a numeric amount as Sri Lankan rupees for display.
 const money = (value) => `Rs. ${Number(value || 0).toLocaleString("en-LK", { minimumFractionDigits: 2 })}`;
 
-// Load doctors and available slots and confirm a patient appointment booking.
+// Book Appointment | Frontend Logic | Load doctors and available slots and confirm a patient appointment booking.
 export const PatientAppointmentBooking = ({ onBooked }) => {
   const [doctors, setDoctors] = useState([]);
   const [form, setForm] = useState(initialForm);
@@ -54,7 +54,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
   }, [error]);
 
   // Cache selected doctor until the listed source values change.
-  // Derive the selected doctor from the loaded list for fee and identity displays.
+  // Book Appointment | Derived Data | Derive the selected doctor from the loaded list for fee and identity displays.
   const selectedDoctor = useMemo(
     () => doctors.find((doctor) => doctor._id === form.doctorId),
     [doctors, form.doctorId]
@@ -62,6 +62,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
 
   // Synchronize component state or external data when the listed dependencies change.
   useEffect(() => {
+    // View Doctors | Data Loading | Call patientApi.getDoctors for this feature and use the returned records
     patientApi
       .getDoctors()
       .then((data) => {
@@ -81,6 +82,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
       return;
     }
     setLoadingSlots(true);
+    // View Appointment Slots | Data Loading | Call patientApi.getAppointmentSlots for this feature and use the returned records
     patientApi
       .getAppointmentSlots({ doctorId: form.doctorId, date: form.appointmentDay })
       .then(setSlots)
@@ -88,13 +90,13 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
       .finally(() => setLoadingSlots(false));
   }, [form.doctorId, form.appointmentDay]);
 
-  // Update one form field and clear its previous validation error.
+  // Book Appointment | Form Logic | Update one form field and clear its previous validation error.
   const setField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
     setFieldErrors((current) => ({ ...current, [field]: "" }));
   };
 
-  // Store the chosen available appointment slot and clear its field error.
+  // Book Appointment | Form Logic | Store the chosen available appointment slot and clear its field error.
   const selectSlot = (slot) => {
     if (!slot.available) return;
     setForm((current) => ({
@@ -105,7 +107,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
     setFieldErrors((current) => ({ ...current, appointmentDate: "" }));
   };
 
-  // Check required booking fields and display field-specific errors before submission.
+  // Book Appointment | Frontend Validation | Check required booking fields and display field-specific errors before submission.
   const validate = () => {
     const nextErrors = {};
     if (!form.doctorId) nextErrors.doctorId = "Select a doctor";
@@ -117,7 +119,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
     return Object.keys(nextErrors).length === 0;
   };
 
-  // Validate booking details before opening the booking confirmation dialog.
+  // Book Appointment | Form Logic | Validate booking details before opening the booking confirmation dialog.
   const handleSubmitClick = (event) => {
     event.preventDefault();
     setMessage("");
@@ -126,12 +128,13 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
     setConfirmOpen(true);
   };
 
-  // Submit the confirmed appointment, reset the form, and notify the parent component.
+  // Book Appointment | Submit Logic | Submit the confirmed appointment, reset the form, and notify the parent component.
   const confirmBooking = async () => {
     setConfirmOpen(false);
     setSubmitting(true);
 
     try {
+      // Book Appointment | Submit Logic | Call patientApi.bookAppointment for this feature.
       await patientApi.bookAppointment({
         doctorId: form.doctorId,
         appointmentDate: form.appointmentDate,
@@ -149,7 +152,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
     }
   };
 
-  // Build a doctor name with a single Dr. prefix.
+  // Book Appointment | Frontend Logic | Build a doctor name with a single Dr. prefix.
   const doctorDisplayName = (doctor) => {
     const fullName = `${doctor.firstName} ${doctor.lastName}`.trim();
     return fullName.startsWith("Dr.") ? fullName : `Dr. ${fullName}`;
@@ -159,7 +162,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
   const reasonOverLimit = reasonLength > REASON_MAX;
 
   // Format the slot hour for display e.g. "09:00" → "9:00 AM", "14:00" → "2:00 PM"
-  // Convert a slot label's 24-hour time into a readable AM or PM display.
+  // Book Appointment | Frontend Logic | Convert a slot label's 24-hour time into a readable AM or PM display.
   const formatSlotTime = (label) => {
     // label is like "Morning 09:00" or "Afternoon 14:00" — extract the hour part
     const parts = label.split(" ");
@@ -195,6 +198,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
       ) : null}
 
       <form className="operation-actions-grid" onSubmit={handleSubmitClick}>
+        {/* Book Appointment | Form | Render fields, validation feedback, and submission controls for this feature. */}
         <div className="operation-form-card">
           <h3>Appointment Details</h3>
           <label className={`form-field${fieldErrors.doctorId ? " has-error" : ""}`}>
@@ -425,6 +429,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
       </form>
 
       {/* Booking confirmation dialog */}
+      {/* Book Appointment | Dialog | Connect this feature to its shared dialog and action handlers. */}
       <ConfirmDialog
         open={confirmOpen}
         title="Confirm Appointment Booking"

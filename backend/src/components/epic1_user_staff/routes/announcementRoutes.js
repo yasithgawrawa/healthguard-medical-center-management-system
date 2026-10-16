@@ -1,4 +1,4 @@
-// Register announcement endpoints with authentication, role checks, validation, and controllers.
+// Staff Announcements | Route | Register announcement endpoints with authentication, role checks, validation, and controllers.
 import { Router } from "express";
 import { ROLES } from "../../../shared/constants/roles.js";
 import { asyncHandler } from "../../../shared/middleware/asyncHandler.js";
@@ -29,20 +29,20 @@ const router = Router();
 // Authenticate requests before they reach the following routes.
 router.use(authenticate);
 
-// GET /current: run list current announcements after role authorization.
+// View Current Staff Announcements | Route | GET /current: run list current announcements after role authorization.
 router.get("/current", authorizeRoles(...staffRoles), asyncHandler(listCurrentAnnouncements));
 
 // Apply the shared middleware to the routes registered below.
 router.use(authorizeRoles(ROLES.MANAGER));
-// GET /: run list announcements.
+// View Staff Announcements | Route | GET /: run list announcements.
 router.get("/", asyncHandler(listAnnouncements));
-// POST /: run create announcement after role and request validation.
+// Create Staff Announcement | Route | POST /: run create announcement after role and request validation.
 router.post("/", validateRequest(createAnnouncementSchema), asyncHandler(createAnnouncement));
-// GET /:id: run get announcement details after role and request validation.
+// View Announcement Details | Route | GET /:id: run get announcement details after role and request validation.
 router.get("/:id", validateRequest(idParamSchema), asyncHandler(getAnnouncementDetails));
-// PATCH /:id: run update announcement after role and request validation.
+// Update Staff Announcement | Route | PATCH /:id: run update announcement after role and request validation.
 router.patch("/:id", validateRequest(updateAnnouncementSchema), asyncHandler(updateAnnouncement));
-// DELETE /:id: run delete announcement after role and request validation.
+// Delete Staff Announcement | Route | DELETE /:id: run delete announcement after role and request validation.
 router.delete("/:id", validateRequest(idParamSchema), asyncHandler(deleteAnnouncement));
 
 export default router;

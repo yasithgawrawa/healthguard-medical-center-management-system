@@ -14,14 +14,14 @@ import { formatDate, formatTime, roleLabel, staffName } from "./e1Constants.js";
 
 const PAGE_SIZE = 7;
 
-// Calculate elapsed hours only when both attendance timestamps are available.
+// View Attendance | Frontend Logic | Calculate elapsed hours only when both attendance timestamps are available.
 const workedHours = (item) => {
   if (!item.checkInAt || !item.checkOutAt) return "-";
   const hours = (new Date(item.checkOutAt) - new Date(item.checkInAt)) / 36e5;
   return `${Math.max(hours, 0).toFixed(1)}h`;
 };
 
-// Manage shifts, attendance, and leave reviews for clinic staff.
+// Workforce Management | Frontend Logic | Manage shifts, attendance, and leave reviews for clinic staff.
 export const WorkforceManagementPanel = () => {
   const [activeTab, setActiveTab] = useState("attendance");
   const [staff, setStaff] = useState([]);
@@ -35,12 +35,15 @@ export const WorkforceManagementPanel = () => {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
 
-  // Load list workforce staff, list attendance, list leave and update the displayed state.
+  // Workforce Management | Frontend Logic | Load list workforce staff, list attendance, list leave and update the displayed state.
   const load = async () => {
     try {
       const [staffData, attendanceData, leaveData] = await Promise.all([
+        // View Staff | Data Loading | Load records through e1Api.listWorkforceStaff for this feature.
         e1Api.listWorkforceStaff(),
+        // View Attendance | Data Loading | Load records through e1Api.listAttendance for this feature.
         e1Api.listAttendance(),
+        // View Leave Requests | Data Loading | Load records through e1Api.listLeave for this feature.
         e1Api.listLeave()
       ]);
       setStaff(Array.isArray(staffData) ? staffData : []);
@@ -58,7 +61,7 @@ export const WorkforceManagementPanel = () => {
 
   // Register browser event listeners and remove them when this effect is cleaned up.
   useEffect(() => {
-    // Apply dashboard quick-action events to this workspace's tabs, filters, or forms.
+    // Workforce Management | Frontend Logic | Apply dashboard quick-action events to this workspace's tabs, filters, or forms.
     const handleDashboardCommand = (event) => {
       const command = event.detail || {};
       if (command.workspace !== "workforce") return;
@@ -87,7 +90,7 @@ export const WorkforceManagementPanel = () => {
       .map((item) => item.staffId?._id || item.staffId)
   );
 
-  // Cache filtered rows until the listed source values change.
+  // Workforce Management | Derived Data | Cache filtered rows until the listed source values change.
   const filteredRows = useMemo(() => {
     const source = activeTab === "attendance" ? attendance : leave;
     const query = search.trim().toLowerCase();
@@ -102,10 +105,11 @@ export const WorkforceManagementPanel = () => {
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
   const rows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // Record check-out for the selected attendance entry and refresh workforce data.
+  // Attendance Check Out | Submit Logic | Record check-out for the selected attendance entry and refresh workforce data.
   const checkoutAttendance = async (item) => {
     setBusy(true);
     try {
+      // Attendance Check Out | Submit Logic | Call e1Api.checkOutAttendance for this feature.
       await e1Api.checkOutAttendance(item._id);
       setToast({ type: "success", message: "Attendance checked out" });
       await load();
@@ -116,10 +120,11 @@ export const WorkforceManagementPanel = () => {
     }
   };
 
-  // Save the manager's leave decision and refresh the pending requests.
+  // Review Leave | Submit Logic | Save the manager's leave decision and refresh the pending requests.
   const submitLeaveReview = async (status) => {
     setBusy(true);
     try {
+      // Review Leave | Submit Logic | Call e1Api.reviewLeave for this feature.
       await e1Api.reviewLeave(reviewLeave._id, { status, reviewNote: "" });
       setReviewLeave(null);
       setToast({ type: "success", message: `Leave request ${status}` });
@@ -141,7 +146,7 @@ export const WorkforceManagementPanel = () => {
     {
       key: "actions",
       header: "Actions",
-      // Format this table cell using the current row's data and available actions.
+      // Workforce Management | Frontend Logic | Format this table cell using the current row's data and available actions.
       render: (item) => item.status === "checked_in" ? (
         <button className="table-link-button" type="button" onClick={() => checkoutAttendance(item)} disabled={busy}>
           Check Out
@@ -158,7 +163,7 @@ export const WorkforceManagementPanel = () => {
     {
       key: "actions",
       header: "Actions",
-      // Format this table cell using the current row's data and available actions.
+      // Workforce Management | Frontend Logic | Format this table cell using the current row's data and available actions.
       render: (item) => (
         <button className="table-link-button" type="button" onClick={() => setReviewLeave(item)}>
           Review
@@ -228,6 +233,7 @@ export const WorkforceManagementPanel = () => {
         subtitle={reviewLeave ? `${staffName(reviewLeave.staffId)} - ${String(reviewLeave.leaveType).replace(/_/g, " ")}` : ""}
         onClose={() => setReviewLeave(null)}
       >
+        {/* Review Leave | Dialog | Group the fields or record details for this feature. */}
         {reviewLeave ? (
           <>
             <div className="detail-grid">

@@ -1,4 +1,4 @@
-// Define the MongoDB structure, constraints, and relationships for expense records.
+// Shared Expense Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
 export const EXPENSE_CATEGORIES = Object.freeze([
@@ -9,7 +9,11 @@ export const EXPENSE_CATEGORIES = Object.freeze([
   "other"
 ]);
 
-// Define stored expense data with expense id, title, category, amount cents and database validation.
+// Create Expense | Database Model | Define stored expense data with expense id, title, category, amount cents and database validation.
+// Update Expense | Database Model | Define stored expense data with expense id, title, category, amount cents and database validation.
+// Delete Expense | Database Model | Define stored expense data with expense id, title, category, amount cents and database validation.
+// View Expenses | Database Model | Define stored expense data with expense id, title, category, amount cents and database validation.
+// View Expense Details | Database Model | Read the stored Expense record and its linked IDs for this feature.
 const expenseSchema = new mongoose.Schema(
   {
     // Require a unique expense id value through a MongoDB unique index.

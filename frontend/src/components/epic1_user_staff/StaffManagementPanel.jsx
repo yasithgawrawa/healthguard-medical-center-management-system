@@ -14,10 +14,10 @@ import { formatDate, roleLabel, STAFF_ROLES, staffName } from "./e1Constants.js"
 import { StaffFormModal } from "./StaffFormModal.jsx";
 
 const PAGE_SIZE = 8;
-// Format a numeric amount as Sri Lankan rupees for display.
+// Staff Management | Frontend Logic | Format a numeric amount as Sri Lankan rupees for display.
 const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
 
-// List staff and coordinate staff creation, editing, and deactivation forms.
+// Staff Management | Frontend Logic | List staff and coordinate staff creation, editing, and deactivation forms.
 export const StaffManagementPanel = () => {
   const [staff, setStaff] = useState([]);
   const [search, setSearch] = useState("");
@@ -30,9 +30,10 @@ export const StaffManagementPanel = () => {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
 
-  // Fetch staff profiles and update the staff management list.
+  // View Staff | Frontend Logic | Fetch staff profiles and update the staff management list.
   const loadStaff = async () => {
     try {
+      // View Staff | Data Loading | Call e1Api.listStaff for this feature and use the returned records
       const data = await e1Api.listStaff();
       setStaff(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -50,13 +51,13 @@ export const StaffManagementPanel = () => {
     setPage(1);
   }, [search, role, department, status]);
 
-  // Cache departments until the listed source values change.
+  // Staff Management | Derived Data | Cache departments until the listed source values change.
   const departments = useMemo(
     () => [...new Set(staff.map((item) => item.department).filter(Boolean))].sort(),
     [staff]
   );
 
-  // Cache filtered staff until the listed source values change.
+  // Staff Management | Derived Data | Cache filtered staff until the listed source values change.
   const filteredStaff = useMemo(() => {
     const query = search.trim().toLowerCase();
     return staff.filter((item) => {
@@ -77,15 +78,18 @@ export const StaffManagementPanel = () => {
 
   const [serverErrors, setServerErrors] = useState(null);
 
-  // Create or update the selected staff profile and refresh the staff list.
+  // Add Staff | Submit Logic | Create or update the selected staff profile and refresh the staff list.
+  // Update Staff | Submit Logic | Create or update the selected staff profile and refresh the staff list.
   const submitStaff = async (payload) => {
     setBusy(true);
     setServerErrors(null);
     try {
       if (modal.type === "edit") {
+        // Update Staff | Submit Logic | Call e1Api.updateStaff for this feature.
         await e1Api.updateStaff(modal.staff._id, payload);
         setToast({ type: "success", message: "Staff updated successfully" });
       } else {
+        // Add Staff | Submit Logic | Call e1Api.createStaff for this feature.
         await e1Api.createStaff(payload);
         setToast({ type: "success", message: "Staff created successfully" });
       }
@@ -109,10 +113,11 @@ export const StaffManagementPanel = () => {
     }
   };
 
-  // Mark the selected staff profile inactive through the staff API.
+  // Deactivate Staff | Frontend Logic | Mark the selected staff profile inactive through the staff API.
   const deactivateStaff = async () => {
     setBusy(true);
     try {
+      // Deactivate Staff | Submit Logic | Call e1Api.deactivateStaff for this feature.
       await e1Api.deactivateStaff(modal.staff._id);
       setToast({ type: "success", message: `${staffName(modal.staff)} deactivated` });
       setModal({ type: null, staff: null });
@@ -134,7 +139,7 @@ export const StaffManagementPanel = () => {
     {
       key: "actions",
       header: "Actions",
-      // Format this table cell using the current row's data and available actions.
+      // Staff Management | Frontend Logic | Format this table cell using the current row's data and available actions.
       render: (item) => (
         <div className="row-actions">
           <button type="button" onClick={() => setMenuId(menuId === item._id ? null : item._id)} aria-label={`Actions for ${staffName(item)}`}>
@@ -186,6 +191,8 @@ export const StaffManagementPanel = () => {
         <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </section>
 
+      {/* Add Staff | Dialog | Connect this feature to its shared dialog and action handlers. */}
+      {/* Update Staff | Dialog | Connect this feature to its shared dialog and action handlers. */}
       <StaffFormModal
         open={modal.type === "create" || modal.type === "edit"}
         mode={modal.type === "edit" ? "edit" : "create"}
@@ -200,6 +207,7 @@ export const StaffManagementPanel = () => {
         onSubmit={submitStaff}
       />
 
+      {/* Deactivate Staff | Dialog | Connect this feature to its shared dialog and action handlers. */}
       <ConfirmDialog
         open={modal.type === "deactivate"}
         title={`Deactivate ${modal.staff ? staffName(modal.staff) : "staff member"}?`}
@@ -216,6 +224,7 @@ export const StaffManagementPanel = () => {
         subtitle="Staff profile summary"
         onClose={() => setModal({ type: null, staff: null })}
       >
+        {/* View Staff | Dialog | Group the fields or record details for this feature. */}
         {modal.staff ? (
           <div className="detail-grid">
             <div><span>Employee ID</span><strong>{modal.staff.employeeId}</strong></div>

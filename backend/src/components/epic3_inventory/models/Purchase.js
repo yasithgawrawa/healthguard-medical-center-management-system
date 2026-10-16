@@ -1,7 +1,8 @@
-// Define the MongoDB structure, constraints, and relationships for purchase records.
+// Shared Purchase Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
-// Define stored purchase data with supplier id, medicine id, batch id, quantity, purchase price and database validation.
+// Record Medicine Purchase | Database Model | Define stored purchase data with supplier id, medicine id, batch id, quantity, purchase price and database validation.
+// View Medicine Purchases | Database Model | Define stored purchase data with supplier id, medicine id, batch id, quantity, purchase price and database validation.
 const purchaseSchema = new mongoose.Schema(
   {
     // Reference the shared Supplier record by ID and require the relationship.

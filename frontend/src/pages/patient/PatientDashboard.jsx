@@ -1,4 +1,4 @@
-// Display the patient dashboard and its role-specific actions.
+// Patient Dashboard | Frontend Logic | Display the patient dashboard and its role-specific actions.
 import { Calendar, CreditCard, FileText, Pill } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
@@ -7,10 +7,10 @@ import { PatientAppointmentBooking } from "../../components/epic2_clinical/Patie
 import { PatientRecordsPanel } from "../../components/epic2_clinical/PatientRecordsPanel.jsx";
 import { patientApi } from "../../services/patientApi.js";
 
-// Format a numeric amount as Sri Lankan rupees for display.
+// Patient Dashboard | Frontend Logic | Format a numeric amount as Sri Lankan rupees for display.
 const money = (val) => `Rs. ${Number(val || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-// Load patient summary data and render the role's dashboard cards and workspaces.
+// Patient Dashboard | Frontend Logic | Load patient summary data and render the role's dashboard cards and workspaces.
 export const PatientDashboard = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [metrics, setMetrics] = useState({
@@ -24,9 +24,13 @@ export const PatientDashboard = () => {
   // Synchronize component state or external data when the listed dependencies change.
   useEffect(() => {
     Promise.all([
+      // View Appointments | Data Loading | Load records through patientApi.getAppointments for this feature.
       patientApi.getAppointments().catch(() => []),
+      // View Lab Requests | Data Loading | Load records through patientApi.getLabRequests for this feature.
       patientApi.getLabRequests().catch(() => []),
+      // View Prescriptions | Data Loading | Load records through patientApi.getPrescriptions for this feature.
       patientApi.getPrescriptions().catch(() => []),
+      // View Invoices | Data Loading | Load records through patientApi.getInvoices for this feature.
       patientApi.getInvoices().catch(() => [])
     ]).then(([appointments, labRequests, prescriptions, invoices]) => {
       const now = new Date();

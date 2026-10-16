@@ -1,7 +1,10 @@
-// Define the MongoDB structure, constraints, and relationships for appointment records.
+// Shared Appointment Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
-// Define stored appointment data with patient id, doctor id, appointment date, slot label, reason and database validation.
+// Book Appointment | Database Model | Define stored appointment data with patient id, doctor id, appointment date, slot label, reason and database validation.
+// Cancel Appointment | Database Model | Define stored appointment data with patient id, doctor id, appointment date, slot label, reason and database validation.
+// Reschedule Appointment | Database Model | Define stored appointment data with patient id, doctor id, appointment date, slot label, reason and database validation.
+// Update Appointment Status | Database Model | Define stored appointment data with patient id, doctor id, appointment date, slot label, reason and database validation.
 const appointmentSchema = new mongoose.Schema(
   {
     // Reference the shared User record by ID and require the relationship.

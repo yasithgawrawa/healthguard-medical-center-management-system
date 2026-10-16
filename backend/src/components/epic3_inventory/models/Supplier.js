@@ -1,7 +1,10 @@
-// Define the MongoDB structure, constraints, and relationships for supplier records.
+// Shared Supplier Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
-// Define stored supplier data with name, email, phone, address, status and database validation.
+// Add Supplier | Database Model | Define stored supplier data with name, email, phone, address, status and database validation.
+// Update Supplier | Database Model | Define stored supplier data with name, email, phone, address, status and database validation.
+// Deactivate Supplier | Database Model | Define stored supplier data with name, email, phone, address, status and database validation.
+// View Suppliers | Database Model | Define stored supplier data with name, email, phone, address, status and database validation.
 const supplierSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },

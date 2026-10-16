@@ -1,4 +1,4 @@
-// Generate downloadable PDFs and printable HTML for invoices, payslips, and laboratory reports.
+// Shared Document Printing | Frontend Logic | Generate downloadable PDFs and printable HTML for invoices, payslips, and laboratory reports.
 /**
  * invoicePrintTemplate.js
  * Professional A4 PDF generator — zero external dependencies.
@@ -18,21 +18,21 @@
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-// Format a numeric amount as Sri Lankan rupees for printed documents.
+// Shared Document Printing | Frontend Logic | Format a numeric amount as Sri Lankan rupees for printed documents.
 const rsStr = (val) =>
   `Rs. ${Number(val || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-// Join available first and last names and use a fallback when no name is available.
+// Shared Document Printing | Frontend Logic | Join available first and last names and use a fallback when no name is available.
 const fullName = (user) =>
   [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "Health Guard User";
 
-// Format a date for the printed document with a missing-date fallback.
+// Shared Document Printing | Frontend Logic | Format a date for the printed document with a missing-date fallback.
 const fmtDate = (value) => {
   if (!value) return "—";
   return new Date(value).toLocaleDateString("en-LK", { day: "2-digit", month: "long", year: "numeric" });
 };
 
-// Format a timestamp with date and time for the printed document.
+// Shared Document Printing | Frontend Logic | Format a timestamp with date and time for the printed document.
 const fmtDateTime = (value) => {
   if (!value) return "—";
   return new Date(value).toLocaleString("en-LK", {
@@ -41,14 +41,14 @@ const fmtDateTime = (value) => {
   });
 };
 
-// Use the last eight ID characters as an uppercase printed reference.
+// Shared Document Printing | Frontend Logic | Use the last eight ID characters as an uppercase printed reference.
 const shortId = (id) => String(id || "").slice(-8).toUpperCase() || "XXXXXXXX";
-// Create a short person reference with a supplied prefix and a pending fallback.
+// Shared Document Printing | Frontend Logic | Create a short person reference with a supplied prefix and a pending fallback.
 const shortPersonId = (value, prefix) => {
   const raw = typeof value === "string" ? value : value?._id || value?.id;
   return `${prefix}-${String(raw || "").slice(-6).toUpperCase() || "PENDING"}`;
 };
-// Display a registered patient or walk-in customer with a short record reference.
+// Shared Document Printing | Frontend Logic | Display a registered patient or walk-in customer with a short record reference.
 const invoiceClientLabel = (invoice) => {
   const patient = invoice?.patientId;
   if (patient) return `${shortPersonId(patient, "PAT")} - ${typeof patient === "object" ? fullName(patient) : "Patient"}`;
@@ -61,7 +61,7 @@ const invoiceClientLabel = (invoice) => {
 // A4: 595.28 × 841.89 pts.
 
 class PdfWriter {
-  // Initialize A4 page dimensions, PDF object storage, and built-in font references.
+  // Shared Document Printing | Frontend Logic | Initialize A4 page dimensions, PDF object storage, and built-in font references.
   constructor() {
     this.W = 595.28;
     this.H = 841.89;
@@ -77,7 +77,7 @@ class PdfWriter {
   }
 
   // PDF object helpers
-  // Assign an object number and store a PDF object for final serialization.
+  // Shared Document Printing | Frontend Logic | Assign an object number and store a PDF object for final serialization.
   _newObj(content) {
     this._objCount++;
     this.objects.push({ id: this._objCount, content });
@@ -85,7 +85,7 @@ class PdfWriter {
   }
 
   // Escape string for PDF
-  // Escape PDF string delimiters and encode characters outside printable ASCII.
+  // Shared Document Printing | Frontend Logic | Escape PDF string delimiters and encode characters outside printable ASCII.
   _esc(str) {
     return String(str || "")
       .replace(/\\/g, "\\\\")
@@ -98,7 +98,7 @@ class PdfWriter {
   }
 
   // Truncate text to fit width (rough character-based estimate at 0.55 per char per pt)
-  // Shorten text to an estimated width based on the font size.
+  // Shared Document Printing | Frontend Logic | Shorten text to an estimated width based on the font size.
   _truncate(text, maxWidth, fontSize) {
     const avgCharWidth = fontSize * 0.55;
     const maxChars = Math.floor(maxWidth / avgCharWidth);
@@ -107,14 +107,14 @@ class PdfWriter {
   }
 
   // Add content stream command
-  // Append one drawing instruction to the current PDF page stream.
+  // Shared Document Printing | Frontend Logic | Append one drawing instruction to the current PDF page stream.
   _cmd(line) {
     this.currentStream.push(line);
   }
 
   // ─── Drawing primitives ───
 
-  // Select the built-in PDF font and emit its font-size instruction.
+  // Shared Document Printing | Frontend Logic | Select the built-in PDF font and emit its font-size instruction.
   setFont(name, size) {
     const f = name.includes("Bold") ? "F2" : name.includes("Italic") || name.includes("Oblique") ? "F3" : "F1";
     this._cmd(`/${f} ${size} Tf`);
@@ -122,22 +122,22 @@ class PdfWriter {
     this._currentSize = size;
   }
 
-  // Convert RGB values to PDF fill-color values between zero and one.
+  // Shared Document Printing | Frontend Logic | Convert RGB values to PDF fill-color values between zero and one.
   setColor(r, g, b) {
     this._cmd(`${(r/255).toFixed(3)} ${(g/255).toFixed(3)} ${(b/255).toFixed(3)} rg`);
   }
 
-  // Convert RGB values to PDF stroke-color values between zero and one.
+  // Shared Document Printing | Frontend Logic | Convert RGB values to PDF stroke-color values between zero and one.
   setStrokeColor(r, g, b) {
     this._cmd(`${(r/255).toFixed(3)} ${(g/255).toFixed(3)} ${(b/255).toFixed(3)} RG`);
   }
 
-  // Set the stroke width used by subsequent PDF drawing commands.
+  // Shared Document Printing | Frontend Logic | Set the stroke width used by subsequent PDF drawing commands.
   setLineWidth(w) {
     this._cmd(`${w} w`);
   }
 
-  // Escape and write a text string at the supplied PDF coordinates.
+  // Shared Document Printing | Frontend Logic | Escape and write a text string at the supplied PDF coordinates.
   text(x, pdfY, str, opts = {}) {
     // pdfY is in our top-down coordinate (converted internally)
     const y = pdfY; // already in PDF coordinates
@@ -146,19 +146,19 @@ class PdfWriter {
   }
 
   // Top-down helper: converts our Y to PDF Y
-  // Convert a distance from the page top into a PDF vertical coordinate.
+  // Shared Document Printing | Frontend Logic | Convert a distance from the page top into a PDF vertical coordinate.
   td(yFromTop) {
     return this.H - yFromTop;
   }
 
   // Line
-  // Draw a stroked line between two PDF coordinates.
+  // Shared Document Printing | Frontend Logic | Draw a stroked line between two PDF coordinates.
   line(x1, y1, x2, y2) {
     this._cmd(`${x1.toFixed(2)} ${y1.toFixed(2)} m ${x2.toFixed(2)} ${y2.toFixed(2)} l S`);
   }
 
   // Filled rectangle
-  // Draw a filled rectangle using the supplied size and color.
+  // Shared Document Printing | Frontend Logic | Draw a filled rectangle using the supplied size and color.
   rect(x, y, w, h, r, g, b) {
     this.setColor(r, g, b);
     this._cmd(`${x.toFixed(2)} ${y.toFixed(2)} ${w.toFixed(2)} ${(-h).toFixed(2)} re f`);
@@ -166,7 +166,7 @@ class PdfWriter {
 
   // ─── Page management ───
 
-  // Finalize any current content and reset the writer for another PDF page.
+  // Shared Document Printing | Frontend Logic | Finalize any current content and reset the writer for another PDF page.
   newPage() {
     if (this.currentStream.length > 0) {
       this._finalizePage();
@@ -175,7 +175,7 @@ class PdfWriter {
     this.y = this.margin + 10; // top-down Y reset
   }
 
-  // Store the current content stream and its page object in the PDF document.
+  // Shared Document Printing | Frontend Logic | Store the current content stream and its page object in the PDF document.
   _finalizePage() {
     const stream = this.currentStream.join("\n");
     const streamObjId = this._newObj(`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`);
@@ -188,7 +188,7 @@ class PdfWriter {
 
   // ─── Generate PDF binary ───
 
-  // Serialize PDF objects, byte offsets, the cross-reference table, and the trailer.
+  // Shared Document Printing | Frontend Logic | Serialize PDF objects, byte offsets, the cross-reference table, and the trailer.
   generate() {
     // Finalize last page
     if (this.currentStream.length > 0) {
@@ -235,7 +235,7 @@ class PdfWriter {
     return pdfParts.join("");
   }
 
-  // Serialize the PDF into bytes and trigger a browser file download.
+  // Shared Document Printing | Frontend Logic | Serialize the PDF into bytes and trigger a browser file download.
   download(filename) {
     const content = this.generate();
     const bytes = new Uint8Array(content.length);
@@ -254,7 +254,7 @@ class PdfWriter {
 
 // ─── Invoice PDF Layout ───────────────────────────────────────────────────────
 
-// Build and download a PDF invoice using the local PDF writer.
+// Download Invoice Receipt | Frontend Logic | Build and download a PDF invoice using the local PDF writer.
 export function downloadInvoicePDF(invoice) {
   const pdf = new PdfWriter();
   const W = pdf.W;
@@ -453,7 +453,7 @@ export function downloadInvoicePDF(invoice) {
 
 // ─── Payslip PDF Layout ───────────────────────────────────────────────────────
 
-// Build and download a PDF payslip using the local PDF writer.
+// Download Payslip | Frontend Logic | Build and download a PDF payslip using the local PDF writer.
 export function downloadPayslipPDF(payroll) {
   const pdf = new PdfWriter();
   const W = pdf.W;
@@ -707,7 +707,7 @@ const PRINT_STYLES = `
   .btn-d{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;padding:10px 22px;border-radius:8px;font-size:10pt;font-weight:600;cursor:pointer}
 `;
 
-// Write the document HTML into a new window and trigger the browser print dialog.
+// Shared Document Printing | Frontend Logic | Write the document HTML into a new window and trigger the browser print dialog.
 function openPrintWindow(title, bodyHtml) {
   const win = window.open("", "_blank", "width=860,height=900,scrollbars=yes");
   if (!win) { alert("Please allow pop-ups to open the PDF viewer."); return; }
@@ -720,7 +720,7 @@ function openPrintWindow(title, bodyHtml) {
   win.document.close();
 }
 
-// Build the invoice HTML and open the browser print or Save as PDF dialog.
+// Print Invoice | Frontend Logic | Build the invoice HTML and open the browser print or Save as PDF dialog.
 export function printInvoicePDF(invoice) {
   const patient = invoice?.patientId;
   const patientName = invoiceClientLabel(invoice);
@@ -768,7 +768,7 @@ export function printInvoicePDF(invoice) {
   openPrintWindow(`Invoice #HG-${invId} | Health Guard`, body);
 }
 
-// Build the payslip HTML and open the browser print or Save as PDF dialog.
+// Print Payslip | Frontend Logic | Build the payslip HTML and open the browser print or Save as PDF dialog.
 export function printPayslipPDF(payroll) {
   const staffUser = payroll?.staffId?.userId;
   const staffName = typeof staffUser === "object" ? fullName(staffUser) : "Staff Member";
@@ -834,7 +834,7 @@ export function printPayslipPDF(payroll) {
   openPrintWindow(`Payslip ${monthLabel} – ${staffName} | Health Guard`, body);
 }
 
-// Build the laboratory report HTML and open the browser print or Save as PDF dialog.
+// Print Lab Report | Frontend Logic | Build the laboratory report HTML and open the browser print or Save as PDF dialog.
 export function printLabReportPDF(labRequest) {
   const patient = labRequest?.patientId;
   const patientName = typeof patient === "object" ? fullName(patient) : "Patient";

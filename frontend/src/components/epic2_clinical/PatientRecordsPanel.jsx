@@ -6,7 +6,7 @@ import { printInvoicePDF, printLabReportPDF } from "../../utils/invoicePrintTemp
 import { customerLabel, patientLabel } from "../../utils/personLabels.js";
 import { Modal } from "../shared/Modal.jsx";
 
-// Format a stored date for display and handle missing or invalid values.
+// Patient Records | Frontend Logic | Format a stored date for display and handle missing or invalid values.
 const formatDate = (value) => {
   if (!value) return "Not set";
   return new Intl.DateTimeFormat("en", {
@@ -17,7 +17,7 @@ const formatDate = (value) => {
 
 // Format just the date portion of an appointment using the slotLabel for the time.
 // This avoids timezone display issues (stored UTC != local display time).
-// Combine the appointment date and slot label into a readable display.
+// Patient Records | Frontend Logic | Combine the appointment date and slot label into a readable display.
 const formatAppointmentDate = (appointmentDate, slotLabel) => {
   if (!appointmentDate) return "Not set";
   const dateOnly = new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(appointmentDate));
@@ -35,7 +35,7 @@ const emptyText = {
   notifications: "No notifications"
 };
 
-// Trigger a browser download for a Blob and release its temporary object URL.
+// Patient Records | Submit Logic | Trigger a browser download for a Blob and release its temporary object URL.
 const saveBlob = (blob, filename) => {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -45,7 +45,7 @@ const saveBlob = (blob, filename) => {
   URL.revokeObjectURL(url);
 };
 
-// Show patient appointments, clinical records, invoices, and notifications with permitted actions.
+// Patient Records | Frontend Logic | Show patient appointments, clinical records, invoices, and notifications with permitted actions.
 export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
   const [data, setData] = useState({
     appointments: [],
@@ -63,15 +63,19 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
   const [rescheduleSlots, setRescheduleSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
-  // Load get appointments, get lab requests, get prescriptions, get invoices and update the displayed state.
+  // Patient Records | Frontend Logic | Load get appointments, get lab requests, get prescriptions, get invoices and update the displayed state.
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       const [appointments, labs, prescriptions, invoices, notifications] = await Promise.all([
+        // View Appointments | Data Loading | Load records through patientApi.getAppointments for this feature.
         patientApi.getAppointments(),
+        // View Lab Requests | Data Loading | Load records through patientApi.getLabRequests for this feature.
         patientApi.getLabRequests(),
+        // View Prescriptions | Data Loading | Load records through patientApi.getPrescriptions for this feature.
         patientApi.getPrescriptions(),
+        // View Invoices | Data Loading | Load records through patientApi.getInvoices for this feature.
         patientApi.getInvoices(),
         Promise.all([patientApi.getNotifications(), patientNoticeApi.mine()]).then(([labs, notices]) => [...labs.map(item => ({ ...item, source: "lab" })), ...notices].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)))
       ]);
@@ -91,9 +95,10 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
   // Register browser event listeners and remove them when this effect is cleaned up.
   useEffect(() => {
     let active = true;
-    // Reload the current patient's combined notification list.
+    // View Patient Notifications | Frontend Logic | Reload the current patient's combined notification list.
     const refreshNotifications = async () => {
       try {
+        // View Patient Notifications | Data Loading | Call patientApi.getNotifications for this feature and use the returned records
         const [labs, notices] = await Promise.all([patientApi.getNotifications(), patientNoticeApi.mine()]);
         if (active) setData(previous => ({ ...previous, notifications: [...labs.map(item => ({ ...item, source: "lab" })), ...notices].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) }));
       } catch { if (active) setError("Unable to refresh notifications. Please refresh your records."); }
@@ -113,11 +118,12 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
     return () => clearTimeout(timer);
   }, [data.notifications]);
 
-  // Submit cancellation for the selected appointment and refresh the displayed records.
+  // Cancel Appointment | Frontend Logic | Submit cancellation for the selected appointment and refresh the displayed records.
   const cancelAppointment = async (id) => {
     setBusyId(id);
     setError("");
     try {
+      // Cancel Appointment | Submit Logic | Call patientApi.cancelAppointment for this feature.
       await patientApi.cancelAppointment(id);
       await load();
       onChanged?.();
@@ -128,10 +134,10 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
     }
   };
 
-  // Check the appointment status and date before offering cancellation in the interface.
+  // Cancel Appointment | Frontend Logic | Check the appointment status and date before offering cancellation in the interface.
   const canCancel = (item) => item.status === "booked" && new Date(item.appointmentDate) > new Date();
 
-  // Open rescheduling with the selected appointment's current doctor and date.
+  // Reschedule Appointment | Frontend Logic | Open rescheduling with the selected appointment's current doctor and date.
   const openReschedule = (appointment) => {
     setError("");
     setRescheduleModal({ open: true, appointment });
@@ -150,6 +156,7 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
     }
 
     setLoadingSlots(true);
+    // View Appointment Slots | Data Loading | Call patientApi.getAppointmentSlots for this feature and use the returned records
     patientApi
       .getAppointmentSlots({ doctorId, date: rescheduleDay })
       .then((slots) => {
@@ -165,7 +172,7 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
       .finally(() => setLoadingSlots(false));
   }, [rescheduleModal.open, rescheduleModal.appointment, rescheduleDay]);
 
-  // Save the selected appointment's replacement slot and refresh patient records.
+  // Reschedule Appointment | Submit Logic | Save the selected appointment's replacement slot and refresh patient records.
   const saveReschedule = async () => {
     if (!rescheduleModal.appointment || !rescheduleSlot) {
       setError("Select an available date and time slot.");
@@ -175,6 +182,7 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
     setBusyId(rescheduleModal.appointment._id);
     setError("");
     try {
+      // Reschedule Appointment | Submit Logic | Call patientApi.rescheduleAppointment for this feature.
       await patientApi.rescheduleAppointment(rescheduleModal.appointment._id, {
         appointmentDate: rescheduleSlot.startsAt,
         slotLabel: rescheduleSlot.label
@@ -190,7 +198,7 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
     }
   };
 
-  // Cache appointment buckets until the listed source values change.
+  // Patient Records | Derived Data | Cache appointment buckets until the listed source values change.
   const appointmentBuckets = useMemo(() => {
     const startToday = new Date();
     startToday.setHours(0, 0, 0, 0);
@@ -210,10 +218,11 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
     }, { todayAppointments: [], upcomingAppointments: [], pastAppointments: [] });
   }, [data.appointments]);
 
-  // Download the selected paid invoice's receipt and save it in the browser.
+  // Download Invoice Receipt | Frontend Logic | Download the selected paid invoice's receipt and save it in the browser.
   const downloadReceipt = async (invoice) => {
     setBusyId(invoice._id);
     try {
+      // Download Invoice Receipt | Submit Logic | Call patientApi.downloadReceipt for this feature.
       saveBlob(await patientApi.downloadReceipt(invoice._id), `healthguard-receipt-${invoice._id}.txt`);
     } catch (err) {
       setError(err.response?.data?.message || "Unable to download receipt");
@@ -222,16 +231,17 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
     }
   };
 
-  // Open the selected invoice using the shared printable invoice template.
+  // Print Invoice | Frontend Logic | Open the selected invoice using the shared printable invoice template.
   const printInvoice = (invoice) => {
     printInvoicePDF(invoice);
   };
 
-  // Record that the current patient has read an eligible notification.
+  // Mark Notification Read | Frontend Logic | Record that the current patient has read an eligible notification.
   const markNotificationRead = async (item) => {
     const id = item._id;
     setBusyId(id);
     try {
+      // Mark Notification Read | Submit Logic | Call patientNoticeApi.markRead for this feature.
       await (item.source === "manager" ? patientNoticeApi.markRead(id) : patientApi.markNotificationRead(id));
       await load();
     } catch (err) {
@@ -241,7 +251,7 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
     }
   };
 
-  // Render one appointment card with its available patient actions.
+  // View Appointments | Frontend Logic | Render one appointment card with its available patient actions.
   const renderAppointment = (item) => (
     <>
       <div className="patient-record-main">
@@ -282,7 +292,7 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
       title: "Notifications",
       icon: Bell,
       records: data.notifications.filter(item => !item.expiryDate || new Date(item.expiryDate) > new Date()),
-      // Format this table cell using the current row's data and available actions.
+      // Patient Records | Frontend Logic | Format this table cell using the current row's data and available actions.
       render: (item) => (
         <>
           <strong>{item.title}</strong>
@@ -322,7 +332,7 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
       title: "Lab Reports",
       icon: FileText,
       records: data.labs,
-      // Format this table cell using the current row's data and available actions.
+      // Patient Records | Frontend Logic | Format this table cell using the current row's data and available actions.
       render: (item) => (
         <>
           <strong>{item.testName}</strong>
@@ -351,7 +361,7 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
       title: "Prescriptions",
       icon: Pill,
       records: data.prescriptions,
-      // Format this table cell using the current row's data and available actions.
+      // Patient Records | Frontend Logic | Format this table cell using the current row's data and available actions.
       render: (item) => (
         <>
           <strong>{item.items?.[0]?.medicineName || "Prescription"}</strong>
@@ -365,7 +375,7 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
       title: "Bills & Receipts",
       icon: CreditCard,
       records: data.invoices,
-      // Format this table cell using the current row's data and available actions.
+      // Patient Records | Frontend Logic | Format this table cell using the current row's data and available actions.
       render: (item) => (
         <>
           <strong>Rs. {Number(item.outstandingAmount || 0).toFixed(2)} outstanding</strong>
@@ -441,6 +451,7 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
         subtitle={rescheduleModal.appointment ? formatAppointmentDate(rescheduleModal.appointment.appointmentDate, rescheduleModal.appointment.slotLabel) : ""}
         onClose={() => setRescheduleModal({ open: false, appointment: null })}
       >
+        {/* Reschedule Appointment | Dialog | Group the fields or record details for this feature. */}
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <label className="form-field">
             <span>Appointment Date</span>

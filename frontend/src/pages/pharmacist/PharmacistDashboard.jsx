@@ -1,4 +1,4 @@
-// Display the pharmacist dashboard and its role-specific actions.
+// Pharmacist Dashboard | Frontend Logic | Display the pharmacist dashboard and its role-specific actions.
 import { AlertCircle, AlertTriangle, ArrowDownCircle, PackageCheck, Pill, ShoppingCart, Truck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { StaffSelfServicePanel } from "../../components/epic1_user_staff/StaffSelfServicePanel.jsx";
@@ -8,10 +8,10 @@ import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
 import { DashboardQuickActions } from "../../components/shared/DashboardQuickActions.jsx";
 import { inventoryApi } from "../../services/inventoryApi.js";
 
-// Format a numeric amount as Sri Lankan rupees for display.
+// Pharmacist Dashboard | Frontend Logic | Format a numeric amount as Sri Lankan rupees for display.
 const money = (val) => `Rs. ${Number(val || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-// Load pharmacist summary data and render the role's dashboard cards and workspaces.
+// Pharmacist Dashboard | Frontend Logic | Load pharmacist summary data and render the role's dashboard cards and workspaces.
 export const PharmacistDashboard = () => {
   const [metrics, setMetrics] = useState({
     activeMeds: 0,
@@ -24,8 +24,11 @@ export const PharmacistDashboard = () => {
   // Synchronize component state or external data when the listed dependencies change.
   useEffect(() => {
     Promise.all([
+      // View Medicines | Data Loading | Load records through inventoryApi.medicines for this feature.
       inventoryApi.medicines().catch(() => []),
+      // View Inventory Alerts | Data Loading | Load records through inventoryApi.alerts for this feature.
       inventoryApi.alerts().catch(() => ({ lowStock: [], expiring: [] })),
+      // View Pharmacy Sales | Data Loading | Load records through inventoryApi.sales for this feature.
       inventoryApi.sales().catch(() => [])
     ]).then(([meds, alertsData, salesData]) => {
       const today = new Date().toISOString().slice(0, 10);

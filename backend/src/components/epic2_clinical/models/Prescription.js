@@ -1,7 +1,10 @@
-// Define the MongoDB structure, constraints, and relationships for prescription records.
+// Shared Prescription Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
-// Define stored prescription item data with medicine name, dosage, frequency, duration, instructions and database validation.
+// Create Prescription | Database Model | Define stored prescription item data with medicine name, dosage, frequency, duration, instructions and database validation.
+// Record Pharmacy Sale | Database Model | Define stored prescription item data with medicine name, dosage, frequency, duration, instructions and database validation.
+// View Prescriptions | Database Model | Define stored prescription item data with medicine name, dosage, frequency, duration, instructions and database validation.
+// View Active Prescriptions | Database Model | Read the stored Prescription record and its linked IDs for this feature.
 const prescriptionItemSchema = new mongoose.Schema(
   {
     medicineName: { type: String, required: true, trim: true },
@@ -13,7 +16,9 @@ const prescriptionItemSchema = new mongoose.Schema(
   { _id: false }
 );
 
-// Define stored prescription data with appointment id, patient id, doctor id, items, status and database validation.
+// Create Prescription | Database Model | Define stored prescription data with appointment id, patient id, doctor id, items, status and database validation.
+// Record Pharmacy Sale | Database Model | Define stored prescription data with appointment id, patient id, doctor id, items, status and database validation.
+// View Prescriptions | Database Model | Define stored prescription data with appointment id, patient id, doctor id, items, status and database validation.
 const prescriptionSchema = new mongoose.Schema(
   {
     // Reference the shared Appointment record by ID and require the relationship.

@@ -1,8 +1,11 @@
-// Define the MongoDB structure, constraints, and relationships for medicine records.
+// Shared Medicine Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 import { MEDICINE_CATEGORIES } from "../constants/medicineCategories.js";
 
-// Define stored medicine data with name, category, unit, price, reorder level and database validation.
+// Add New Medicine | Database Model | Define stored medicine data with name, category, unit, price, reorder level and database validation.
+// Update Medicine | Database Model | Define stored medicine data with name, category, unit, price, reorder level and database validation.
+// Delete Medicine | Database Model | Define stored medicine data with name, category, unit, price, reorder level and database validation.
+// View Medicines | Database Model | Define stored medicine data with name, category, unit, price, reorder level and database validation.
 const medicineSchema = new mongoose.Schema(
   {
     // Require a unique name value through a MongoDB unique index.

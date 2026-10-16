@@ -11,7 +11,7 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import { DASHBOARD_PATH_BY_ROLE } from "../../utils/roles.js";
 import { requiredName, requiredPastDate, requiredPhone, stripDigits, stripNonPhone } from "../../utils/validationSchemas.js";
 
-// Validate password values.
+// Patient Registration | Frontend Validation | Validate password values.
 const passwordSchema = z
   .string({ required_error: "Password is required" })
   .min(1, "Password is required")
@@ -21,7 +21,7 @@ const passwordSchema = z
   .regex(/[0-9]/, "Password must include at least one number")
   .regex(/[^A-Za-z0-9]/, "Password must include at least one special character");
 
-// Validate this form's values including first name, last name, email, phone, address.
+// Patient Registration | Frontend Validation | Validate this form's values including first name, last name, email, phone, address.
 const schema = z
   .object({
     firstName: requiredName("First name"),
@@ -56,7 +56,7 @@ const schema = z
     message: "Passwords do not match"
   });
 
-// Validate patient registration details and create an authenticated patient account.
+// Patient Registration | Frontend Logic | Validate patient registration details and create an authenticated patient account.
 export const RegisterPage = () => {
   const { registerPatient } = useAuth();
   const navigate = useNavigate();
@@ -94,7 +94,7 @@ export const RegisterPage = () => {
   const hasNumber = /[0-9]/.test(passwordValue);
   const hasSymbol = /[^A-Za-z0-9]/.test(passwordValue);
 
-  // Submit the validated register form and show the resulting success or error feedback.
+  // Patient Registration | Submit Logic | Submit the validated register form and show the resulting success or error feedback.
   const onSubmit = async (values) => {
     setApiError("");
     try {
@@ -105,7 +105,7 @@ export const RegisterPage = () => {
     }
   };
 
-  // Surface form validation errors when registration cannot be submitted.
+  // Patient Registration | Frontend Logic | Surface form validation errors when registration cannot be submitted.
   const onInvalid = (fieldErrors) => {
     const firstKey = Object.keys(fieldErrors)[0];
     if (firstKey) {
@@ -137,6 +137,7 @@ export const RegisterPage = () => {
         ) : null}
 
         <form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
+          {/* Patient Registration | Form | Render fields, validation feedback, and submission controls for this feature. */}
           <div className="form-grid">
             <FormInput
               label="First Name"

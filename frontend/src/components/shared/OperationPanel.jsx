@@ -12,21 +12,21 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { operationsApi } from "../../services/operationsApi.js";
 
-// Build initial operation-form values from the configured field definitions.
+// Shared Operation Panel | Frontend Logic | Build initial operation-form values from the configured field definitions.
 const initialValues = (fields) =>
   fields.reduce((acc, field) => {
     acc[field.name] = field.defaultValue ?? "";
     return acc;
   }, {});
 
-// Convert configured number and boolean fields before submitting operation data.
+// Shared Operation Panel | Frontend Logic | Convert configured number and boolean fields before submitting operation data.
 const coerceValue = (value, type) => {
   if (type === "number") return Number(value);
   if (type === "json") return JSON.parse(value || "null");
   return value;
 };
 
-// Convert a label into a lowercase URL-safe identifier.
+// Shared Operation Panel | Frontend Logic | Convert a label into a lowercase URL-safe identifier.
 const slugify = (value) =>
   value
     .toLowerCase()
@@ -34,7 +34,7 @@ const slugify = (value) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
-// Render forms and records from reusable API operation definitions.
+// Shared Operation Panel | Frontend Logic | Render forms and records from reusable API operation definitions.
 export const OperationPanel = ({ id, title, description, listPath, actions = [] }) => {
   const [records, setRecords] = useState([]);
   const [message, setMessage] = useState("");
@@ -49,7 +49,7 @@ export const OperationPanel = ({ id, title, description, listPath, actions = [] 
     }, {})
   );
 
-  // Fetch records from the operation panel's configured list endpoint.
+  // Shared Operation Panel | Frontend Logic | Fetch records from the operation panel's configured list endpoint.
   const loadRecords = async () => {
     if (!listPath) return;
     setBusy(true);
@@ -72,10 +72,10 @@ export const OperationPanel = ({ id, title, description, listPath, actions = [] 
     loadRecords();
   }, [listPath]);
 
-  // Cache visible records until the listed source values change.
+  // Shared Operation Panel | Derived Data | Cache visible records until the listed source values change.
   const visibleRecords = useMemo(() => records.slice(0, 6), [records]);
 
-  // Update one form field and clear its previous validation error.
+  // Shared Operation Panel | Form Logic | Update one form field and clear its previous validation error.
   const setField = (actionLabel, fieldName, value) => {
     setFieldErrors((current) => ({
       ...current,
@@ -87,7 +87,7 @@ export const OperationPanel = ({ id, title, description, listPath, actions = [] 
     }));
   };
 
-  // Check configured required fields before running a generic operation.
+  // Shared Operation Panel | Frontend Logic | Check configured required fields before running a generic operation.
   const validateAction = (action) => {
     const form = forms[action.label] || {};
     const errors = {};
@@ -110,7 +110,7 @@ export const OperationPanel = ({ id, title, description, listPath, actions = [] 
     return Object.keys(errors).length === 0;
   };
 
-  // Validate and send a configured API operation, then reload its records.
+  // Shared Operation Panel | Submit Logic | Validate and send a configured API operation, then reload its records.
   const submitAction = async (action) => {
     setBusy(true);
     setError("");
@@ -178,6 +178,7 @@ export const OperationPanel = ({ id, title, description, listPath, actions = [] 
                 submitAction(action);
               }}
             >
+              {/* Shared Configured Forms | Form | Render fields, validation feedback, and submission controls for this feature. */}
               <h3>{action.label}</h3>
               {(action.fields || []).map((field) => {
                 const fieldError = fieldErrors[action.label]?.[field.name];

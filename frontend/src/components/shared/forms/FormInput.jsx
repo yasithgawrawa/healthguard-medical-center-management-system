@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 
-// Render a reusable input with its label, field error, ref, and optional value sanitization.
+// Shared Form Input | Frontend Logic | Render a reusable input with its label, field error, ref, and optional value sanitization.
 export const FormInput = forwardRef(({
   label,
   error,
@@ -14,7 +14,7 @@ export const FormInput = forwardRef(({
   const inputType = props.type || "text";
   const placeholder = props.placeholder ?? (["date", "datetime-local", "month", "time"].includes(inputType) ? undefined : `Enter ${String(label).toLowerCase()}`);
 
-  // Sanitize the input value when requested and forward the change to the registered form handler.
+  // Shared Form Input | Frontend Logic | Sanitize the input value when requested and forward the change to the registered form handler.
   const handleChange = (event) => {
     if (sanitize) {
       const nextValue = sanitize(event.target.value);

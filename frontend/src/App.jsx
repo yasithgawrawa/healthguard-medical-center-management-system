@@ -1,4 +1,4 @@
-// Define public and protected routes and select dashboards by role.
+// Application Routing | Frontend Logic | Define public and protected routes and select dashboards by role.
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./components/shared/ProtectedRoute.jsx";
 import { ErrorBoundary } from "./components/shared/ErrorBoundary.jsx";

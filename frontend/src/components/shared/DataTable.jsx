@@ -1,4 +1,4 @@
-// Render configured columns and rows with a shared empty-state message.
+// Shared Data Table | Frontend Logic | Render configured columns and rows with a shared empty-state message.
 export const DataTable = ({ columns = [], rows = [], rowKey = "_id", emptyText = "No records found" }) => (
   <div className="data-table-wrap">
     <table className="data-table">

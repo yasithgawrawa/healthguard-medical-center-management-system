@@ -1,7 +1,9 @@
-// Define the MongoDB structure, constraints, and relationships for patient notice records.
+// Shared PatientNotice Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
-// Define stored patient notice data and database validation.
+// Create Patient Notification | Database Model | Define stored patient notice data and database validation.
+// Update Patient Notification | Database Model | Define stored patient notice data and database validation.
+// View Patient Notifications | Database Model | Define stored patient notice data and database validation.
 const schema = new mongoose.Schema({
   // Require a unique notification id value through a MongoDB unique index.
   notificationId: { type: String, required: true, unique: true, immutable: true, default() { return `PN-${this._id.toString().toUpperCase()}`; } },

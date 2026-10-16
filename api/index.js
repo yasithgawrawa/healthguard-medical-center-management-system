@@ -1,4 +1,4 @@
-// Expose the Express API as a serverless request handler.
+// API Serverless Entry | Shared Logic | Expose the Express API as a serverless request handler.
 import app from "../backend/src/app.js";
 import { connectDatabase } from "../backend/src/shared/config/database.js";
 

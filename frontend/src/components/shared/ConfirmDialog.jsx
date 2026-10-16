@@ -1,9 +1,10 @@
 import { AlertTriangle } from "lucide-react";
 import { Modal } from "./Modal.jsx";
 
-// Render the shared confirmation modal and its cancel and confirm actions.
+// Shared Confirm Dialog | Frontend Logic | Render the shared confirmation modal and its cancel and confirm actions.
 export const ConfirmDialog = ({ open, title, message, confirmLabel = "Confirm", busy, onCancel, onConfirm }) => (
   <Modal open={open} title={title} onClose={onCancel}>
+    {/* Shared Confirm Dialog | Dialog | Group the fields or record details for this feature. */}
     <div className="confirm-dialog-body">
       <div className="confirm-icon">
         <AlertTriangle size={22} />

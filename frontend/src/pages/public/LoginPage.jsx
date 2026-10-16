@@ -9,7 +9,7 @@ import { SubmitButton } from "../../components/shared/forms/SubmitButton.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { DASHBOARD_PATH_BY_ROLE } from "../../utils/roles.js";
 
-// Validate this form's values including email, password.
+// Login | Frontend Validation | Validate this form's values including email, password.
 const schema = z.object({
   email: z.string().email("Enter a valid email address"),
   password: z.string().min(1, "Password is required")
@@ -28,7 +28,7 @@ const QUICK_ACCESS_ROLES = [
   { roleKey: "patient", label: "Patient", email: "saman.kumara@gmail.com", password: "Pass@12345" }
 ];
 
-// Validate credentials, sign in through the auth context, and redirect to the user's dashboard.
+// Login | Frontend Logic | Validate credentials, sign in through the auth context, and redirect to the user's dashboard.
 export const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -44,7 +44,7 @@ export const LoginPage = () => {
     formState: { errors, isSubmitting }
   } = useForm({ resolver: zodResolver(schema), mode: "onChange" });
 
-  // Submit the validated login form and show the resulting success or error feedback.
+  // Login | Submit Logic | Submit the validated login form and show the resulting success or error feedback.
   const onSubmit = async (values) => {
     setApiError("");
     try {
@@ -56,7 +56,7 @@ export const LoginPage = () => {
     }
   };
 
-  // Fill demo credentials for the selected quick-login account.
+  // Login | Frontend Logic | Fill demo credentials for the selected quick-login account.
   const handleQuickLogin = async (acc) => {
     setActiveQuickKey(acc.label);
     setValue("email", acc.email, { shouldValidate: true, shouldDirty: true });
@@ -83,6 +83,7 @@ export const LoginPage = () => {
         ) : null}
 
         <form onSubmit={handleSubmit(onSubmit)}>
+          {/* Login | Form | Render fields, validation feedback, and submission controls for this feature. */}
           <FormInput
             label="Email Address"
             type="email"

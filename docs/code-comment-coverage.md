@@ -1,5 +1,7 @@
 # Code comment coverage
 
+Feature labels now connect related frontend and backend segments across all four epics. Use the [feature code guide](feature-code-guide.md) for exact search labels and direct source links.
+
 Added single-line explanations across all four epics and shared application code. Comments cover functions, routes, request validation, database relationships, React hooks, stock calculations, authentication, and billing links. Application logic and configuration values are unchanged.
 
 Validation: JavaScript and JSX syntax trees match the original files after excluding comment and source-position metadata; non-JavaScript files match after removing comments. The frontend production build passes.

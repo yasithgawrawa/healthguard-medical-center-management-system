@@ -23,7 +23,7 @@ const staffSelfServiceRoles = [
   ROLES.LAB_ASSISTANT
 ];
 
-// Choose navigation links for the signed-in user's role.
+// Shared Dashboard Layout | Frontend Logic | Choose navigation links for the signed-in user's role.
 const roleNavItems = (role) => {
   if (role === ROLES.ADMIN) {
     return [
@@ -69,13 +69,13 @@ const roleNavItems = (role) => {
   ];
 };
 
-// Render role-specific navigation and the current authenticated dashboard.
+// Shared Dashboard Layout | Frontend Logic | Render role-specific navigation and the current authenticated dashboard.
 export const DashboardLayout = () => {
   const { user, sessionVersion } = useAuth();
   const location = useLocation();
   const navItems = roleNavItems(user?.role);
 
-  // Read the initial URL fragment to select the current dashboard section.
+  // Shared Dashboard Layout | Frontend Logic | Read the initial URL fragment to select the current dashboard section.
   const getInitialHash = () => {
     if (location.hash) return location.hash;
     return navItems[0]?.href ?? "#overview";
@@ -92,7 +92,7 @@ export const DashboardLayout = () => {
     }
   }, [location.hash, user?.role]);
 
-  // Check whether a navigation link matches the current dashboard location.
+  // Shared Dashboard Layout | Frontend Logic | Check whether a navigation link matches the current dashboard location.
   const isItemActive = (href) => {
     if (activeHash === href) return true;
     if (href === "#attendance-leave" && (activeHash === "#attendance-leave" || activeHash === "#staff-self-service")) {
@@ -110,7 +110,7 @@ export const DashboardLayout = () => {
     return false;
   };
 
-  // Apply dashboard navigation and update the selected section.
+  // Shared Dashboard Layout | Frontend Logic | Apply dashboard navigation and update the selected section.
   const handleNavClick = (href) => {
     setActiveHash(href);
   };

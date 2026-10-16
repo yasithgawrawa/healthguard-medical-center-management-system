@@ -1,4 +1,4 @@
-// Handle billing HTTP requests and return consistent API responses.
+// Billing Workspace | Controller | Handle billing HTTP requests and return consistent API responses.
 import { Attendance } from "../../epic1_user_staff/models/Attendance.js";
 import { Staff } from "../../epic1_user_staff/models/Staff.js";
 import { User } from "../../epic1_user_staff/models/User.js";
@@ -12,7 +12,8 @@ import { ROLES } from "../../../shared/constants/roles.js";
 import { successResponse } from "../../../shared/utils/apiResponse.js";
 import { AppError } from "../../../shared/utils/AppError.js";
 
-// Clamp paid and outstanding amounts and derive whether the invoice is issued or paid.
+// Record Payment | Business Logic | Clamp paid and outstanding amounts and derive whether the invoice is issued or paid.
+// Consolidate Patient Invoices | Business Logic | Clamp paid and outstanding amounts and derive whether the invoice is issued or paid.
 const recalculateInvoice = (invoice) => {
   invoice.paidAmount = Math.min(invoice.paidAmount, invoice.subtotal);
   invoice.outstandingAmount = Math.max(invoice.subtotal - invoice.paidAmount, 0);
@@ -20,15 +21,16 @@ const recalculateInvoice = (invoice) => {
   invoice.status = invoice.outstandingAmount === 0 ? "paid" : "issued";
 };
 
-// Round a monetary value to two decimal places.
+// Billing Workspace | Business Logic | Round a monetary value to two decimal places.
 const roundMoney = (value) => Number(Number(value || 0).toFixed(2));
-// Remove formatting and compare phone numbers using their last nine digits.
+// Billing Workspace | Business Logic | Remove formatting and compare phone numbers using their last nine digits.
 const normalizePhone = (value) => {
   const digits = String(value || "").replace(/\D/g, "");
   return digits.length > 9 ? digits.slice(-9) : digits;
 };
 
-// Validate staff eligibility and calculate gross and net salary from daily pay and working days.
+// Create Salary Draft | Business Logic | Validate staff eligibility and calculate gross and net salary from daily pay and working days.
+// Preview Salary | Business Logic | Validate staff eligibility and calculate gross and net salary from daily pay and working days.
 const buildDailyPayroll = async ({ staffId, month, dailyPay, workingDays, allowances = 0, deductions = 0 }) => {
   const staff = await Staff.findById(staffId).populate("userId", "firstName lastName email");
   if (!staff) throw new AppError("Staff profile not found", 404);
@@ -63,7 +65,7 @@ const buildDailyPayroll = async ({ staffId, month, dailyPay, workingDays, allowa
   };
 };
 
-// Calculate invoice line totals and subtotal on the server before storing the invoice.
+// Create Invoice | Controller | Calculate invoice line totals and subtotal on the server before storing the invoice.
 export const createInvoice = async (req, res) => {
   if (req.body.appointmentId) {
     const appointment = await Appointment.findById(req.body.appointmentId);
@@ -90,7 +92,7 @@ export const createInvoice = async (req, res) => {
   return successResponse(res, "Invoice created successfully", invoice, 201);
 };
 
-// Exclude cancelled invoices and restrict patient users to their own invoice records.
+// View Invoices | Controller | Exclude cancelled invoices and restrict patient users to their own invoice records.
 export const listInvoices = async (req, res) => {
   const filter = req.user.role === "patient" ? { patientId: req.user._id, status: { $ne: "cancelled" } } : { status: { $ne: "cancelled" } };
   const invoices = await Invoice.find(filter)
@@ -99,7 +101,7 @@ export const listInvoices = async (req, res) => {
   return successResponse(res, "Invoice list loaded", invoices);
 };
 
-// Require full settlement, update the invoice balance, and mark linked pharmacy sales as paid.
+// Record Payment | Controller | Require full settlement, update the invoice balance, and mark linked pharmacy sales as paid.
 export const recordPayment = async (req, res) => {
   const invoice = await Invoice.findById(req.body.invoiceId);
   if (!invoice) throw new AppError("Invoice not found", 404);
@@ -129,7 +131,7 @@ export const recordPayment = async (req, res) => {
   return successResponse(res, "Payment recorded successfully", { payment, invoice }, 201);
 };
 
-// Return payments and send the result using the shared API response format.
+// View Payments | Controller | Return payments and send the result using the shared API response format.
 export const listPayments = async (req, res) => {
   const payments = await Payment.find()
     .populate("invoiceId", "patientId customerName customerPhone subtotal outstandingAmount status")
@@ -137,7 +139,7 @@ export const listPayments = async (req, res) => {
   return successResponse(res, "Payment list loaded", payments);
 };
 
-// Change a non-voided payment's status and record the verifier when verified.
+// Update Payment Status | Controller | Change a non-voided payment's status and record the verifier when verified.
 export const updatePaymentStatus = async (req, res) => {
   const payment = await Payment.findById(req.params.id);
   if (!payment) throw new AppError("Payment not found", 404);
@@ -148,7 +150,7 @@ export const updatePaymentStatus = async (req, res) => {
   return successResponse(res, "Payment status updated", payment);
 };
 
-// Return supplier bills and send the result using the shared API response format.
+// View Supplier Bills | Controller | Return supplier bills and send the result using the shared API response format.
 export const listSupplierBills = async (req, res) => {
   const bills = await SupplierBill.find({ status: { $ne: "cancelled" } })
     .populate("supplierId", "name phone email")
@@ -163,7 +165,7 @@ export const listSupplierBills = async (req, res) => {
   return successResponse(res, "Supplier bills loaded", bills);
 };
 
-// Mark a pending supplier bill as paid and record the payment method, staff member, and time.
+// Pay Supplier Bill | Controller | Mark a pending supplier bill as paid and record the payment method, staff member, and time.
 export const paySupplierBill = async (req, res) => {
   const bill = await SupplierBill.findById(req.params.id);
   if (!bill) throw new AppError("Supplier bill not found", 404);
@@ -189,7 +191,7 @@ export const paySupplierBill = async (req, res) => {
   return successResponse(res, "Supplier bill marked as paid", bill);
 };
 
-// Reject duplicate staff-month salaries and save server-calculated salary amounts.
+// Create Salary Draft | Controller | Reject duplicate staff-month salaries and save server-calculated salary amounts.
 export const createPayroll = async (req, res) => {
   const existingPayroll = await Payroll.findOne({ staffId: req.body.staffId, month: req.body.month });
   if (existingPayroll) {
@@ -223,7 +225,7 @@ export const createPayroll = async (req, res) => {
   return successResponse(res, "Salary calculated successfully", payroll, 201);
 };
 
-// Calculate salary amounts without saving and report any existing staff-month payroll.
+// Preview Salary | Controller | Calculate salary amounts without saving and report any existing staff-month payroll.
 export const previewPayroll = async (req, res) => {
   const existingPayroll = await Payroll.findOne({ staffId: req.body.staffId, month: req.body.month });
   const calculated = await buildDailyPayroll({
@@ -237,7 +239,7 @@ export const previewPayroll = async (req, res) => {
   return successResponse(res, "Salary preview loaded", { ...calculated, existingPayroll });
 };
 
-// Count checked-out attendance entries for the selected staff member and month.
+// View Salary Attendance Days | Controller | Count checked-out attendance entries for the selected staff member and month.
 export const getSalaryAttendanceDays = async (req, res) => {
   const { staffId, month } = req.validatedQuery || req.query;
   const staff = await Staff.findById(staffId);
@@ -253,7 +255,7 @@ export const getSalaryAttendanceDays = async (req, res) => {
   return successResponse(res, "Attendance working days loaded", { staffId, month, workingDays });
 };
 
-// Return all payroll for billing roles and restrict other staff to their own salary records.
+// View Salaries | Controller | Return all payroll for billing roles and restrict other staff to their own salary records.
 export const listPayroll = async (req, res) => {
   const filter = {};
   if (![ROLES.MANAGER, ROLES.ADMIN, ROLES.CASHIER].includes(req.user.role)) {
@@ -267,7 +269,7 @@ export const listPayroll = async (req, res) => {
   return successResponse(res, "Salary list loaded", payroll);
 };
 
-// Enforce the draft, reviewed, approved, and paid sequence with role checks for each step.
+// Update Salary Status | Controller | Enforce the draft, reviewed, approved, and paid sequence with role checks for each step.
 export const updatePayrollStatus = async (req, res) => {
   const payroll = await Payroll.findById(req.params.id);
   if (!payroll) throw new AppError("Salary record not found", 404);
@@ -288,7 +290,7 @@ export const updatePayrollStatus = async (req, res) => {
   return successResponse(res, "Salary status updated", payroll);
 };
 
-// Download a paid-invoice receipt after applying patient ownership checks.
+// Download Invoice Receipt | Controller | Download a paid-invoice receipt after applying patient ownership checks.
 export const downloadInvoiceReceipt = async (req, res) => {
   const filter = { _id: req.params.id };
   if (req.user.role === ROLES.PATIENT) filter.patientId = req.user._id;
@@ -317,7 +319,7 @@ export const downloadInvoiceReceipt = async (req, res) => {
   return res.send(lines.join("\n"));
 };
 
-// Load an authorized salary record and send a downloadable text payslip.
+// Download Payslip | Controller | Load an authorized salary record and send a downloadable text payslip.
 export const downloadPayslip = async (req, res) => {
   const payroll = await Payroll.findById(req.params.id)
     .populate({ path: "staffId", populate: { path: "userId", select: "firstName lastName email" } });
@@ -348,7 +350,7 @@ export const downloadPayslip = async (req, res) => {
   return res.send(lines.join("\n"));
 };
 
-// Merge unpaid patient and phone-matched walk-in invoices and relink their pharmacy sales.
+// Consolidate Patient Invoices | Controller | Merge unpaid patient and phone-matched walk-in invoices and relink their pharmacy sales.
 export const consolidatePatientInvoices = async (req, res) => {
   const { patientId } = req.body;
   if (!patientId) throw new AppError("Patient ID is required", 400);
@@ -414,7 +416,7 @@ export const consolidatePatientInvoices = async (req, res) => {
   return successResponse(res, "Consolidated into one unified bill for patient", primaryInvoice);
 };
 
-// Summarize invoiced, collected, outstanding, payroll, and supplier amounts from stored records.
+// View Revenue Summary | Controller | Summarize invoiced, collected, outstanding, payroll, and supplier amounts from stored records.
 export const revenueSummary = async (req, res) => {
   const invoices = await Invoice.find({ status: { $ne: "cancelled" } });
   const payments = await Payment.find({ status: { $ne: "voided" } });
@@ -450,7 +452,7 @@ export const revenueSummary = async (req, res) => {
   });
 };
 
-// Match doctor appointments to invoices and summarize consultation fees billed, collected, and outstanding.
+// View Doctor Earnings | Controller | Match doctor appointments to invoices and summarize consultation fees billed, collected, and outstanding.
 export const getDoctorEarnings = async (req, res) => {
   let doctorUserId = req.user.role === ROLES.DOCTOR ? req.user._id : req.query.doctorId;
   if (!doctorUserId) {
@@ -530,5 +532,5 @@ export const getDoctorEarnings = async (req, res) => {
   });
 };
 
-// Build a display name with email and caller-provided fallbacks.
+// Billing Workspace | Business Logic | Build a display name with email and caller-provided fallbacks.
 const nameFromUser = (user, fallback = "Health Guard user") => [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || fallback;

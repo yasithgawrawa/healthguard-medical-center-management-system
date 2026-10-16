@@ -1,7 +1,9 @@
-// Define the MongoDB structure, constraints, and relationships for supplier bill records.
+// Shared SupplierBill Model | Database Model | Define the stored fields, constraints, and relationships used by this record's features.
 import mongoose from "mongoose";
 
-// Define stored supplier bill data with supplier id, purchase id, amount, status, method and database validation.
+// Record Medicine Purchase | Database Model | Define stored supplier bill data with supplier id, purchase id, amount, status, method and database validation.
+// Pay Supplier Bill | Database Model | Define stored supplier bill data with supplier id, purchase id, amount, status, method and database validation.
+// View Supplier Bills | Database Model | Define stored supplier bill data with supplier id, purchase id, amount, status, method and database validation.
 const supplierBillSchema = new mongoose.Schema(
   {
     // Reference the shared Supplier record by ID and require the relationship.

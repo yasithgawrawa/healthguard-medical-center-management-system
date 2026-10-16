@@ -1,4 +1,4 @@
-// Implement inventory business rules and coordinate database operations.
+// Inventory Workspace | Business Logic | Implement inventory business rules and coordinate database operations.
 import { Medicine } from "../models/Medicine.js";
 import { MedicineBatch } from "../models/MedicineBatch.js";
 import { Supplier } from "../models/Supplier.js";
@@ -13,7 +13,7 @@ import { User } from "../../epic1_user_staff/models/User.js";
 import { AppError } from "../../../shared/utils/AppError.js";
 import { ROLES } from "../../../shared/constants/roles.js";
 
-// Replace return reference IDs with selected medicine, batch, supplier, and staff details.
+// Shared Medicine Return Details | Business Logic | Replace return reference IDs with selected medicine, batch, supplier, and staff details.
 const populateMedicineReturn = (query) =>
   query
     .populate("medicineId", "name category unit")
@@ -22,7 +22,7 @@ const populateMedicineReturn = (query) =>
     .populate("createdBy", "firstName lastName")
     .populate("completedBy", "firstName lastName");
 
-// Build a dated return reference and skip references that already exist.
+// Create Medicine Return Draft | Business Logic | Build a dated return reference and skip references that already exist.
 const generateReturnId = async (date = new Date()) => {
   const key = date.toISOString().slice(0, 10).replace(/-/g, "");
   const start = new Date(date);
@@ -40,7 +40,7 @@ const generateReturnId = async (date = new Date()) => {
 
 export const inventoryService = {
   // --- MEDICINES ---
-  // Sum batch quantities per medicine and derive stock levels against each reorder threshold.
+  // View Medicines | Business Logic | Sum batch quantities per medicine and derive stock levels against each reorder threshold.
   async getMedicinesWithStock(filter = {}) {
     const medicines = await Medicine.find(filter).sort({ name: 1 });
     const batches = await MedicineBatch.find();
@@ -77,7 +77,7 @@ export const inventoryService = {
     });
   },
 
-  // Reject an existing case-insensitive medicine name before creating the catalog record.
+  // Add New Medicine | Business Logic | Reject an existing case-insensitive medicine name before creating the catalog record.
   async createMedicine(data) {
     const existing = await Medicine.findOne({ name: { $regex: new RegExp(`^${data.name.trim()}$`, "i") } });
     if (existing) {
@@ -86,7 +86,7 @@ export const inventoryService = {
     return Medicine.create(data);
   },
 
-  // Check name conflicts and update the medicine with Mongoose validation enabled.
+  // Update Medicine | Business Logic | Check name conflicts and update the medicine with Mongoose validation enabled.
   async updateMedicine(id, data) {
     if (data.name) {
       const existing = await Medicine.findOne({
@@ -102,7 +102,7 @@ export const inventoryService = {
     return medicine;
   },
 
-  // Delete the medicine and all of its batches and report the number of removed batches.
+  // Delete Medicine | Business Logic | Delete the medicine and all of its batches and report the number of removed batches.
   async deleteMedicine(id) {
     const medicine = await Medicine.findById(id);
     if (!medicine) throw new AppError("Medicine not found", 404);
@@ -118,7 +118,7 @@ export const inventoryService = {
   },
 
   // --- BATCHES ---
-  // Load batches with medicine details and classify expiry within the next 30 days.
+  // View Medicine Batches | Business Logic | Load batches with medicine details and classify expiry within the next 30 days.
   async getBatches() {
     const batches = await MedicineBatch.find()
       .populate("medicineId", "name category unit price status")
@@ -143,7 +143,7 @@ export const inventoryService = {
     });
   },
 
-  // Check batch uniqueness, linked medicine, and date order before creating received stock.
+  // Add Medicine Batch | Business Logic | Check batch uniqueness, linked medicine, and date order before creating received stock.
   async createBatch(data) {
     const existing = await MedicineBatch.findOne({ batchNumber: data.batchNumber.trim().toUpperCase() });
     if (existing) {
@@ -169,7 +169,7 @@ export const inventoryService = {
     });
   },
 
-  // Check batch-number conflicts and update the batch with Mongoose validation enabled.
+  // Update Medicine Batch | Business Logic | Check batch-number conflicts and update the batch with Mongoose validation enabled.
   async updateBatch(id, data) {
     if (data.batchNumber) {
       const existing = await MedicineBatch.findOne({
@@ -187,24 +187,24 @@ export const inventoryService = {
   },
 
   // --- SUPPLIERS ---
-  // Return suppliers in alphabetical order.
+  // View Suppliers | Business Logic | Return suppliers in alphabetical order.
   async getSuppliers() {
     return Supplier.find().sort({ name: 1 });
   },
 
-  // Store a new supplier using the validated request data.
+  // Add Supplier | Business Logic | Store a new supplier using the validated request data.
   async createSupplier(data) {
     return Supplier.create(data);
   },
 
-  // Update a supplier with model validation or return a 404 error.
+  // Update Supplier | Business Logic | Update a supplier with model validation or return a 404 error.
   async updateSupplier(id, data) {
     const supplier = await Supplier.findByIdAndUpdate(id, data, { new: true, runValidators: true });
     if (!supplier) throw new AppError("Supplier not found", 404);
     return supplier;
   },
 
-  // Mark a supplier inactive while preserving its purchase history.
+  // Deactivate Supplier | Business Logic | Mark a supplier inactive while preserving its purchase history.
   async deleteSupplier(id) {
     const supplier = await Supplier.findByIdAndUpdate(id, { status: "inactive" }, { new: true });
     if (!supplier) throw new AppError("Supplier not found", 404);
@@ -212,7 +212,7 @@ export const inventoryService = {
   },
 
   // --- PURCHASES ---
-  // Load purchase history with linked supplier, medicine, and batch details.
+  // View Medicine Purchases | Business Logic | Load purchase history with linked supplier, medicine, and batch details.
   async getPurchases() {
     return Purchase.find()
       .populate("supplierId", "name phone email")
@@ -221,7 +221,7 @@ export const inventoryService = {
       .sort({ purchasedAt: -1 });
   },
 
-  // Receive stock into an existing or new batch, record the purchase, and create a supplier bill.
+  // Record Medicine Purchase | Business Logic | Receive stock into an existing or new batch, record the purchase, and create a supplier bill.
   async recordPurchase(data) {
     const supplier = await Supplier.findById(data.supplierId);
     if (!supplier) throw new AppError("Supplier not found", 404);
@@ -302,7 +302,8 @@ export const inventoryService = {
   },
 
   // --- MEDICINE RETURNS ---
-  // Verify the medicine and batch, infer the supplier from purchase history, and check available stock.
+  // Create Medicine Return Draft | Business Logic | Verify the medicine and batch, infer the supplier from purchase history, and check available stock.
+  // Update Medicine Return Draft | Business Logic | Verify the medicine and batch, infer the supplier from purchase history, and check available stock.
   async validateMedicineReturnPayload(data) {
     const medicine = await Medicine.findById(data.medicineId);
     if (!medicine) throw new AppError("Medicine not found", 404);
@@ -330,7 +331,7 @@ export const inventoryService = {
     return { medicine, batch, supplier };
   },
 
-  // Create a validated supplier return draft without deducting stock.
+  // Create Medicine Return Draft | Business Logic | Create a validated supplier return draft without deducting stock.
   async createMedicineReturnDraft(data, userId) {
     const { supplier } = await this.validateMedicineReturnPayload(data);
     const returnId = await generateReturnId();
@@ -344,19 +345,19 @@ export const inventoryService = {
     return populateMedicineReturn(MedicineReturn.findById(medicineReturn._id));
   },
 
-  // List supplier returns with related records, newest first.
+  // View Medicine Returns | Business Logic | List supplier returns with related records, newest first.
   async getMedicineReturns() {
     return populateMedicineReturn(MedicineReturn.find().sort({ createdAt: -1 }));
   },
 
-  // Load a populated supplier return or return a 404 error.
+  // View Medicine Return Details | Business Logic | Load a populated supplier return or return a 404 error.
   async getMedicineReturnById(id) {
     const medicineReturn = await populateMedicineReturn(MedicineReturn.findById(id));
     if (!medicineReturn) throw new AppError("Medicine return not found", 404);
     return medicineReturn;
   },
 
-  // Validate merged return details and allow edits only while the return is a draft.
+  // Update Medicine Return Draft | Business Logic | Validate merged return details and allow edits only while the return is a draft.
   async updateMedicineReturnDraft(id, data) {
     const medicineReturn = await MedicineReturn.findById(id);
     if (!medicineReturn) throw new AppError("Medicine return not found", 404);
@@ -378,7 +379,7 @@ export const inventoryService = {
     return populateMedicineReturn(MedicineReturn.findById(medicineReturn._id));
   },
 
-  // Delete a return only while its status is draft.
+  // Delete Medicine Return Draft | Business Logic | Delete a return only while its status is draft.
   async deleteMedicineReturnDraft(id) {
     const medicineReturn = await MedicineReturn.findById(id);
     if (!medicineReturn) throw new AppError("Medicine return not found", 404);
@@ -387,7 +388,7 @@ export const inventoryService = {
     return medicineReturn;
   },
 
-  // Deduct available batch stock, complete a draft return, and restore stock if completion loses a race.
+  // Complete Medicine Return | Business Logic | Deduct available batch stock, complete a draft return, and restore stock if completion loses a race.
   async completeMedicineReturn(id, userId) {
     const medicineReturn = await MedicineReturn.findById(id);
     if (!medicineReturn) throw new AppError("Medicine return not found", 404);
@@ -420,7 +421,7 @@ export const inventoryService = {
   },
 
   // --- SALES / POS ---
-  // Validate sale items, calculate prices on the server, deduct stock, and link prescription and billing records.
+  // Record Pharmacy Sale | Business Logic | Validate sale items, calculate prices on the server, deduct stock, and link prescription and billing records.
   async createSale({ prescriptionId, patientId, customerName, customerPhone, items, soldById, paymentStatus }) {
     if (!items || items.length === 0) {
       throw new AppError("Sale must contain at least one item", 400);
@@ -614,7 +615,7 @@ export const inventoryService = {
     ]);
   },
 
-  // List pharmacy sales with patient, dispenser, medicine, and batch details.
+  // View Pharmacy Sales | Business Logic | List pharmacy sales with patient, dispenser, medicine, and batch details.
   async getSales() {
     return PharmacySale.find()
       .populate("patientId", "firstName lastName email phone registrationSource portalAccessEnabled")
@@ -624,7 +625,7 @@ export const inventoryService = {
       .sort({ createdAt: -1 });
   },
 
-  // Load one pharmacy sale with the details needed for its bill.
+  // View Pharmacy Sale Details | Business Logic | Load one pharmacy sale with the details needed for its bill.
   async getSaleById(id) {
     const sale = await PharmacySale.findById(id)
       .populate("patientId", "firstName lastName email phone address registrationSource portalAccessEnabled")
@@ -636,7 +637,7 @@ export const inventoryService = {
     return sale;
   },
 
-  // Build a downloadable text bill showing dispensed items, totals, and cashier payment status.
+  // Download Pharmacy Bill | Business Logic | Build a downloadable text bill showing dispensed items, totals, and cashier payment status.
   async getBillFile(id) {
     const sale = await this.getSaleById(id);
     const patientName = sale.customerName || [sale.patientId?.firstName, sale.patientId?.lastName].filter(Boolean).join(" ") || "Walk-in Patient";
@@ -688,7 +689,7 @@ export const inventoryService = {
   },
 
   // --- ALERTS ---
-  // Report medicines at or below reorder level and batches expiring within 60 days, including expired batches.
+  // View Inventory Alerts | Business Logic | Report medicines at or below reorder level and batches expiring within 60 days, including expired batches.
   async getAlerts() {
     const medicines = await Medicine.find({ status: "active" }).sort({ name: 1 });
     const batches = await MedicineBatch.find()
@@ -750,7 +751,7 @@ export const inventoryService = {
   },
 
   // --- SALES REPORT ---
-  // Aggregate sale revenue and quantities by period, medicine, and category.
+  // View Pharmacy Sales Report | Business Logic | Aggregate sale revenue and quantities by period, medicine, and category.
   async getSalesReport(period = "all") {
     let dateFilter = {};
     const now = new Date();
@@ -829,14 +830,14 @@ export const inventoryService = {
   },
 
   // --- PATIENTS & PRESCRIPTIONS HELPERS FOR PHARMACY ---
-  // List active patient records available for pharmacy sales.
+  // View Pharmacy Patients | Business Logic | List active patient records available for pharmacy sales.
   async getEligiblePatients() {
     return User.find({ role: ROLES.PATIENT, status: "active" })
       .select("firstName lastName email phone registrationSource portalAccessEnabled")
       .sort({ firstName: 1 });
   },
 
-  // Load active prescriptions with patient and doctor details for dispensing.
+  // View Active Prescriptions | Business Logic | Load active prescriptions with patient and doctor details for dispensing.
   async getActivePrescriptions() {
     return Prescription.find({ status: "active" })
       .populate("patientId", "firstName lastName email phone registrationSource portalAccessEnabled")

@@ -1,4 +1,4 @@
-// Handle workforce HTTP requests and return consistent API responses.
+// Workforce Management | Controller | Handle workforce HTTP requests and return consistent API responses.
 import { Attendance } from "../models/Attendance.js";
 import { CenterLocation } from "../models/CenterLocation.js";
 import { LeaveRequest } from "../models/LeaveRequest.js";
@@ -9,27 +9,27 @@ import { AppError } from "../../../shared/utils/AppError.js";
 
 const SINGLE_CLINIC_LOCATION = "Health Guard Medical Center";
 
-// Load a staff profile and reject missing or inactive staff members.
+// Shared Staff Validation | Business Logic | Load a staff profile and reject missing or inactive staff members.
 const assertActiveStaff = async (staffId) => {
   const staff = await Staff.findById(staffId);
   if (!staff || staff.status !== "active") throw new AppError("Active staff member not found", 404);
   return staff;
 };
 
-// Resolve the signed-in user to an active staff profile for self-service actions.
+// Shared Staff Self-Service | Business Logic | Resolve the signed-in user to an active staff profile for self-service actions.
 const getCurrentActiveStaff = async (userId) => {
   const staff = await Staff.findOne({ userId });
   if (!staff || staff.status !== "active") throw new AppError("Active staff profile not found for current user", 404);
   return staff;
 };
 
-// Load the primary clinic attendance point.
+// View Clinic Location | Controller | Load the primary clinic attendance point.
 export const getCenterLocation = async (req, res) => {
   const center = await CenterLocation.findOne({ key: "primary" });
   return successResponse(res, "Clinic attendance point loaded", center);
 };
 
-// Create or update the primary clinic attendance point and record who changed it.
+// Set Clinic Location | Controller | Create or update the primary clinic attendance point and record who changed it.
 export const updateCenterLocation = async (req, res) => {
   const center = await CenterLocation.findOneAndUpdate(
     { key: "primary" },
@@ -39,7 +39,7 @@ export const updateCenterLocation = async (req, res) => {
   return successResponse(res, "Clinic attendance point saved", center);
 };
 
-// Reject overlapping scheduled shifts before saving the selected staff member's shift.
+// Create Shift | Controller | Reject overlapping scheduled shifts before saving the selected staff member's shift.
 export const createShift = async (req, res) => {
   await assertActiveStaff(req.body.staffId);
   // Detect scheduled shifts that intersect the requested start and end times.
@@ -55,7 +55,8 @@ export const createShift = async (req, res) => {
   return successResponse(res, "Shift created successfully", shift, 201);
 };
 
-// Combine a calendar date and an HH:mm time using the server local timezone.
+// Create Shift | Business Logic | Combine a calendar date and an HH:mm time using the server local timezone.
+// Create Bulk Shifts | Business Logic | Combine a calendar date and an HH:mm time using the server local timezone.
 const combineDateAndTime = (date, time) => {
   const [hours, minutes] = time.split(":").map(Number);
   const value = new Date(date);
@@ -63,7 +64,7 @@ const combineDateAndTime = (date, time) => {
   return value;
 };
 
-// Generate shifts for selected staff and weekdays while reporting overlaps and inactive staff.
+// Create Bulk Shifts | Controller | Generate shifts for selected staff and weekdays while reporting overlaps and inactive staff.
 export const createBulkShifts = async (req, res) => {
   const { staffIds, startDate, endDate, startTime, endTime, weekdays, notes } = req.body;
   const activeStaff = await Staff.find({ _id: { $in: staffIds }, status: "active" }).select("_id");
@@ -112,33 +113,33 @@ export const createBulkShifts = async (req, res) => {
   return successResponse(res, `Created ${inserted.length} shift(s)`, { createdCount: inserted.length, skipped }, 201);
 };
 
-// Return workforce staff and send the result using the shared API response format.
+// View Staff | Controller | Return workforce staff and send the result using the shared API response format.
 export const listWorkforceStaff = async (req, res) => {
   const staff = await Staff.find({ status: "active" }).populate("userId", "-passwordHash").sort({ employeeId: 1 });
   return successResponse(res, "Workforce staff loaded", staff);
 };
 
-// Return shifts and send the result using the shared API response format.
+// View Shifts | Controller | Return shifts and send the result using the shared API response format.
 export const listShifts = async (req, res) => {
   const shifts = await Shift.find().populate({ path: "staffId", populate: { path: "userId", select: "-passwordHash" } }).sort({ startTime: -1 });
   return successResponse(res, "Shift list loaded", shifts);
 };
 
-// Return shifts belonging to the signed-in staff member.
+// View My Shifts | Controller | Return shifts belonging to the signed-in staff member.
 export const listMyShifts = async (req, res) => {
   const staff = await getCurrentActiveStaff(req.user._id);
   const shifts = await Shift.find({ staffId: staff._id }).populate({ path: "staffId", populate: { path: "userId", select: "-passwordHash" } }).sort({ startTime: -1 });
   return successResponse(res, "My shift schedule loaded", shifts);
 };
 
-// Update shift status and send the result using the shared API response format.
+// Update Shift Status | Controller | Update shift status and send the result using the shared API response format.
 export const updateShiftStatus = async (req, res) => {
   const shift = await Shift.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true, runValidators: true });
   if (!shift) throw new AppError("Shift not found", 404);
   return successResponse(res, "Shift status updated", shift);
 };
 
-// Reject duplicate daily attendance and create a check-in entry for the selected active staff member.
+// Attendance Check In | Controller | Reject duplicate daily attendance and create a check-in entry for the selected active staff member.
 export const checkIn = async (req, res) => {
   await assertActiveStaff(req.body.staffId);
   const now = new Date();
@@ -155,7 +156,7 @@ export const checkIn = async (req, res) => {
   return successResponse(res, "Attendance check-in recorded", attendance, 201);
 };
 
-// Record one daily attendance entry for the signed-in staff member.
+// Attendance Check In | Controller | Record one daily attendance entry for the signed-in staff member.
 export const checkInSelf = async (req, res) => {
   const staff = await getCurrentActiveStaff(req.user._id);
   const now = new Date();
@@ -172,7 +173,7 @@ export const checkInSelf = async (req, res) => {
   return successResponse(res, "Attendance check-in recorded", attendance, 201);
 };
 
-// Close an open attendance entry and record its check-out timestamp.
+// Attendance Check Out | Controller | Close an open attendance entry and record its check-out timestamp.
 export const checkOut = async (req, res) => {
   const attendance = await Attendance.findById(req.params.id);
   if (!attendance) throw new AppError("Attendance record not found", 404);
@@ -183,7 +184,7 @@ export const checkOut = async (req, res) => {
   return successResponse(res, "Attendance check-out recorded", attendance);
 };
 
-// Close the signed-in staff member's most recent open attendance entry.
+// Attendance Check Out | Controller | Close the signed-in staff member's most recent open attendance entry.
 export const checkOutSelf = async (req, res) => {
   const staff = await getCurrentActiveStaff(req.user._id);
   const attendance = await Attendance.findOne({ staffId: staff._id, status: "checked_in" }).sort({ checkInAt: -1 });
@@ -194,7 +195,7 @@ export const checkOutSelf = async (req, res) => {
   return successResponse(res, "Attendance check-out recorded", attendance);
 };
 
-// Return attendance and send the result using the shared API response format.
+// View Attendance | Controller | Return attendance and send the result using the shared API response format.
 export const listAttendance = async (req, res) => {
   const attendance = await Attendance.find()
     .populate({ path: "staffId", populate: { path: "userId", select: "-passwordHash" } })
@@ -202,7 +203,7 @@ export const listAttendance = async (req, res) => {
   return successResponse(res, "Attendance list loaded", attendance);
 };
 
-// Return attendance history belonging to the signed-in staff member.
+// View My Attendance | Controller | Return attendance history belonging to the signed-in staff member.
 export const listMyAttendance = async (req, res) => {
   const staff = await getCurrentActiveStaff(req.user._id);
   const attendance = await Attendance.find({ staffId: staff._id })
@@ -211,34 +212,34 @@ export const listMyAttendance = async (req, res) => {
   return successResponse(res, "My attendance history loaded", attendance);
 };
 
-// Create leave and send the result using the shared API response format.
+// Request Leave | Controller | Create leave and send the result using the shared API response format.
 export const createLeave = async (req, res) => {
   await assertActiveStaff(req.body.staffId);
   const leave = await LeaveRequest.create(req.body);
   return successResponse(res, "Leave request created successfully", leave, 201);
 };
 
-// Create a leave request using the signed-in staff profile rather than a client-supplied staff ID.
+// Request Leave | Controller | Create a leave request using the signed-in staff profile rather than a client-supplied staff ID.
 export const createMyLeave = async (req, res) => {
   const staff = await getCurrentActiveStaff(req.user._id);
   const leave = await LeaveRequest.create({ ...req.body, staffId: staff._id });
   return successResponse(res, "Leave request created successfully", leave, 201);
 };
 
-// Return leave and send the result using the shared API response format.
+// View Leave Requests | Controller | Return leave and send the result using the shared API response format.
 export const listLeave = async (req, res) => {
   const leaveRequests = await LeaveRequest.find().populate({ path: "staffId", populate: { path: "userId", select: "-passwordHash" } }).sort({ createdAt: -1 });
   return successResponse(res, "Leave request list loaded", leaveRequests);
 };
 
-// Return leave requests belonging to the signed-in staff member.
+// View My Leave | Controller | Return leave requests belonging to the signed-in staff member.
 export const listMyLeave = async (req, res) => {
   const staff = await getCurrentActiveStaff(req.user._id);
   const leaveRequests = await LeaveRequest.find({ staffId: staff._id }).populate({ path: "staffId", populate: { path: "userId", select: "-passwordHash" } }).sort({ createdAt: -1 });
   return successResponse(res, "My leave requests loaded", leaveRequests);
 };
 
-// Approve or reject a pending leave request and record the reviewer.
+// Review Leave | Controller | Approve or reject a pending leave request and record the reviewer.
 export const reviewLeave = async (req, res) => {
   const leave = await LeaveRequest.findById(req.params.id);
   if (!leave) throw new AppError("Leave request not found", 404);

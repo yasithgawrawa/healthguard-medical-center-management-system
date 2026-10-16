@@ -1,4 +1,4 @@
-// Parse request data with Zod and pass the validated values to the controller.
+// Shared Request Validation | Shared Logic | Parse request data with Zod and pass the validated values to the controller.
 export const validateRequest = (schema) => (req, res, next) => {
   const parsed = schema.parse({
     body: req.body,

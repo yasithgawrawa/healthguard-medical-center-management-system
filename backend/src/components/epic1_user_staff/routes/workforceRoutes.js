@@ -1,4 +1,4 @@
-// Register workforce endpoints with authentication, role checks, validation, and controllers.
+// Workforce Management | Route | Register workforce endpoints with authentication, role checks, validation, and controllers.
 import { Router } from "express";
 import { z } from "zod";
 import { ROLES } from "../../../shared/constants/roles.js";
@@ -40,7 +40,7 @@ const router = Router();
 // Authenticate requests before they reach the following routes.
 router.use(authenticate);
 
-// Validate my leave values including leave type, start date, end date, reason.
+// Request Leave | Backend Validation | Validate my leave values including leave type, start date, end date, reason.
 const myLeaveSchema = z.object({
   body: z.object({
     leaveType: z.enum(["annual", "sick", "casual", "unpaid"]),
@@ -53,21 +53,21 @@ const myLeaveSchema = z.object({
   })
 });
 
-// GET /center-location: run get center location after role authorization.
+// View Clinic Location | Route | GET /center-location: run get center location after role authorization.
 router.get("/center-location", authorizeRoles(ROLES.ADMIN, ROLES.MANAGER, ROLES.DOCTOR, ROLES.NURSE, ROLES.PHARMACIST, ROLES.CASHIER, ROLES.LAB_ASSISTANT), asyncHandler(getCenterLocation));
-// PATCH /center-location: run update center location after role and request validation.
+// Set Clinic Location | Route | PATCH /center-location: run update center location after role and request validation.
 router.patch("/center-location", authorizeRoles(ROLES.ADMIN, ROLES.MANAGER), validateRequest(centerLocationSchema), asyncHandler(updateCenterLocation));
-// GET /staff: run list workforce staff after role authorization.
+// View Staff | Route | GET /staff: run list workforce staff after role authorization.
 router.get("/staff", authorizeRoles(ROLES.ADMIN, ROLES.MANAGER, ROLES.CASHIER), asyncHandler(listWorkforceStaff));
-// POST /shifts/bulk: run create bulk shifts after role and request validation.
+// Create Bulk Shifts | Route | POST /shifts/bulk: run create bulk shifts after role and request validation.
 router.post("/shifts/bulk", authorizeRoles(ROLES.ADMIN, ROLES.MANAGER), validateRequest(bulkShiftSchema), asyncHandler(createBulkShifts));
-// POST /shifts: run create shift after role and request validation.
+// Create Shift | Route | POST /shifts: run create shift after role and request validation.
 router.post("/shifts", authorizeRoles(ROLES.ADMIN, ROLES.MANAGER), validateRequest(shiftSchema), asyncHandler(createShift));
-// GET /shifts: run list shifts after role authorization.
+// View Shifts | Route | GET /shifts: run list shifts after role authorization.
 router.get("/shifts", authorizeRoles(ROLES.ADMIN, ROLES.MANAGER), asyncHandler(listShifts));
-// GET /shifts/my: run list my shifts after role authorization.
+// View My Shifts | Route | GET /shifts/my: run list my shifts after role authorization.
 router.get("/shifts/my", authorizeRoles(ROLES.DOCTOR, ROLES.NURSE, ROLES.PHARMACIST, ROLES.CASHIER, ROLES.LAB_ASSISTANT), asyncHandler(listMyShifts));
-// PATCH /shifts/:id/status: run update shift status after role and request validation.
+// Update Shift Status | Route | PATCH /shifts/:id/status: run update shift status after role and request validation.
 router.patch(
   "/shifts/:id/status",
   authorizeRoles(ROLES.ADMIN, ROLES.MANAGER),
@@ -75,30 +75,30 @@ router.patch(
   asyncHandler(updateShiftStatus)
 );
 
-// POST /attendance/my/check-in: run check in self after role and request validation.
+// Attendance Check In | Route | POST /attendance/my/check-in: run check in self after role and request validation.
 router.post("/attendance/my/check-in", authorizeRoles(ROLES.DOCTOR, ROLES.NURSE, ROLES.PHARMACIST, ROLES.CASHIER, ROLES.LAB_ASSISTANT), validateRequest(z.object({ body: z.object({
   notes: z.string().trim().max(250).optional().default("")
 }) })), asyncHandler(checkInSelf));
-// PATCH /attendance/my/check-out: run check out self after role authorization.
+// Attendance Check Out | Route | PATCH /attendance/my/check-out: run check out self after role authorization.
 router.patch("/attendance/my/check-out", authorizeRoles(ROLES.DOCTOR, ROLES.NURSE, ROLES.PHARMACIST, ROLES.CASHIER, ROLES.LAB_ASSISTANT), asyncHandler(checkOutSelf));
-// GET /attendance/my: run list my attendance after role authorization.
+// View My Attendance | Route | GET /attendance/my: run list my attendance after role authorization.
 router.get("/attendance/my", authorizeRoles(ROLES.DOCTOR, ROLES.NURSE, ROLES.PHARMACIST, ROLES.CASHIER, ROLES.LAB_ASSISTANT), asyncHandler(listMyAttendance));
-// POST /attendance/check-in: run check in after role and request validation.
+// Attendance Check In | Route | POST /attendance/check-in: run check in after role and request validation.
 router.post("/attendance/check-in", authorizeRoles(ROLES.ADMIN, ROLES.MANAGER), validateRequest(attendanceCheckInSchema), asyncHandler(checkIn));
-// PATCH /attendance/:id/check-out: run check out after role and request validation.
+// Attendance Check Out | Route | PATCH /attendance/:id/check-out: run check out after role and request validation.
 router.patch("/attendance/:id/check-out", authorizeRoles(ROLES.ADMIN, ROLES.MANAGER), validateRequest(idParamSchema), asyncHandler(checkOut));
-// GET /attendance: run list attendance after role authorization.
+// View Attendance | Route | GET /attendance: run list attendance after role authorization.
 router.get("/attendance", authorizeRoles(ROLES.ADMIN, ROLES.MANAGER), asyncHandler(listAttendance));
 
-// POST /leave: run create leave after role and request validation.
+// Request Leave | Route | POST /leave: run create leave after role and request validation.
 router.post("/leave", authorizeRoles(ROLES.ADMIN, ROLES.MANAGER), validateRequest(leaveSchema), asyncHandler(createLeave));
-// GET /leave: run list leave after role authorization.
+// View Leave Requests | Route | GET /leave: run list leave after role authorization.
 router.get("/leave", authorizeRoles(ROLES.ADMIN, ROLES.MANAGER), asyncHandler(listLeave));
-// POST /leave/my: run create my leave after role and request validation.
+// Request Leave | Route | POST /leave/my: run create my leave after role and request validation.
 router.post("/leave/my", authorizeRoles(ROLES.DOCTOR, ROLES.NURSE, ROLES.PHARMACIST, ROLES.CASHIER, ROLES.LAB_ASSISTANT), validateRequest(myLeaveSchema), asyncHandler(createMyLeave));
-// GET /leave/my: run list my leave after role authorization.
+// View My Leave | Route | GET /leave/my: run list my leave after role authorization.
 router.get("/leave/my", authorizeRoles(ROLES.DOCTOR, ROLES.NURSE, ROLES.PHARMACIST, ROLES.CASHIER, ROLES.LAB_ASSISTANT), asyncHandler(listMyLeave));
-// PATCH /leave/:id/review: run review leave after role and request validation.
+// Review Leave | Route | PATCH /leave/:id/review: run review leave after role and request validation.
 router.patch("/leave/:id/review", authorizeRoles(ROLES.MANAGER), validateRequest(reviewLeaveSchema), asyncHandler(reviewLeave));
 
 export default router;

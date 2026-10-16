@@ -1,4 +1,4 @@
-// Mount the React application with routing, authentication, and shared styling.
+// Application Startup | Frontend Logic | Mount the React application with routing, authentication, and shared styling.
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";

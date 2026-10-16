@@ -28,15 +28,18 @@ const NAME_PATTERN = /^[A-Za-z][A-Za-z .'-]*$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_PATTERN = /^(?:\+94|0)?[1-9]\d{8}$/;
 
-// Format a date as a local calendar key for date comparisons.
+// Add Walk-in Patient | Frontend Logic | Format a date as a local calendar key for date comparisons.
+// Book Appointment | Frontend Logic | Format a date as a local calendar key for date comparisons.
 const localDateKey = (value) => {
   const date = value ? new Date(value) : new Date();
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
-// Normalize phone punctuation and check the local phone-number pattern.
+// Add Walk-in Patient | Frontend Logic | Normalize phone punctuation and check the local phone-number pattern.
+// Book Appointment | Frontend Logic | Normalize phone punctuation and check the local phone-number pattern.
 const isValidLocalPhone = (value) => PHONE_PATTERN.test(String(value || "").replace(/[\s\-().]/g, ""));
-// Check that the birth date falls within the supported patient age range.
+// Add Walk-in Patient | Frontend Logic | Check that the birth date falls within the supported patient age range.
+// Book Appointment | Frontend Logic | Check that the birth date falls within the supported patient age range.
 const isWithinBirthDateRange = (value) => {
   if (!value) return true;
   const selected = new Date(value);
@@ -49,7 +52,8 @@ const isWithinBirthDateRange = (value) => {
   return selected <= today && selected >= oldest;
 };
 
-// Register an in-clinic patient and book an available appointment slot.
+// Add Walk-in Patient | Frontend Logic | Register an in-clinic patient and book an available appointment slot.
+// Book Appointment | Frontend Logic | Register an in-clinic patient and book an available appointment slot.
 export const NurseWalkInBookingPanel = ({ onBooked }) => {
   const [doctors, setDoctors] = useState([]);
   const [form, setForm] = useState(initialForm);
@@ -61,6 +65,7 @@ export const NurseWalkInBookingPanel = ({ onBooked }) => {
 
   // Synchronize component state or external data when the listed dependencies change.
   useEffect(() => {
+    // View Doctors | Data Loading | Call clinicalApi.listDoctors for this feature and use the returned records
     clinicalApi
       .listDoctors()
       .then((data) => {
@@ -81,6 +86,7 @@ export const NurseWalkInBookingPanel = ({ onBooked }) => {
     }
 
     setLoadingSlots(true);
+    // View Appointment Slots | Data Loading | Call clinicalApi.getAppointmentSlots for this feature and use the returned records
     clinicalApi
       .getAppointmentSlots({ doctorId: form.doctorId, date: form.appointmentDay })
       .then((data) => setSlots(data || []))
@@ -91,7 +97,8 @@ export const NurseWalkInBookingPanel = ({ onBooked }) => {
       .finally(() => setLoadingSlots(false));
   }, [form.doctorId, form.appointmentDay]);
 
-  // Update one form field and clear its previous validation error.
+  // Add Walk-in Patient | Form Logic | Update one form field and clear its previous validation error.
+  // Book Appointment | Form Logic | Update one form field and clear its previous validation error.
   const setField = (field, value) => {
     setForm((current) => {
       const next = { ...current, [field]: value };
@@ -104,7 +111,7 @@ export const NurseWalkInBookingPanel = ({ onBooked }) => {
     setErrors((current) => ({ ...current, [field]: "" }));
   };
 
-  // Store the chosen available appointment slot and clear its field error.
+  // Book Appointment | Form Logic | Store the chosen available appointment slot and clear its field error.
   const selectSlot = (slot) => {
     if (!slot.available) return;
     setForm((current) => ({
@@ -115,7 +122,8 @@ export const NurseWalkInBookingPanel = ({ onBooked }) => {
     setErrors((current) => ({ ...current, appointmentDate: "" }));
   };
 
-  // Check required booking fields and display field-specific errors before submission.
+  // Add Walk-in Patient | Frontend Validation | Check required booking fields and display field-specific errors before submission.
+  // Book Appointment | Frontend Validation | Check required booking fields and display field-specific errors before submission.
   const validate = () => {
     const nextErrors = {};
     const firstName = form.firstName.trim();
@@ -150,13 +158,15 @@ export const NurseWalkInBookingPanel = ({ onBooked }) => {
     return Object.keys(nextErrors).length === 0;
   };
 
-  // Submit the validated nurse walk in booking form and show the resulting success or error feedback.
+  // Add Walk-in Patient | Submit Logic | Submit the validated nurse walk in booking form and show the resulting success or error feedback.
+  // Book Appointment | Submit Logic | Submit the validated nurse walk in booking form and show the resulting success or error feedback.
   const submit = async (event) => {
     event.preventDefault();
     if (!validate()) return;
 
     setBusy(true);
     try {
+      // Add Walk-in Patient | Submit Logic | Call e1Api.createQuickPatient for this feature.
       const created = await e1Api.createQuickPatient({
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
@@ -168,6 +178,7 @@ export const NurseWalkInBookingPanel = ({ onBooked }) => {
       });
       const patientId = created.patient?._id || created.patient?.id;
 
+      // Book Appointment | Submit Logic | Call clinicalApi.createAppointment for this feature.
       await clinicalApi.createAppointment({
         patientId,
         doctorId: form.doctorId,
@@ -199,6 +210,8 @@ export const NurseWalkInBookingPanel = ({ onBooked }) => {
       </div>
 
       <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        {/* Add Walk-in Patient | Form | Render fields, validation feedback, and submission controls for this feature. */}
+        {/* Book Appointment | Form | Render fields, validation feedback, and submission controls for this feature. */}
         <div className="form-grid">
           <FormInput label="First Name" required maxLength={60} value={form.firstName} onChange={(event) => setField("firstName", event.target.value)} error={errors.firstName} />
           <FormInput label="Last Name" required maxLength={60} value={form.lastName} onChange={(event) => setField("lastName", event.target.value)} error={errors.lastName} />

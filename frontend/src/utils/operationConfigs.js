@@ -1,4 +1,4 @@
-// Describe reusable workspace actions, form fields, and their API paths.
+// Shared Configured Forms | Frontend Logic | Describe reusable workspace actions, form fields, and their API paths.
 export const commonId = { name: "id", label: "Record ID", required: true, pathParam: true };
 
 const medicineCategoryOptions = [
@@ -15,6 +15,7 @@ const medicineCategoryOptions = [
 ].map((category) => ({ value: category, label: category }));
 
 export const e1StaffActions = [
+  // Add Staff | Form Configuration | Define the input fields and endpoint used by the reusable operation form.
   {
     label: "Create Staff",
     method: "post",
@@ -39,6 +40,7 @@ export const e1StaffActions = [
       { name: "password", label: "Password", type: "password", required: true, placeholder: "Admin@12345" }
     ]
   },
+  // Deactivate Staff | Form Configuration | Define the input fields and endpoint used by the reusable operation form.
   {
     label: "Deactivate Staff",
     method: "delete",
@@ -48,11 +50,14 @@ export const e1StaffActions = [
 ];
 
 export const e1WorkforceActions = [
+  // Attendance Check In | Form Configuration | Define the input fields and endpoint used by the reusable operation form.
   { label: "Check In", method: "post", path: "/e1/workforce/attendance/check-in", fields: [
     { name: "staffId", label: "Staff ID", required: true },
     { name: "notes", label: "Notes", placeholder: "Checked in at Colombo center" }
   ] },
+  // Attendance Check Out | Form Configuration | Define the input fields and endpoint used by the reusable operation form.
   { label: "Check Out", method: "patch", path: "/e1/workforce/attendance/:id/check-out", fields: [commonId] },
+  // Request Leave | Form Configuration | Define the input fields and endpoint used by the reusable operation form.
   { label: "Create Leave", method: "post", path: "/e1/workforce/leave", fields: [
     { name: "staffId", label: "Staff ID", required: true },
     { name: "leaveType", label: "Type", type: "select", required: true, options: [
@@ -65,6 +70,7 @@ export const e1WorkforceActions = [
 ];
 
 export const e2Actions = [
+  // Book Appointment | Form Configuration | Define the input fields and endpoint used by the reusable operation form.
   { label: "Book Appointment", method: "post", path: "/e2/clinical/appointments", fields: [
     { name: "patientId", label: "Patient ID", required: true },
     { name: "doctorId", label: "Doctor User ID", required: true },
@@ -72,12 +78,14 @@ export const e2Actions = [
     { name: "slotLabel", label: "Slot", required: true, placeholder: "Morning 09:00" },
     { name: "reason", label: "Reason", required: true, placeholder: "Fever and body aches" }
   ] },
+  // Update Appointment Status | Form Configuration | Define the input fields and endpoint used by the reusable operation form.
   { label: "Update Appointment", method: "patch", path: "/e2/clinical/appointments/:id/status", fields: [
     commonId,
     { name: "status", label: "Status", type: "select", required: true, options: [
       { value: "checked_in", label: "Checked in" }, { value: "in_consultation", label: "In consultation" }, { value: "completed", label: "Completed" }, { value: "cancelled", label: "Cancelled" }
     ] }
   ] },
+  // Record Vitals | Form Configuration | Define the input fields and endpoint used by the reusable operation form.
   { label: "Record Vitals", method: "post", path: "/e2/clinical/vitals", fields: [
     { name: "appointmentId", label: "Appointment ID", required: true },
     { name: "patientId", label: "Patient ID", required: true },
@@ -85,6 +93,7 @@ export const e2Actions = [
     { name: "heartRate", label: "Heart rate", type: "number" },
     { name: "spo2", label: "SpO2", type: "number" }
   ] },
+  // Save Consultation | Form Configuration | Define the input fields and endpoint used by the reusable operation form.
   { label: "Save Consultation", method: "post", path: "/e2/clinical/consultations", fields: [
     { name: "appointmentId", label: "Appointment ID", required: true },
     { name: "patientId", label: "Patient ID", required: true },
@@ -92,12 +101,14 @@ export const e2Actions = [
     { name: "diagnosis", label: "Diagnosis", required: true, placeholder: "Viral fever" },
     { name: "clinicalNotes", label: "Clinical notes", required: true, placeholder: "Hydration advised" }
   ] },
+  // Create Prescription | Form Configuration | Define the input fields and endpoint used by the reusable operation form.
   { label: "Create Prescription", method: "post", path: "/e2/clinical/prescriptions", fields: [
     { name: "appointmentId", label: "Appointment ID", required: true },
     { name: "patientId", label: "Patient ID", required: true },
     { name: "doctorId", label: "Doctor ID", required: true },
     { name: "items", label: "Items JSON", type: "json", required: true, defaultValue: "[{\"medicineName\":\"Paracetamol\",\"dosage\":\"500mg\",\"frequency\":\"Twice daily\",\"duration\":\"3 days\",\"instructions\":\"After meals\"}]" }
   ] },
+  // Create Lab Request | Form Configuration | Define the input fields and endpoint used by the reusable operation form.
   { label: "Create Lab Request", method: "post", path: "/e2/clinical/lab-requests", fields: [
     { name: "appointmentId", label: "Appointment ID", required: true },
     { name: "patientId", label: "Patient ID", required: true },
@@ -107,6 +118,7 @@ export const e2Actions = [
 ];
 
 export const e3Actions = [
+  // Add New Medicine | Form Configuration | Define the input fields and endpoint used by the reusable operation form.
   { label: "Create Medicine", method: "post", path: "/e3/inventory/medicines", fields: [
     { name: "name", label: "Name", required: true, placeholder: "Paracetamol 500mg" },
     { name: "category", label: "Category", type: "select", required: true, placeholder: "Select medicine category", options: medicineCategoryOptions },
@@ -114,12 +126,14 @@ export const e3Actions = [
     { name: "price", label: "Price", type: "number", required: true, placeholder: "12.00" },
     { name: "reorderLevel", label: "Reorder level", type: "number", required: true, placeholder: "100" }
   ] },
+  // Add Supplier | Form Configuration | Define the input fields and endpoint used by the reusable operation form.
   { label: "Create Supplier", method: "post", path: "/e3/inventory/suppliers", fields: [
     { name: "name", label: "Name", required: true, placeholder: "State Pharmaceuticals Corporation" },
     { name: "email", label: "Email", type: "email", placeholder: "supplies@example.lk" },
     { name: "phone", label: "Phone", required: true, placeholder: "+94 11 232 8262" },
     { name: "address", label: "Address", placeholder: "Colombo 07" }
   ] },
+  // Add Medicine Batch | Form Configuration | Define the input fields and endpoint used by the reusable operation form.
   { label: "Create Batch", method: "post", path: "/e3/inventory/batches", fields: [
     { name: "medicineId", label: "Medicine ID", required: true },
     { name: "batchNumber", label: "Batch number", required: true, placeholder: "PARA-LK-001" },
@@ -128,6 +142,7 @@ export const e3Actions = [
     { name: "manufactureDate", label: "Manufacture date", type: "date", required: true },
     { name: "expiryDate", label: "Expiry date", type: "date", required: true }
   ] },
+  // Record Medicine Purchase | Form Configuration | Define the input fields and endpoint used by the reusable operation form.
   { label: "Record Purchase", method: "post", path: "/e3/inventory/purchases", fields: [
     { name: "supplierId", label: "Supplier ID", required: true },
     { name: "medicineId", label: "Medicine ID", required: true },
@@ -135,6 +150,7 @@ export const e3Actions = [
     { name: "quantity", label: "Quantity", type: "number", required: true, placeholder: "100" },
     { name: "purchasePrice", label: "Purchase price", type: "number", required: true, placeholder: "7200.00" }
   ] },
+  // Record Pharmacy Sale | Form Configuration | Define the input fields and endpoint used by the reusable operation form.
   { label: "Pharmacy Sale", method: "post", path: "/e3/inventory/sales", fields: [
     { name: "patientId", label: "Patient ID" },
     { name: "items", label: "Items JSON", type: "json", required: true, defaultValue: "[{\"medicineId\":\"\",\"batchId\":\"\",\"quantity\":1}]", placeholder: "[{\"medicineId\":\"...\",\"batchId\":\"...\",\"quantity\":1}]" }
@@ -142,11 +158,13 @@ export const e3Actions = [
 ];
 
 export const e4Actions = [
+  // Create Invoice | Form Configuration | Define the input fields and endpoint used by the reusable operation form.
   { label: "Create Invoice", method: "post", path: "/e4/billing/invoices", fields: [
     { name: "patientId", label: "Patient ID", required: true },
     { name: "appointmentId", label: "Appointment ID" },
     { name: "items", label: "Items JSON", type: "json", required: true, defaultValue: "[{\"description\":\"Consultation\",\"quantity\":1,\"unitPrice\":1500}]", placeholder: "[{\"description\":\"Consultation\",\"quantity\":1,\"unitPrice\":1500}]" }
   ] },
+  // Record Payment | Form Configuration | Define the input fields and endpoint used by the reusable operation form.
   { label: "Record Payment", method: "post", path: "/e4/billing/payments", fields: [
     { name: "invoiceId", label: "Invoice ID", required: true },
     { name: "amount", label: "Amount", type: "number", required: true, placeholder: "1500.00" },
@@ -154,6 +172,7 @@ export const e4Actions = [
       { value: "cash", label: "Cash" }, { value: "card", label: "Card" }, { value: "bank_transfer", label: "Bank transfer" }
     ] }
   ] },
+  // Create Salary Draft | Form Configuration | Define the input fields and endpoint used by the reusable operation form.
   { label: "Create Salary", method: "post", path: "/e4/billing/payroll", fields: [
     { name: "staffId", label: "Staff ID", required: true },
     { name: "month", label: "Month YYYY-MM", required: true, placeholder: "2026-09" },

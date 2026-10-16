@@ -1,10 +1,10 @@
-// Manage the shared Mongoose connection used by HTTP handlers and scripts.
+// Shared Database Connection | Shared Logic | Manage the shared Mongoose connection used by HTTP handlers and scripts.
 import mongoose from "mongoose";
 import { env } from "./env.js";
 
 let cachedConnection = null;
 
-// Reuse an existing MongoDB connection or open one with the configured connection limits.
+// Shared Database Connection | Shared Logic | Reuse an existing MongoDB connection or open one with the configured connection limits.
 export const connectDatabase = async () => {
   if (mongoose.connection.readyState >= 1) {
     return mongoose.connection;

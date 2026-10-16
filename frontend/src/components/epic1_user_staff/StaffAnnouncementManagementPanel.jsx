@@ -18,14 +18,15 @@ import { formatDate, roleLabel, STAFF_ROLES } from "./e1Constants.js";
 
 const targetRoleOptions = [{ value: "all", label: "All Staff" }, ...STAFF_ROLES];
 
-// Build today's local date input value.
+// Staff Announcements | Frontend Logic | Build today's local date input value.
 const todayInputValue = () => {
   const now = new Date();
   const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
   return localDate.toISOString().slice(0, 10);
 };
 
-// Validate announcement form values including title, published date, expiry date, target role.
+// Create Staff Announcement | Frontend Validation | Validate announcement form values including title, published date, expiry date, target role.
+// Update Staff Announcement | Frontend Validation | Validate announcement form values including title, published date, expiry date, target role.
 const announcementFormSchema = z.object({
   title: z.string().trim().min(2, "Title must be at least 2 characters").max(120, "Title cannot exceed 120 characters"),
   message: z.string().trim().min(5, "Message must be at least 5 characters").max(1000, "Message cannot exceed 1000 characters"),
@@ -37,7 +38,7 @@ const announcementFormSchema = z.object({
   message: "Expiry date cannot be earlier than published date"
 });
 
-// Validate create announcement form values.
+// Create Staff Announcement | Frontend Validation | Validate create announcement form values.
 const createAnnouncementFormSchema = announcementFormSchema
   .refine((data) => data.publishedDate >= todayInputValue(), {
     path: ["publishedDate"],
@@ -48,14 +49,15 @@ const createAnnouncementFormSchema = announcementFormSchema
     message: "Expiry date cannot be in the past"
   });
 
-// Convert a stored record date into the value expected by a date input.
+// Staff Announcements | Frontend Logic | Convert a stored record date into the value expected by a date input.
 const dateInputValue = (value) => {
   if (!value) return "";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
 };
 
-// Map a stored record into the values expected by its editing form.
+// Create Staff Announcement | Form Logic | Map a stored record into the values expected by its editing form.
+// Update Staff Announcement | Form Logic | Map a stored record into the values expected by its editing form.
 const formValuesFor = (announcement) => ({
   title: announcement?.title || "",
   message: announcement?.message || "",
@@ -64,7 +66,7 @@ const formValuesFor = (announcement) => ({
   targetRole: announcement?.targetRole || "all"
 });
 
-// Derive whether an announcement is scheduled, current, or expired from its dates.
+// Staff Announcements | Frontend Logic | Derive whether an announcement is scheduled, current, or expired from its dates.
 const announcementStatus = (announcement) => {
   const now = new Date();
   const publishedDate = new Date(announcement.publishedDate);
@@ -74,12 +76,12 @@ const announcementStatus = (announcement) => {
   return "active";
 };
 
-// Translate an announcement status into its display label.
+// Staff Announcements | Frontend Logic | Translate an announcement status into its display label.
 const statusLabel = (status) => ({ active: "Current", scheduled: "Scheduled", expired: "Expired" }[status] || status);
-// Show All Staff for a broadcast announcement or the selected role label.
+// Staff Announcements | Frontend Logic | Show All Staff for a broadcast announcement or the selected role label.
 const targetLabel = (targetRole) => targetRole === "all" ? "All Staff" : roleLabel(targetRole);
 
-// Manage staff announcements, audience selection, publication, and expiry dates.
+// Staff Announcements | Frontend Logic | Manage staff announcements, audience selection, publication, and expiry dates.
 export const StaffAnnouncementManagementPanel = () => {
   const [announcements, setAnnouncements] = useState([]);
   const [search, setSearch] = useState("");
@@ -108,9 +110,10 @@ export const StaffAnnouncementManagementPanel = () => {
     ? selectedPublishedDate
     : minimumCreateDate;
 
-  // Fetch management announcements and update the displayed list.
+  // View Staff Announcements | Frontend Logic | Fetch management announcements and update the displayed list.
   const loadAnnouncements = async () => {
     try {
+      // View Staff Announcements | Data Loading | Call e1Api.listAnnouncements for this feature and use the returned records
       const data = await e1Api.listAnnouncements();
       setAnnouncements(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -128,7 +131,7 @@ export const StaffAnnouncementManagementPanel = () => {
     if (["create", "edit"].includes(modal.type)) reset(formValuesFor(modal.announcement));
   }, [modal, reset]);
 
-  // Cache filtered announcements until the listed source values change.
+  // Staff Announcements | Derived Data | Cache filtered announcements until the listed source values change.
   const filteredAnnouncements = useMemo(() => {
     const query = search.trim().toLowerCase();
     return announcements.filter((announcement) => {
@@ -143,10 +146,11 @@ export const StaffAnnouncementManagementPanel = () => {
     });
   }, [announcements, search, status, targetRole]);
 
-  // Fetch the selected record and open its details dialog.
+  // View Announcement Details | Frontend Logic | Fetch the selected record and open its details dialog.
   const openDetails = async (announcement) => {
     setBusy(true);
     try {
+      // View Announcement Details | Data Loading | Call e1Api.getAnnouncement for this feature and use the returned records
       const details = await e1Api.getAnnouncement(announcement._id);
       setModal({ type: "view", announcement: details });
     } catch (error) {
@@ -156,7 +160,8 @@ export const StaffAnnouncementManagementPanel = () => {
     }
   };
 
-  // Save the validated announcement form and refresh management announcements.
+  // Create Staff Announcement | Submit Logic | Save the validated announcement form and refresh management announcements.
+  // Update Staff Announcement | Submit Logic | Save the validated announcement form and refresh management announcements.
   const saveAnnouncement = async (values) => {
     setBusy(true);
     try {
@@ -169,9 +174,11 @@ export const StaffAnnouncementManagementPanel = () => {
       };
 
       if (modal.type === "edit") {
+        // Update Staff Announcement | Submit Logic | Call e1Api.updateAnnouncement for this feature.
         await e1Api.updateAnnouncement(modal.announcement._id, payload);
         setToast({ type: "success", message: "Announcement updated successfully" });
       } else {
+        // Create Staff Announcement | Submit Logic | Call e1Api.createAnnouncement for this feature.
         await e1Api.createAnnouncement(payload);
         setToast({ type: "success", message: "Announcement published successfully" });
       }
@@ -188,10 +195,11 @@ export const StaffAnnouncementManagementPanel = () => {
     }
   };
 
-  // Confirm announcement deletion and refresh the displayed list.
+  // Delete Staff Announcement | Frontend Logic | Confirm announcement deletion and refresh the displayed list.
   const removeAnnouncement = async () => {
     setBusy(true);
     try {
+      // Delete Staff Announcement | Submit Logic | Call e1Api.deleteAnnouncement for this feature.
       await e1Api.deleteAnnouncement(modal.announcement._id);
       setToast({ type: "success", message: "Announcement deleted successfully" });
       setModal({ type: null, announcement: null });
@@ -211,7 +219,7 @@ export const StaffAnnouncementManagementPanel = () => {
     {
       key: "status",
       header: "Status",
-      // Format this table cell using the current row's data and available actions.
+      // Staff Announcements | Frontend Logic | Format this table cell using the current row's data and available actions.
       render: (item) => {
         const currentStatus = announcementStatus(item);
         return currentStatus === "active" ? <StatusBadge status="active" /> : <span className={`announcement-status ${currentStatus}`}>{statusLabel(currentStatus)}</span>;
@@ -220,7 +228,7 @@ export const StaffAnnouncementManagementPanel = () => {
     {
       key: "actions",
       header: "Actions",
-      // Format this table cell using the current row's data and available actions.
+      // Staff Announcements | Frontend Logic | Format this table cell using the current row's data and available actions.
       render: (item) => (
         <div className="announcement-row-actions">
           <button type="button" title="View announcement" aria-label={`View ${item.title}`} onClick={() => openDetails(item)} disabled={busy}>
@@ -271,7 +279,11 @@ export const StaffAnnouncementManagementPanel = () => {
         subtitle="The notice will appear only during its active dates and for its selected audience."
         onClose={() => setModal({ type: null, announcement: null })}
       >
+        {/* Create Staff Announcement | Dialog | Group the fields or record details for this feature. */}
+        {/* Update Staff Announcement | Dialog | Group the fields or record details for this feature. */}
         <form onSubmit={handleSubmit(saveAnnouncement)}>
+          {/* Create Staff Announcement | Form | Render fields, validation feedback, and submission controls for this feature. */}
+          {/* Update Staff Announcement | Form | Render fields, validation feedback, and submission controls for this feature. */}
           <div className="form-grid">
             <FormInput label="Title" maxLength={120} required error={errors.title?.message} {...register("title")} />
             <FormSelect label="Target Role" required error={errors.targetRole?.message} {...register("targetRole")}>
@@ -310,6 +322,7 @@ export const StaffAnnouncementManagementPanel = () => {
         subtitle={modal.announcement?.announcementId || ""}
         onClose={() => setModal({ type: null, announcement: null })}
       >
+        {/* View Announcement Details | Dialog | Group the fields or record details for this feature. */}
         {modal.announcement ? (
           <div className="detail-grid">
             <div><span>Target</span><strong>{targetLabel(modal.announcement.targetRole)}</strong></div>
@@ -321,6 +334,7 @@ export const StaffAnnouncementManagementPanel = () => {
         ) : null}
       </Modal>
 
+      {/* Delete Staff Announcement | Dialog | Connect this feature to its shared dialog and action handlers. */}
       <ConfirmDialog
         open={modal.type === "delete"}
         title={`Delete ${modal.announcement?.announcementId || "announcement"}?`}

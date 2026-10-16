@@ -1,6 +1,6 @@
 import { CheckCircle2 } from "lucide-react";
 
-// Render the shared list of guidance for the current workspace.
+// Shared Workspace Tips | Frontend Logic | Render the shared list of guidance for the current workspace.
 export const WorkspaceTips = ({ title = "Before You Start", tips = [] }) => (
   <aside className="workspace-tips">
     <h2>{title}</h2>
