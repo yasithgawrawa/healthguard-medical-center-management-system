@@ -28,12 +28,15 @@ const NAME_PATTERN = /^[A-Za-z][A-Za-z .'-]*$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_PATTERN = /^(?:\+94|0)?[1-9]\d{8}$/;
 
+// Format a date as a local calendar key for date comparisons.
 const localDateKey = (value) => {
   const date = value ? new Date(value) : new Date();
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
+// Normalize phone punctuation and check the local phone-number pattern.
 const isValidLocalPhone = (value) => PHONE_PATTERN.test(String(value || "").replace(/[\s\-().]/g, ""));
+// Check that the birth date falls within the supported patient age range.
 const isWithinBirthDateRange = (value) => {
   if (!value) return true;
   const selected = new Date(value);
@@ -46,6 +49,7 @@ const isWithinBirthDateRange = (value) => {
   return selected <= today && selected >= oldest;
 };
 
+// Register an in-clinic patient and book an available appointment slot.
 export const NurseWalkInBookingPanel = ({ onBooked }) => {
   const [doctors, setDoctors] = useState([]);
   const [form, setForm] = useState(initialForm);
@@ -55,6 +59,7 @@ export const NurseWalkInBookingPanel = ({ onBooked }) => {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Synchronize component state or external data when the listed dependencies change.
   useEffect(() => {
     clinicalApi
       .listDoctors()
@@ -68,6 +73,7 @@ export const NurseWalkInBookingPanel = ({ onBooked }) => {
       .catch(() => setToast({ type: "error", message: "Unable to load doctors for walk-in booking" }));
   }, []);
 
+  // Reload available appointment slots when the selected doctor or calendar day changes.
   useEffect(() => {
     if (!form.doctorId || !form.appointmentDay) {
       setSlots([]);
@@ -85,6 +91,7 @@ export const NurseWalkInBookingPanel = ({ onBooked }) => {
       .finally(() => setLoadingSlots(false));
   }, [form.doctorId, form.appointmentDay]);
 
+  // Update one form field and clear its previous validation error.
   const setField = (field, value) => {
     setForm((current) => {
       const next = { ...current, [field]: value };
@@ -97,6 +104,7 @@ export const NurseWalkInBookingPanel = ({ onBooked }) => {
     setErrors((current) => ({ ...current, [field]: "" }));
   };
 
+  // Store the chosen available appointment slot and clear its field error.
   const selectSlot = (slot) => {
     if (!slot.available) return;
     setForm((current) => ({
@@ -107,6 +115,7 @@ export const NurseWalkInBookingPanel = ({ onBooked }) => {
     setErrors((current) => ({ ...current, appointmentDate: "" }));
   };
 
+  // Check required booking fields and display field-specific errors before submission.
   const validate = () => {
     const nextErrors = {};
     const firstName = form.firstName.trim();
@@ -141,6 +150,7 @@ export const NurseWalkInBookingPanel = ({ onBooked }) => {
     return Object.keys(nextErrors).length === 0;
   };
 
+  // Submit the validated nurse walk in booking form and show the resulting success or error feedback.
   const submit = async (event) => {
     event.preventDefault();
     if (!validate()) return;

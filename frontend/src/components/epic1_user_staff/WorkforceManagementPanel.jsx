@@ -14,12 +14,14 @@ import { formatDate, formatTime, roleLabel, staffName } from "./e1Constants.js";
 
 const PAGE_SIZE = 7;
 
+// Calculate elapsed hours only when both attendance timestamps are available.
 const workedHours = (item) => {
   if (!item.checkInAt || !item.checkOutAt) return "-";
   const hours = (new Date(item.checkOutAt) - new Date(item.checkInAt)) / 36e5;
   return `${Math.max(hours, 0).toFixed(1)}h`;
 };
 
+// Manage shifts, attendance, and leave reviews for clinic staff.
 export const WorkforceManagementPanel = () => {
   const [activeTab, setActiveTab] = useState("attendance");
   const [staff, setStaff] = useState([]);
@@ -33,6 +35,7 @@ export const WorkforceManagementPanel = () => {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Load list workforce staff, list attendance, list leave and update the displayed state.
   const load = async () => {
     try {
       const [staffData, attendanceData, leaveData] = await Promise.all([
@@ -48,11 +51,14 @@ export const WorkforceManagementPanel = () => {
     }
   };
 
+  // Load workspace data on mount and whenever the effect dependencies change.
   useEffect(() => {
     load();
   }, []);
 
+  // Register browser event listeners and remove them when this effect is cleaned up.
   useEffect(() => {
+    // Apply dashboard quick-action events to this workspace's tabs, filters, or forms.
     const handleDashboardCommand = (event) => {
       const command = event.detail || {};
       if (command.workspace !== "workforce") return;
@@ -66,6 +72,7 @@ export const WorkforceManagementPanel = () => {
     return () => window.removeEventListener(DASHBOARD_COMMAND_EVENT, handleDashboardCommand);
   }, []);
 
+  // Synchronize component state or external data when the listed dependencies change.
   useEffect(() => {
     setPage(1);
   }, [activeTab, search, role, date]);
@@ -80,6 +87,7 @@ export const WorkforceManagementPanel = () => {
       .map((item) => item.staffId?._id || item.staffId)
   );
 
+  // Cache filtered rows until the listed source values change.
   const filteredRows = useMemo(() => {
     const source = activeTab === "attendance" ? attendance : leave;
     const query = search.trim().toLowerCase();
@@ -94,6 +102,7 @@ export const WorkforceManagementPanel = () => {
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
   const rows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  // Record check-out for the selected attendance entry and refresh workforce data.
   const checkoutAttendance = async (item) => {
     setBusy(true);
     try {
@@ -107,6 +116,7 @@ export const WorkforceManagementPanel = () => {
     }
   };
 
+  // Save the manager's leave decision and refresh the pending requests.
   const submitLeaveReview = async (status) => {
     setBusy(true);
     try {
@@ -131,6 +141,7 @@ export const WorkforceManagementPanel = () => {
     {
       key: "actions",
       header: "Actions",
+      // Format this table cell using the current row's data and available actions.
       render: (item) => item.status === "checked_in" ? (
         <button className="table-link-button" type="button" onClick={() => checkoutAttendance(item)} disabled={busy}>
           Check Out
@@ -147,6 +158,7 @@ export const WorkforceManagementPanel = () => {
     {
       key: "actions",
       header: "Actions",
+      // Format this table cell using the current row's data and available actions.
       render: (item) => (
         <button className="table-link-button" type="button" onClick={() => setReviewLeave(item)}>
           Review

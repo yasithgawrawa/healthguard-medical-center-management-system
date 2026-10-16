@@ -1,3 +1,4 @@
+/* Define shared theme tokens, component styles, and responsive layouts for the application. */
 :root {
   /* Brand Steel-Blue & Oceanic Palette */
   --brand-950: #071728;
@@ -1449,6 +1450,7 @@ main {
   white-space: pre-wrap;
 }
 
+/* Adapt dashboard layouts for viewports up to 900 pixels wide. */
 @media (max-width: 900px) {
   .table-toolbar.expense-toolbar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1459,6 +1461,7 @@ main {
   }
 }
 
+/* Stack compact layouts and controls on small phone screens. */
 @media (max-width: 560px) {
   .table-toolbar.expense-toolbar {
     grid-template-columns: 1fr;
@@ -2160,6 +2163,7 @@ main {
   align-items: start;
 }
 
+/* Adjust this component section for phone and small tablet widths. */
 @media (max-width: 768px) {
   .form-grid-3 {
     grid-template-columns: 1fr;
@@ -2419,6 +2423,7 @@ main {
   box-sizing: border-box;
 }
 
+/* Adjust this component section for phone and small tablet widths. */
 @media (max-width: 768px) {
   .pos-add-grid {
     grid-template-columns: 1fr;
@@ -3240,6 +3245,7 @@ main {
    RESPONSIVE MEDIA QUERIES
    ========================================================================== */
 
+/* Reduce spacing and columns for tablet-sized viewports. */
 @media (max-width: 1024px) {
   .hero-section {
     grid-template-columns: 1fr;
@@ -3294,6 +3300,7 @@ main {
   }
 }
 
+/* Adjust this component section for phone and small tablet widths. */
 @media (max-width: 768px) {
   .navbar {
     top: 10px;

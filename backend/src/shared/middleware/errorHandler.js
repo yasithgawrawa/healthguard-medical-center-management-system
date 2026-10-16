@@ -1,6 +1,7 @@
 import { ZodError } from "zod";
 import { errorResponse } from "../utils/apiResponse.js";
 
+// Convert Zod issue paths into field names and messages for form errors.
 const formatZodErrors = (error) =>
   error.errors.reduce((acc, issue) => {
     const key = issue.path.join(".") || "request";
@@ -8,6 +9,7 @@ const formatZodErrors = (error) =>
     return acc;
   }, {});
 
+// Translate validation, duplicate-key, and application errors into consistent HTTP responses.
 export const errorHandler = (error, req, res, next) => {
   if (process.env.NODE_ENV !== "production") {
     console.error(error);
@@ -25,6 +27,7 @@ export const errorHandler = (error, req, res, next) => {
     return errorResponse(res, "Validation failed", 400, errors);
   }
 
+  // Convert a MongoDB unique-index conflict into HTTP 409 with a field-specific message.
   if (error.code === 11000) {
     const field = Object.keys(error.keyPattern || {})[0] || "record";
     return errorResponse(res, "Duplicate value found", 409, {
@@ -33,6 +36,7 @@ export const errorHandler = (error, req, res, next) => {
   }
 
   const statusCode = error.statusCode || 500;
+  // Hide unexpected internal error details from API clients.
   const message = statusCode === 500 ? "Unexpected server error" : error.message;
   return errorResponse(res, message, statusCode, error.errors);
 };

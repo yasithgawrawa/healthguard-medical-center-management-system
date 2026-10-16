@@ -1,3 +1,4 @@
+// Create or update linked seed records used to populate the clinic application.
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 import { connectDatabase } from "./shared/config/database.js";
@@ -30,6 +31,7 @@ const passwordHash = await bcrypt.hash(defaultPassword, 12);
 const now = new Date();
 const month = now.toISOString().slice(0, 7);
 
+// Build a date relative to today and assign the requested local time.
 const atTime = (dayOffset, hour, minute = 0) => {
   const date = new Date(now);
   date.setDate(date.getDate() + dayOffset);
@@ -70,6 +72,7 @@ const patientUsers = [
 const userByEmail = new Map();
 const staffByEmployeeId = new Map();
 
+// Create a seeded account or update the existing account with the same email.
 const upsertUser = async ({ firstName, lastName, email, phone, role, address, dateOfBirth, gender }) => {
   const user = await User.findOneAndUpdate(
     { email },
@@ -126,6 +129,7 @@ await CenterLocation.findOneAndUpdate(
   { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
 );
 
+// Create or update a seeded shift for the selected employee and date.
 const upsertShift = async (employeeId, dayOffset, startHour, endHour, location) => {
   const staff = staffByEmployeeId.get(employeeId);
   return Shift.findOneAndUpdate(

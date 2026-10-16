@@ -1,3 +1,4 @@
+// Keep reusable domain values consistent across validation, storage, and interface choices.
 export const STAFF_ROLES = [
   { value: "admin", label: "Admin" },
   { value: "manager", label: "Manager" },
@@ -21,8 +22,10 @@ export const SHIFT_STATUSES = [
   { value: "cancelled", label: "Cancelled" }
 ];
 
+// Translate a stored role value into its staff-facing display label.
 export const roleLabel = (role) => STAFF_ROLES.find((item) => item.value === role)?.label || role;
 
+// Build the staff display name from populated user details with fallbacks.
 export const staffName = (staff) => {
   if (!staff) return "Unassigned Staff";
   const u = staff.userId || {};
@@ -33,11 +36,13 @@ export const staffName = (staff) => {
   return staff.employeeId ? `Employee ${staff.employeeId}` : "Unassigned Staff";
 };
 
+// Format a stored date for display and handle missing or invalid values.
 export const formatDate = (value) => {
   if (!value) return "Not set";
   return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(value));
 };
 
+// Format a stored timestamp as a readable time.
 export const formatTime = (value) => {
   if (!value) return "-";
   return new Intl.DateTimeFormat("en", { timeStyle: "short" }).format(new Date(value));

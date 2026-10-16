@@ -1,12 +1,15 @@
+// Validate and normalize billing request fields before business logic runs.
 import { z } from "zod";
 import { moneySchema, phoneSchema, quantitySchema } from "../../../shared/validators/fieldSchemas.js";
 import { idParamSchema, objectIdSchema } from "../../../shared/validators/commonSchemas.js";
 
+// Validate payroll month values.
 const payrollMonthSchema = z.string()
   .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Month must be YYYY-MM")
   .refine((month) => month <= new Date().toISOString().slice(0, 7), "Future payroll months are not allowed")
   .refine((month) => Number(month.slice(0, 4)) >= new Date().getFullYear() - 5, "Payroll month is too old");
 
+// Validate invoice values including patient id, customer name, customer phone, appointment id, items.
 export const invoiceSchema = z.object({
   body: z.object({
     patientId: objectIdSchema.optional(),
@@ -24,6 +27,7 @@ export const invoiceSchema = z.object({
   })
 });
 
+// Validate payment values including invoice id, amount, method.
 export const paymentSchema = z.object({
   body: z.object({
     invoiceId: objectIdSchema,
@@ -32,11 +36,13 @@ export const paymentSchema = z.object({
   })
 });
 
+// Validate payment status values.
 export const paymentStatusSchema = z.object({
   params: idParamSchema.shape.params,
   body: z.object({ status: z.enum(["verified", "reconciled", "voided"]) })
 });
 
+// Validate supplier bill payment values including method.
 export const supplierBillPaymentSchema = z.object({
   params: idParamSchema.shape.params,
   body: z.object({
@@ -44,12 +50,14 @@ export const supplierBillPaymentSchema = z.object({
   })
 });
 
+// Validate consolidate invoice values including patient id.
 export const consolidateInvoiceSchema = z.object({
   body: z.object({
     patientId: objectIdSchema
   })
 });
 
+// Validate payroll values including staff id, month, daily pay, working days, allowances.
 export const payrollSchema = z.object({
   body: z.object({
     staffId: objectIdSchema,
@@ -61,6 +69,7 @@ export const payrollSchema = z.object({
   })
 });
 
+// Validate payroll preview values including staff id, month, daily pay, working days, allowances.
 export const payrollPreviewSchema = z.object({
   body: z.object({
     staffId: objectIdSchema,
@@ -72,6 +81,7 @@ export const payrollPreviewSchema = z.object({
   })
 });
 
+// Validate salary attendance days values including staff id, month.
 export const salaryAttendanceDaysSchema = z.object({
   query: z.object({
     staffId: objectIdSchema,
@@ -79,6 +89,7 @@ export const salaryAttendanceDaysSchema = z.object({
   })
 });
 
+// Validate payroll status values.
 export const payrollStatusSchema = z.object({
   params: idParamSchema.shape.params,
   body: z.object({ status: z.enum(["reviewed", "approved", "paid"]) })

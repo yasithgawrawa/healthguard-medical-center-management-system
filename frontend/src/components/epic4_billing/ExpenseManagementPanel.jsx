@@ -36,6 +36,7 @@ const yearOptions = Array.from({ length: 11 }, (_, index) => {
   return { value: String(year), label: String(year) };
 });
 
+// Validate expense values including title, category, amount, expense date, notes.
 const expenseSchema = z.object({
   title: z.string().trim().min(2, "Title must be at least 2 characters").max(120, "Title cannot exceed 120 characters"),
   category: z.enum(categories.map((category) => category.value)),
@@ -48,27 +49,35 @@ const expenseSchema = z.object({
   notes: z.string().trim().max(500, "Notes cannot exceed 500 characters").optional()
 });
 
+// Build today's local date input value.
 const localDateInput = () => {
   const now = new Date();
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 };
 
+// Convert a stored record date into the value expected by a date input.
 const dateInputValue = (value) => value ? String(value).slice(0, 10) : localDateInput();
+// Translate an expense category value into its display label.
 const categoryLabel = (value) => categories.find((category) => category.value === value)?.label || value;
+// Format an expense date for display using the Sri Lankan locale.
 const dateLabel = (value) => value ? new Date(value).toLocaleDateString("en-LK") : "-";
+// Join a populated user's names with a fallback for missing user details.
 const userLabel = (value) => [value?.firstName, value?.lastName].filter(Boolean).join(" ") || "-";
 
+// Convert stored integer cents into a formatted rupee display.
 const moneyFromCents = (value) => {
   const cents = Number.isSafeInteger(Number(value)) ? Number(value) : 0;
   const whole = Math.trunc(cents / 100).toLocaleString("en-LK");
   return `Rs. ${whole}.${String(Math.abs(cents % 100)).padStart(2, "0")}`;
 };
 
+// Convert stored cents into the decimal amount expected by the expense form.
 const amountInputValue = (value) => {
   const cents = Number(value || 0);
   return `${Math.trunc(cents / 100)}.${String(Math.abs(cents % 100)).padStart(2, "0")}`;
 };
 
+// Map a stored record into the values expected by its editing form.
 const formValuesFor = (expense) => ({
   title: expense?.title || "",
   category: expense?.category || "electricity",
@@ -77,6 +86,7 @@ const formValuesFor = (expense) => ({
   notes: expense?.notes || ""
 });
 
+// Manage filtered expense records, expense forms, details, and summary totals.
 export const ExpenseManagementPanel = ({ embedded = false }) => {
   const { user } = useAuth();
   const canManage = user?.role === ROLES.CASHIER;
@@ -92,6 +102,7 @@ export const ExpenseManagementPanel = ({ embedded = false }) => {
   const [toast, setToast] = useState(null);
   const requestNumber = useRef(0);
 
+  // Connect form fields, validation errors, and submission handling through React Hook Form.
   const {
     register,
     handleSubmit,
@@ -104,10 +115,12 @@ export const ExpenseManagementPanel = ({ embedded = false }) => {
     defaultValues: formValuesFor()
   });
 
+  // Reset the form when its selected record or dialog state changes.
   useEffect(() => {
     if (["create", "edit"].includes(modal.type)) reset(formValuesFor(modal.expense));
   }, [modal, reset]);
 
+  // Schedule feedback dismissal or periodic updates and clear timers during cleanup.
   useEffect(() => {
     const thisRequest = ++requestNumber.current;
     const timer = window.setTimeout(async () => {
@@ -129,6 +142,7 @@ export const ExpenseManagementPanel = ({ embedded = false }) => {
     return () => window.clearTimeout(timer);
   }, [search, category, month, year]);
 
+  // Fetch expenses with the current filters and update records and summary totals.
   const refreshExpenses = async () => {
     const params = Object.fromEntries(Object.entries({ search: search.trim(), category, month, year }).filter(([, value]) => value));
     const result = await billingApi.expenses(params);
@@ -136,6 +150,7 @@ export const ExpenseManagementPanel = ({ embedded = false }) => {
     setTotalAmountCents(result?.totalAmountCents || 0);
   };
 
+  // Fetch the selected record and open its details dialog.
   const openDetails = async (expense) => {
     setBusy(true);
     try {
@@ -148,6 +163,7 @@ export const ExpenseManagementPanel = ({ embedded = false }) => {
     }
   };
 
+  // Save a validated expense and refresh the filtered expense list.
   const saveExpense = async (values) => {
     setBusy(true);
     try {
@@ -178,6 +194,7 @@ export const ExpenseManagementPanel = ({ embedded = false }) => {
     }
   };
 
+  // Confirm expense deletion and refresh the displayed expenses.
   const removeExpense = async () => {
     setBusy(true);
     try {
@@ -202,6 +219,7 @@ export const ExpenseManagementPanel = ({ embedded = false }) => {
     {
       key: "actions",
       header: "Actions",
+      // Format this table cell using the current row's data and available actions.
       render: (item) => (
         <div className="expense-row-actions">
           <button type="button" title="View expense" aria-label={`View ${item.title}`} onClick={() => openDetails(item)} disabled={busy}>

@@ -1,3 +1,4 @@
+// Exercise linked clinic workflows and report whether each verification step succeeds.
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
@@ -31,6 +32,7 @@ await connectDatabase();
 console.log("Starting End-to-End Real Workflow Verification on Production Database...");
 
 const results = [];
+// Append a pass or fail result to the end-to-end flow verification report.
 const recordStep = (flow, step, passed, details = "") => {
   results.push({ Flow: flow, Step: step, Status: passed ? "PASSED" : "FAILED", Details: details });
   console.log(`[${passed ? "✓" : "✗"}] ${flow} -> ${step}: ${details}`);

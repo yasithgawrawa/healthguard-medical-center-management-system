@@ -14,8 +14,10 @@ import { formatDate, roleLabel, STAFF_ROLES, staffName } from "./e1Constants.js"
 import { StaffFormModal } from "./StaffFormModal.jsx";
 
 const PAGE_SIZE = 8;
+// Format a numeric amount as Sri Lankan rupees for display.
 const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
 
+// List staff and coordinate staff creation, editing, and deactivation forms.
 export const StaffManagementPanel = () => {
   const [staff, setStaff] = useState([]);
   const [search, setSearch] = useState("");
@@ -28,6 +30,7 @@ export const StaffManagementPanel = () => {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Fetch staff profiles and update the staff management list.
   const loadStaff = async () => {
     try {
       const data = await e1Api.listStaff();
@@ -37,19 +40,23 @@ export const StaffManagementPanel = () => {
     }
   };
 
+  // Load workspace data on mount and whenever the effect dependencies change.
   useEffect(() => {
     loadStaff();
   }, []);
 
+  // Synchronize component state or external data when the listed dependencies change.
   useEffect(() => {
     setPage(1);
   }, [search, role, department, status]);
 
+  // Cache departments until the listed source values change.
   const departments = useMemo(
     () => [...new Set(staff.map((item) => item.department).filter(Boolean))].sort(),
     [staff]
   );
 
+  // Cache filtered staff until the listed source values change.
   const filteredStaff = useMemo(() => {
     const query = search.trim().toLowerCase();
     return staff.filter((item) => {
@@ -70,6 +77,7 @@ export const StaffManagementPanel = () => {
 
   const [serverErrors, setServerErrors] = useState(null);
 
+  // Create or update the selected staff profile and refresh the staff list.
   const submitStaff = async (payload) => {
     setBusy(true);
     setServerErrors(null);
@@ -101,6 +109,7 @@ export const StaffManagementPanel = () => {
     }
   };
 
+  // Mark the selected staff profile inactive through the staff API.
   const deactivateStaff = async () => {
     setBusy(true);
     try {
@@ -125,6 +134,7 @@ export const StaffManagementPanel = () => {
     {
       key: "actions",
       header: "Actions",
+      // Format this table cell using the current row's data and available actions.
       render: (item) => (
         <div className="row-actions">
           <button type="button" onClick={() => setMenuId(menuId === item._id ? null : item._id)} aria-label={`Actions for ${staffName(item)}`}>

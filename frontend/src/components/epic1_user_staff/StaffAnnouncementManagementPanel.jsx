@@ -18,12 +18,14 @@ import { formatDate, roleLabel, STAFF_ROLES } from "./e1Constants.js";
 
 const targetRoleOptions = [{ value: "all", label: "All Staff" }, ...STAFF_ROLES];
 
+// Build today's local date input value.
 const todayInputValue = () => {
   const now = new Date();
   const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
   return localDate.toISOString().slice(0, 10);
 };
 
+// Validate announcement form values including title, published date, expiry date, target role.
 const announcementFormSchema = z.object({
   title: z.string().trim().min(2, "Title must be at least 2 characters").max(120, "Title cannot exceed 120 characters"),
   message: z.string().trim().min(5, "Message must be at least 5 characters").max(1000, "Message cannot exceed 1000 characters"),
@@ -35,6 +37,7 @@ const announcementFormSchema = z.object({
   message: "Expiry date cannot be earlier than published date"
 });
 
+// Validate create announcement form values.
 const createAnnouncementFormSchema = announcementFormSchema
   .refine((data) => data.publishedDate >= todayInputValue(), {
     path: ["publishedDate"],
@@ -45,12 +48,14 @@ const createAnnouncementFormSchema = announcementFormSchema
     message: "Expiry date cannot be in the past"
   });
 
+// Convert a stored record date into the value expected by a date input.
 const dateInputValue = (value) => {
   if (!value) return "";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
 };
 
+// Map a stored record into the values expected by its editing form.
 const formValuesFor = (announcement) => ({
   title: announcement?.title || "",
   message: announcement?.message || "",
@@ -59,6 +64,7 @@ const formValuesFor = (announcement) => ({
   targetRole: announcement?.targetRole || "all"
 });
 
+// Derive whether an announcement is scheduled, current, or expired from its dates.
 const announcementStatus = (announcement) => {
   const now = new Date();
   const publishedDate = new Date(announcement.publishedDate);
@@ -68,9 +74,12 @@ const announcementStatus = (announcement) => {
   return "active";
 };
 
+// Translate an announcement status into its display label.
 const statusLabel = (status) => ({ active: "Current", scheduled: "Scheduled", expired: "Expired" }[status] || status);
+// Show All Staff for a broadcast announcement or the selected role label.
 const targetLabel = (targetRole) => targetRole === "all" ? "All Staff" : roleLabel(targetRole);
 
+// Manage staff announcements, audience selection, publication, and expiry dates.
 export const StaffAnnouncementManagementPanel = () => {
   const [announcements, setAnnouncements] = useState([]);
   const [search, setSearch] = useState("");
@@ -80,6 +89,7 @@ export const StaffAnnouncementManagementPanel = () => {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Connect form fields, validation errors, and submission handling through React Hook Form.
   const {
     register,
     handleSubmit,
@@ -98,6 +108,7 @@ export const StaffAnnouncementManagementPanel = () => {
     ? selectedPublishedDate
     : minimumCreateDate;
 
+  // Fetch management announcements and update the displayed list.
   const loadAnnouncements = async () => {
     try {
       const data = await e1Api.listAnnouncements();
@@ -107,14 +118,17 @@ export const StaffAnnouncementManagementPanel = () => {
     }
   };
 
+  // Load workspace data on mount and whenever the effect dependencies change.
   useEffect(() => {
     loadAnnouncements();
   }, []);
 
+  // Reset the form when its selected record or dialog state changes.
   useEffect(() => {
     if (["create", "edit"].includes(modal.type)) reset(formValuesFor(modal.announcement));
   }, [modal, reset]);
 
+  // Cache filtered announcements until the listed source values change.
   const filteredAnnouncements = useMemo(() => {
     const query = search.trim().toLowerCase();
     return announcements.filter((announcement) => {
@@ -129,6 +143,7 @@ export const StaffAnnouncementManagementPanel = () => {
     });
   }, [announcements, search, status, targetRole]);
 
+  // Fetch the selected record and open its details dialog.
   const openDetails = async (announcement) => {
     setBusy(true);
     try {
@@ -141,6 +156,7 @@ export const StaffAnnouncementManagementPanel = () => {
     }
   };
 
+  // Save the validated announcement form and refresh management announcements.
   const saveAnnouncement = async (values) => {
     setBusy(true);
     try {
@@ -172,6 +188,7 @@ export const StaffAnnouncementManagementPanel = () => {
     }
   };
 
+  // Confirm announcement deletion and refresh the displayed list.
   const removeAnnouncement = async () => {
     setBusy(true);
     try {
@@ -194,6 +211,7 @@ export const StaffAnnouncementManagementPanel = () => {
     {
       key: "status",
       header: "Status",
+      // Format this table cell using the current row's data and available actions.
       render: (item) => {
         const currentStatus = announcementStatus(item);
         return currentStatus === "active" ? <StatusBadge status="active" /> : <span className={`announcement-status ${currentStatus}`}>{statusLabel(currentStatus)}</span>;
@@ -202,6 +220,7 @@ export const StaffAnnouncementManagementPanel = () => {
     {
       key: "actions",
       header: "Actions",
+      // Format this table cell using the current row's data and available actions.
       render: (item) => (
         <div className="announcement-row-actions">
           <button type="button" title="View announcement" aria-label={`View ${item.title}`} onClick={() => openDetails(item)} disabled={busy}>

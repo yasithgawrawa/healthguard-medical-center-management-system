@@ -1,3 +1,4 @@
+// Display the patient dashboard and its role-specific actions.
 import { Calendar, CreditCard, FileText, Pill } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
@@ -6,8 +7,10 @@ import { PatientAppointmentBooking } from "../../components/epic2_clinical/Patie
 import { PatientRecordsPanel } from "../../components/epic2_clinical/PatientRecordsPanel.jsx";
 import { patientApi } from "../../services/patientApi.js";
 
+// Format a numeric amount as Sri Lankan rupees for display.
 const money = (val) => `Rs. ${Number(val || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+// Load patient summary data and render the role's dashboard cards and workspaces.
 export const PatientDashboard = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [metrics, setMetrics] = useState({
@@ -18,6 +21,7 @@ export const PatientDashboard = () => {
     outstandingBalance: 0
   });
 
+  // Synchronize component state or external data when the listed dependencies change.
   useEffect(() => {
     Promise.all([
       patientApi.getAppointments().catch(() => []),

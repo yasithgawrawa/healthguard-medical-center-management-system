@@ -1,3 +1,4 @@
+// Display the cashier dashboard and its role-specific actions.
 import { CheckCircle, CreditCard, DollarSign, FileCheck, Receipt, ReceiptText } from "lucide-react";
 import { useEffect, useState } from "react";
 import { StaffSelfServicePanel } from "../../components/epic1_user_staff/StaffSelfServicePanel.jsx";
@@ -8,8 +9,10 @@ import { DashboardQuickActions } from "../../components/shared/DashboardQuickAct
 import { billingApi } from "../../services/billingApi.js";
 import { clinicalApi } from "../../services/clinicalApi.js";
 
+// Format a numeric amount as Sri Lankan rupees for display.
 const money = (val) => `Rs. ${Number(val || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+// Load cashier summary data and render the role's dashboard cards and workspaces.
 export const CashierDashboard = () => {
   const [metrics, setMetrics] = useState({
     pendingInvoicesCount: 0,
@@ -19,6 +22,7 @@ export const CashierDashboard = () => {
     settledCount: 0
   });
 
+  // Synchronize component state or external data when the listed dependencies change.
   useEffect(() => {
     Promise.all([
       billingApi.invoices().catch(() => []),

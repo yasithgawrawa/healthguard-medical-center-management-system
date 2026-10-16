@@ -1,3 +1,4 @@
+// Validate and normalize epic1 request fields before business logic runs.
 import { z } from "zod";
 import { ROLE_VALUES, ROLES } from "../../../shared/constants/roles.js";
 import { employeeIdSchema, moneySchema, nameSchema, phoneSchema, textNoNumbersSchema } from "../../../shared/validators/fieldSchemas.js";
@@ -5,6 +6,7 @@ import { idParamSchema, objectIdSchema } from "../../../shared/validators/common
 
 const staffRoleValues = ROLE_VALUES.filter((role) => role !== ROLES.PATIENT);
 const creatableStaffRoleValues = staffRoleValues.filter((role) => role !== ROLES.DOCTOR);
+// Validate password values.
 const passwordSchema = z
   .string({ required_error: "Password is required" })
   .min(8, "Password must be at least 8 characters")
@@ -13,6 +15,7 @@ const passwordSchema = z
   .regex(/[0-9]/, "Password must include at least one number")
   .regex(/[^A-Za-z0-9]/, "Password must include at least one special character (e.g. @, #, $, !)");
 
+// Validate optional date of birth values.
 const optionalDateOfBirthSchema = z.coerce.date().optional().refine((date) => {
   if (!date) return true;
   const today = new Date();
@@ -26,6 +29,7 @@ const optionalDateOfBirthSchema = z.coerce.date().optional().refine((date) => {
   return date >= oldest;
 }, "Date of birth must be within the last 120 years");
 
+// Validate create staff values including first name, last name, email, phone, address.
 export const createStaffSchema = z.object({
   body: z.object({
     firstName: nameSchema("First name"),
@@ -50,6 +54,7 @@ export const createStaffSchema = z.object({
   })
 });
 
+// Validate update staff values including first name, last name, phone, address, department.
 export const updateStaffSchema = z.object({
   params: idParamSchema.shape.params,
   body: z.object({
@@ -73,6 +78,7 @@ export const updateStaffSchema = z.object({
   })
 });
 
+// Validate quick patient values including first name, last name, email, phone, address.
 export const quickPatientSchema = z.object({
   body: z.object({
     firstName: nameSchema("First name"),
@@ -85,6 +91,7 @@ export const quickPatientSchema = z.object({
   })
 });
 
+// Validate shift values including staff id, start time, end time, location, geo fence.
 export const shiftSchema = z.object({
   body: z.object({
     staffId: objectIdSchema,
@@ -106,6 +113,7 @@ export const shiftSchema = z.object({
   })
 });
 
+// Validate bulk shift values including staff ids, start date, end date, start time, end time.
 export const bulkShiftSchema = z.object({
   body: z.object({
     staffIds: z.array(objectIdSchema).min(1, "Select at least one staff member").max(50, "Too many staff members selected")
@@ -139,6 +147,7 @@ export const bulkShiftSchema = z.object({
   })
 });
 
+// Validate attendance check in values including staff id, latitude, longitude, accuracy meters, notes.
 export const attendanceCheckInSchema = z.object({
   body: z.object({
     staffId: objectIdSchema,
@@ -149,6 +158,7 @@ export const attendanceCheckInSchema = z.object({
   })
 });
 
+// Validate leave values including staff id, leave type, start date, end date, reason.
 export const leaveSchema = z.object({
   body: z.object({
     staffId: objectIdSchema,
@@ -162,6 +172,7 @@ export const leaveSchema = z.object({
   })
 });
 
+// Validate review leave values including status, review note.
 export const reviewLeaveSchema = z.object({
   params: idParamSchema.shape.params,
   body: z.object({
@@ -170,6 +181,7 @@ export const reviewLeaveSchema = z.object({
   })
 });
 
+// Validate center location values including name, latitude, longitude, radius meters.
 export const centerLocationSchema = z.object({
   body: z.object({
     name: z.string().trim().max(120).optional(),

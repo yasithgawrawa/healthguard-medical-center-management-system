@@ -1,6 +1,7 @@
 import { Activity, ArrowUpRight } from "lucide-react";
 import { dispatchDashboardCommand } from "../../utils/dashboardCommands.js";
 
+// Dispatch a dashboard command or follow the card's configured navigation target.
 const handleCardClick = (href, onClick, command) => (event) => {
   if (onClick) onClick(event);
   if (!event.defaultPrevented && href?.startsWith("#")) {
@@ -10,6 +11,7 @@ const handleCardClick = (href, onClick, command) => (event) => {
   if (!event.defaultPrevented) dispatchDashboardCommand(command);
 };
 
+// Render a dashboard metric card with optional navigation or command behavior.
 export const DashboardCard = ({
   title,
   value,

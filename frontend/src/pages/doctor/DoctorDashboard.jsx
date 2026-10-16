@@ -1,3 +1,4 @@
+// Display the doctor dashboard and its role-specific actions.
 import { CalendarCheck, CheckCircle2, ClipboardPlus, DollarSign, Edit3, FlaskConical, Stethoscope, UserCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ClinicalWorkspacePanel } from "../../components/epic2_clinical/ClinicalWorkspacePanel.jsx";
@@ -12,8 +13,10 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import { clinicalApi } from "../../services/clinicalApi.js";
 import { billingApi } from "../../services/billingApi.js";
 
+// Format a numeric amount as Sri Lankan rupees for display.
 const money = (val) => `Rs. ${Number(val || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+// Load doctor summary data and render the role's dashboard cards and workspaces.
 export const DoctorDashboard = () => {
   const { user } = useAuth();
   const [metrics, setMetrics] = useState({
@@ -36,6 +39,7 @@ export const DoctorDashboard = () => {
   const [busyFee, setBusyFee] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Load list appointments, list lab requests, list doctors, doctor earnings and update the displayed state.
   const loadData = () => {
     Promise.all([
       clinicalApi.listAppointments().catch(() => []),
@@ -70,8 +74,10 @@ export const DoctorDashboard = () => {
     });
   };
 
+  // Register browser event listeners and remove them when this effect is cleaned up.
   useEffect(() => {
     loadData();
+    // Refresh displayed records when the browser window regains focus.
     const handleFocus = () => loadData();
     window.addEventListener("focus", handleFocus);
     const interval = setInterval(loadData, 15000);
@@ -81,6 +87,7 @@ export const DoctorDashboard = () => {
     };
   }, [user]);
 
+  // Save the current doctor's edited consultation fee and refresh the dashboard.
   const handleSaveFee = async (e) => {
     e.preventDefault();
     setBusyFee(true);

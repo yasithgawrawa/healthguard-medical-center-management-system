@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 
+// Render a shared dialog with its title, content, and close action.
 export const Modal = ({ open, title, subtitle, onClose, children }) => {
   if (!open) return null;
 

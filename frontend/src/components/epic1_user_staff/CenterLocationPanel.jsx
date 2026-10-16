@@ -6,15 +6,18 @@ import { z } from "zod";
 import { e1Api } from "../../services/e1Api.js";
 import { FormInput } from "../shared/forms/FormInput.jsx";
 
+// Validate center values including latitude, longitude, radius meters.
 const centerSchema = z.object({
   latitude: z.coerce.number().min(-90, "Latitude is required").max(90),
   longitude: z.coerce.number().min(-180, "Longitude is required").max(180),
   radiusMeters: z.coerce.number().int("Radius must be a whole number").min(10, "Minimum radius is 10m").max(1000, "Maximum radius is 1000m")
 });
 
+// Edit the clinic attendance point and optionally fill coordinates from browser geolocation.
 export const CenterLocationPanel = ({ onToast }) => {
   const [busy, setBusy] = useState(false);
   const [locationMessage, setLocationMessage] = useState("");
+  // Connect form fields, validation errors, and submission handling through React Hook Form.
   const {
     register,
     handleSubmit,
@@ -27,6 +30,7 @@ export const CenterLocationPanel = ({ onToast }) => {
     defaultValues: { latitude: "", longitude: "", radiusMeters: 100 }
   });
 
+  // Reset the form when its selected record or dialog state changes.
   useEffect(() => {
     e1Api
       .getCenterLocation()
@@ -40,6 +44,7 @@ export const CenterLocationPanel = ({ onToast }) => {
       .catch(() => {});
   }, [reset]);
 
+  // Read browser geolocation and fill the clinic attendance coordinates.
   const useCurrentLocation = () => {
     setLocationMessage("");
     if (!navigator.geolocation) {
@@ -57,6 +62,7 @@ export const CenterLocationPanel = ({ onToast }) => {
     );
   };
 
+  // Submit the validated center location form and show the resulting success or error feedback.
   const submit = async (values) => {
     setBusy(true);
     try {

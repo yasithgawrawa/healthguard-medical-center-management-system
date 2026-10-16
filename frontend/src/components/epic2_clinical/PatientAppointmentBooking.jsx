@@ -15,8 +15,10 @@ const REASON_MIN = 5;
 const REASON_MAX = 300;
 const ALERT_DISMISS_MS = 6000;
 
+// Format a numeric amount as Sri Lankan rupees for display.
 const money = (value) => `Rs. ${Number(value || 0).toLocaleString("en-LK", { minimumFractionDigits: 2 })}`;
 
+// Load doctors and available slots and confirm a patient appointment booking.
 export const PatientAppointmentBooking = ({ onBooked }) => {
   const [doctors, setDoctors] = useState([]);
   const [form, setForm] = useState(initialForm);
@@ -33,6 +35,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
   const errorTimer = useRef(null);
 
   // Auto-dismiss alerts
+  // Schedule feedback dismissal or periodic updates and clear timers during cleanup.
   useEffect(() => {
     if (message) {
       clearTimeout(messageTimer.current);
@@ -41,6 +44,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
     return () => clearTimeout(messageTimer.current);
   }, [message]);
 
+  // Schedule feedback dismissal or periodic updates and clear timers during cleanup.
   useEffect(() => {
     if (error) {
       clearTimeout(errorTimer.current);
@@ -49,11 +53,14 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
     return () => clearTimeout(errorTimer.current);
   }, [error]);
 
+  // Cache selected doctor until the listed source values change.
+  // Derive the selected doctor from the loaded list for fee and identity displays.
   const selectedDoctor = useMemo(
     () => doctors.find((doctor) => doctor._id === form.doctorId),
     [doctors, form.doctorId]
   );
 
+  // Synchronize component state or external data when the listed dependencies change.
   useEffect(() => {
     patientApi
       .getDoctors()
@@ -67,6 +74,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
       .finally(() => setLoading(false));
   }, []);
 
+  // Reload available appointment slots when the selected doctor or calendar day changes.
   useEffect(() => {
     if (!form.doctorId || !form.appointmentDay) {
       setSlots([]);
@@ -80,11 +88,13 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
       .finally(() => setLoadingSlots(false));
   }, [form.doctorId, form.appointmentDay]);
 
+  // Update one form field and clear its previous validation error.
   const setField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
     setFieldErrors((current) => ({ ...current, [field]: "" }));
   };
 
+  // Store the chosen available appointment slot and clear its field error.
   const selectSlot = (slot) => {
     if (!slot.available) return;
     setForm((current) => ({
@@ -95,6 +105,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
     setFieldErrors((current) => ({ ...current, appointmentDate: "" }));
   };
 
+  // Check required booking fields and display field-specific errors before submission.
   const validate = () => {
     const nextErrors = {};
     if (!form.doctorId) nextErrors.doctorId = "Select a doctor";
@@ -106,6 +117,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
     return Object.keys(nextErrors).length === 0;
   };
 
+  // Validate booking details before opening the booking confirmation dialog.
   const handleSubmitClick = (event) => {
     event.preventDefault();
     setMessage("");
@@ -114,6 +126,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
     setConfirmOpen(true);
   };
 
+  // Submit the confirmed appointment, reset the form, and notify the parent component.
   const confirmBooking = async () => {
     setConfirmOpen(false);
     setSubmitting(true);
@@ -136,6 +149,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
     }
   };
 
+  // Build a doctor name with a single Dr. prefix.
   const doctorDisplayName = (doctor) => {
     const fullName = `${doctor.firstName} ${doctor.lastName}`.trim();
     return fullName.startsWith("Dr.") ? fullName : `Dr. ${fullName}`;
@@ -145,6 +159,7 @@ export const PatientAppointmentBooking = ({ onBooked }) => {
   const reasonOverLimit = reasonLength > REASON_MAX;
 
   // Format the slot hour for display e.g. "09:00" → "9:00 AM", "14:00" → "2:00 PM"
+  // Convert a slot label's 24-hour time into a readable AM or PM display.
   const formatSlotTime = (label) => {
     // label is like "Morning 09:00" or "Afternoon 14:00" — extract the hour part
     const parts = label.split(" ");

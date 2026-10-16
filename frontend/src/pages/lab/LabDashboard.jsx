@@ -1,3 +1,4 @@
+// Display the lab dashboard and its role-specific actions.
 import { AlertCircle, CheckCircle2, FlaskConical, Microscope } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ClinicalWorkspacePanel } from "../../components/epic2_clinical/ClinicalWorkspacePanel.jsx";
@@ -7,6 +8,7 @@ import { DashboardCard } from "../../components/shared/DashboardCard.jsx";
 import { DashboardQuickActions } from "../../components/shared/DashboardQuickActions.jsx";
 import { clinicalApi } from "../../services/clinicalApi.js";
 
+// Load lab summary data and render the role's dashboard cards and workspaces.
 export const LabDashboard = () => {
   const [metrics, setMetrics] = useState({
     requestedCount: 0,
@@ -15,6 +17,7 @@ export const LabDashboard = () => {
     completedCount: 0
   });
 
+  // Synchronize component state or external data when the listed dependencies change.
   useEffect(() => {
     clinicalApi.listLabRequests().then((labs) => {
       const list = labs || [];

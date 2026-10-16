@@ -1,3 +1,4 @@
+// Verify patient notice authorization, visibility, validation, and read-receipt behavior.
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
@@ -14,6 +15,7 @@ import { clinicToday, expiryInstant, createPatientNoticeSchema, updatePatientNot
 const base = "/api/e2/patient-notices";
 let mongo, server, origin;
 const actors = {};
+// Call the test API with the selected method, token, and JSON body.
 const request = async (actor, method, path, body) => {
   const response = await fetch(`${origin}${path}`, {
     method,
@@ -22,6 +24,7 @@ const request = async (actor, method, path, body) => {
   });
   return { status: response.status, ...await response.json() };
 };
+// Create a test notice through the authenticated notice endpoint.
 const create = (actor = "manager", body = {}) => request(actor, "POST", base, { title: "Clinic notice", message: "Please check the clinic opening times.", recipient: "all", ...body });
 
 before(async () => {

@@ -3,13 +3,16 @@ import { useEffect, useState } from "react";
 import { e1Api } from "../../services/e1Api.js";
 import { formatDate, roleLabel } from "./e1Constants.js";
 
+// Show All Staff for a broadcast announcement or the selected role label.
 const targetLabel = (targetRole) => targetRole === "all" ? "All Staff" : roleLabel(targetRole);
 
+// Show current announcements addressed to the signed-in staff member.
 export const StaffNoticesPanel = () => {
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Fetch the current staff member's eligible announcements.
   const loadNotices = async () => {
     setLoading(true);
     setError("");
@@ -23,6 +26,7 @@ export const StaffNoticesPanel = () => {
     }
   };
 
+  // Load workspace data on mount and whenever the effect dependencies change.
   useEffect(() => {
     loadNotices();
   }, []);

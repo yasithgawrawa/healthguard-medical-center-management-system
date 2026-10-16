@@ -66,18 +66,23 @@ const MEDICINE_UNITS = [
   "ointment"
 ];
 
+// Format a stored date for a date-only display, with a fallback for missing values.
 const dateOnly = (value) => (value ? new Date(value).toISOString().slice(0, 10) : "-");
+// Build today's date input value without shifting the local date through UTC.
 const todayStr = () => {
   const now = new Date();
   const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
   return localDate.toISOString().slice(0, 10);
 };
+// Format a numeric amount as Sri Lankan rupees for display.
 const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
+// Identify patient records created for in-clinic use without patient portal access.
 const isWalkInPatientRecord = (patient) => (
   patient?.registrationSource === "walk_in" ||
   patient?.portalAccessEnabled === false ||
   /^walkin\..+@healthguard\.local$/i.test(patient?.email || "")
 );
+// Trigger a browser download for a Blob and release its temporary object URL.
 const saveBlob = (blob, filename) => {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -87,6 +92,7 @@ const saveBlob = (blob, filename) => {
   URL.revokeObjectURL(url);
 };
 
+// Derive a short medicine code for generated batch numbers.
 const getMedicinePrefix = (medName) => {
   if (!medName) return "MED";
   const upper = medName.toUpperCase();
@@ -102,6 +108,7 @@ const getMedicinePrefix = (medName) => {
   return (clean.slice(0, 3) || "MED").padEnd(3, "X");
 };
 
+// Suggest a medicine-prefixed batch number that is absent from the currently loaded batches.
 const generateBatchNumber = (med, existingBatches = [], excludeBatch = "") => {
   const prefix = getMedicinePrefix(med?.name);
   const yy = new Date().getFullYear().toString().slice(-2);
@@ -118,6 +125,7 @@ const generateBatchNumber = (med, existingBatches = [], excludeBatch = "") => {
 };
 
 
+// Define frontend validation rules for medicine, batch, supplier, and return forms.
 const schemas = {
   medicine: z.object({
     name: z.string().trim().min(2, "Medicine name is required").max(120),
@@ -186,11 +194,13 @@ const schemas = {
   })
 };
 
+// Manage medicine stock, procurement, supplier returns, dispensing, and pharmacy reports.
 export const InventoryWorkspacePanel = () => {
   const { user } = useAuth();
   const isPharmacist = [ROLES.PHARMACIST, ROLES.ADMIN].includes(user?.role);
   const isManager = user?.role === ROLES.MANAGER;
 
+  // Store API records used by the catalog, stock, procurement, returns, and dispensing views.
   const [medicines, setMedicines] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [batches, setBatches] = useState([]);
@@ -202,6 +212,7 @@ export const InventoryWorkspacePanel = () => {
   const [patients, setPatients] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
 
+  // Track the visible inventory view and its search and filter selections.
   const [activeTab, setActiveTab] = useState("catalog");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -209,12 +220,14 @@ export const InventoryWorkspacePanel = () => {
   const [returnStatusFilter, setReturnStatusFilter] = useState("");
   const [reportPeriod, setReportPeriod] = useState("all");
 
+  // Track the open form or detail dialog and the record being edited.
   const [modal, setModal] = useState({ type: null, record: null });
   const [selectedBill, setSelectedBill] = useState(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
 
   // POS / Dispensing State
+  // Keep dispensing customer, prescription, batch selection, and cart state in the component.
   const [posPatientType, setPosPatientType] = useState("walk_in");
   const [posCustomerName, setPosCustomerName] = useState("");
   const [posCustomerPhone, setPosCustomerPhone] = useState("");
@@ -226,6 +239,7 @@ export const InventoryWorkspacePanel = () => {
   const [posQty, setPosQty] = useState(1);
 
   // Purchase Form State
+  // Keep purchase form selections separate from the standard catalog forms.
   const [purchaseSupplierId, setPurchaseSupplierId] = useState("");
   const [purchaseMedId, setPurchaseMedId] = useState("");
   const [purchaseIsNewBatch, setPurchaseIsNewBatch] = useState(true);
@@ -236,20 +250,27 @@ export const InventoryWorkspacePanel = () => {
   const [purchaseQty, setPurchaseQty] = useState(100);
   const [purchasePrice, setPurchasePrice] = useState("");
 
+  // Select the validation schema for the active form and whether it is creating or editing a record.
   const formSchema = modal.type === "batch" && modal.record ? schemas.batchUpdate : schemas[modal.type] || schemas.medicine;
+  // Connect form fields, validation errors, and submission handling through React Hook Form.
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(formSchema),
     mode: "onChange"
   });
+  // Watch the return medicine so the batch options follow the selected medicine.
   const selectedReturnMedicineId = watch("medicineId");
   const selectedReturnBatchId = watch("batchId");
   const selectedReturnBatch = batches.find((batch) => batch._id === selectedReturnBatchId);
+  // Offer only batches linked to the selected return medicine.
   const returnBatchesForMedicine = batches.filter((batch) => (batch.medicineId?._id || batch.medicineId) === selectedReturnMedicineId);
+  // Find the supplier attached to the first matching purchase in the loaded purchase list.
   const getSupplierForBatch = (batchId) => purchases.find((purchase) => (purchase.batchId?._id || purchase.batchId) === batchId)?.supplierId;
   const selectedReturnSupplier = getSupplierForBatch(selectedReturnBatchId);
 
+  // Load medicines, suppliers, batches, sales and update the displayed state.
   const loadData = async () => {
     try {
+      // Load independent inventory lists and reports concurrently to populate the workspace.
       const [meds, sups, bts, sls, prchs, rts, alrts, rpt, pts, rx] = await Promise.all([
         inventoryApi.medicines(),
         inventoryApi.suppliers(),
@@ -277,11 +298,13 @@ export const InventoryWorkspacePanel = () => {
     }
   };
 
+  // Load workspace data on mount and whenever the effect dependencies change.
   useEffect(() => {
     loadData();
   }, [reportPeriod]);
 
   // Open Standard Modal (Medicine, Batch, Supplier)
+  // Reset the medicine, batch, or supplier form with new-record defaults or existing values.
   const openStandardModal = (type, record = null) => {
     const defaults = record
       ? {
@@ -296,6 +319,7 @@ export const InventoryWorkspacePanel = () => {
   };
 
   // Open Purchase Modal
+  // Prepare purchase defaults and suggest a batch number for the selected medicine.
   const openPurchaseModal = (prefillMed = null) => {
     setPurchaseSupplierId(suppliers[0]?._id || "");
     const medId = prefillMed?._id || medicines[0]?._id || "";
@@ -313,6 +337,7 @@ export const InventoryWorkspacePanel = () => {
     setModal({ type: "purchase", record: prefillMed });
   };
 
+  // Prepare a return draft form with matching medicine, batch, reason, and date values.
   const openReturnModal = (record = null) => {
     const medicineId = record?.medicineId?._id || record?.medicineId || medicines[0]?._id || "";
     const availableBatches = batches.filter((batch) => (batch.medicineId?._id || batch.medicineId) === medicineId);
@@ -335,6 +360,7 @@ export const InventoryWorkspacePanel = () => {
   };
 
   // Open POS / Dispense Modal
+  // Reset the dispensing cart and prefill patient or prescription details when supplied.
   const openPosModal = (prefillRx = null) => {
     setPosCart([]);
     if (prefillRx) {
@@ -356,7 +382,9 @@ export const InventoryWorkspacePanel = () => {
     setModal({ type: "pos", record: prefillRx });
   };
 
+  // Register browser event listeners and remove them when this effect is cleaned up.
   useEffect(() => {
+    // Apply dashboard quick-action events to this workspace's tabs, filters, or forms.
     const handleDashboardCommand = (event) => {
       const command = event.detail || {};
       if (command.workspace !== "inventory") return;
@@ -389,6 +417,7 @@ export const InventoryWorkspacePanel = () => {
   }, [isPharmacist, reset, suppliers, medicines, batches, patients]);
 
   // Form Submits
+  // Save the selected inventory form, check return stock where needed, and reload workspace data.
   const submitStandard = async (values) => {
     setBusy(true);
     try {
@@ -436,6 +465,7 @@ export const InventoryWorkspacePanel = () => {
     }
   };
 
+  // Fetch the selected medicine return and open its details dialog.
   const handleViewReturn = async (item) => {
     setBusy(true);
     try {
@@ -448,6 +478,7 @@ export const InventoryWorkspacePanel = () => {
     }
   };
 
+  // Confirm deletion of a draft return and refresh the inventory data.
   const handleDeleteReturn = async (item) => {
     if (!window.confirm(`Delete draft return ${item.returnId}? This cannot be undone.`)) return;
     setBusy(true);
@@ -462,6 +493,7 @@ export const InventoryWorkspacePanel = () => {
     }
   };
 
+  // Confirm completion of a draft return and reload stock after the server deducts it.
   const handleCompleteReturn = async (item) => {
     if (!window.confirm(`Complete ${item.returnId} and deduct ${item.quantity} unit(s) from batch ${item.batchId?.batchNumber || ""}?`)) return;
     setBusy(true);
@@ -476,6 +508,7 @@ export const InventoryWorkspacePanel = () => {
     }
   };
 
+  // Confirm medicine deletion and refresh the catalog and related batch data.
   const handleDeleteMedicine = async (med) => {
     if (!window.confirm(`Permanently delete ${med.name} from the database? This cannot be undone.`)) return;
     try {
@@ -487,6 +520,7 @@ export const InventoryWorkspacePanel = () => {
     }
   };
 
+  // Mark the selected supplier inactive and refresh the supplier list.
   const handleDeactivateSupplier = async (sup) => {
     if (!window.confirm(`Are you sure you want to deactivate supplier ${sup.name}?`)) return;
     try {
@@ -499,6 +533,7 @@ export const InventoryWorkspacePanel = () => {
   };
 
   // Record Purchase Submit
+  // Validate purchase details and submit the stock receipt to the inventory API.
   const handlePurchaseSubmit = async (e) => {
     e.preventDefault();
     if (!purchaseSupplierId) return setToast({ type: "error", message: "Please select a supplier" });
@@ -541,6 +576,7 @@ export const InventoryWorkspacePanel = () => {
   };
 
   // Add Item to POS Cart
+  // Validate the selected medicine, batch, and quantity before adding or merging a cart line.
   const handleAddToCart = () => {
     const med = medicines.find((m) => m._id === posMedId);
     const batch = batches.find((b) => b._id === posBatchId);
@@ -580,13 +616,16 @@ export const InventoryWorkspacePanel = () => {
     setPosQty(1);
   };
 
+  // Remove the cart line at the selected index.
   const handleRemoveFromCart = (index) => {
     setPosCart(posCart.filter((_, i) => i !== index));
   };
 
+  // Cache pos grand total until the listed source values change.
   const posGrandTotal = useMemo(() => posCart.reduce((sum, item) => sum + item.lineTotal, 0), [posCart]);
 
   // Submit POS Sale
+  // Submit medicine and batch quantities for server-side pricing, stock updates, and billing.
   const handleCheckoutSale = async () => {
     if (posCart.length === 0) return setToast({ type: "error", message: "Cart is empty. Add at least one medicine item." });
     if (posPatientType === "registered" && !posPatientId) {
@@ -625,6 +664,7 @@ export const InventoryWorkspacePanel = () => {
   };
 
   // View & Download Bill
+  // Fetch the selected pharmacy sale and open its bill preview.
   const handleViewBill = async (sale) => {
     setBusy(true);
     try {
@@ -637,6 +677,7 @@ export const InventoryWorkspacePanel = () => {
     }
   };
 
+  // Download the selected pharmacy sale's text bill through the API.
   const handleDownloadBillFile = async (sale) => {
     setBusy(true);
     try {
@@ -650,6 +691,7 @@ export const InventoryWorkspacePanel = () => {
   };
 
   // Filtered Rows for Catalog
+  // Cache catalog rows until the listed source values change.
   const catalogRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return medicines.filter((item) => {
@@ -661,12 +703,14 @@ export const InventoryWorkspacePanel = () => {
   }, [medicines, search, categoryFilter, stockStatusFilter]);
 
   // Filtered Suppliers
+  // Cache supplier rows until the listed source values change.
   const supplierRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return suppliers.filter((s) => [s.name, s.phone, s.email, s.address, s.status].join(" ").toLowerCase().includes(q));
   }, [suppliers, search]);
 
   // Filtered Purchases
+  // Cache purchase rows until the listed source values change.
   const purchaseRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return purchases.filter((p) => {
@@ -677,6 +721,7 @@ export const InventoryWorkspacePanel = () => {
     });
   }, [purchases, search]);
 
+  // Cache return rows until the listed source values change.
   const returnRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return returns.filter((item) => {
@@ -694,6 +739,7 @@ export const InventoryWorkspacePanel = () => {
   }, [returns, search, returnStatusFilter]);
 
   // Filtered Sales
+  // Cache sales rows until the listed source values change.
   const salesRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return sales.filter((s) => {
@@ -821,6 +867,7 @@ export const InventoryWorkspacePanel = () => {
               {
                 key: "totalStock",
                 header: "Available Stock",
+                // Format this table cell using the current row's data and available actions.
                 render: (item) => (
                   <span style={{ fontWeight: 600, color: item.totalStock === 0 ? "var(--danger)" : item.totalStock <= item.reorderLevel ? "var(--warning)" : "var(--success)" }}>
                     {item.totalStock} {item.unit}s
@@ -831,6 +878,7 @@ export const InventoryWorkspacePanel = () => {
               {
                 key: "stockStatus",
                 header: "Stock Status",
+                // Format this table cell using the current row's data and available actions.
                 render: (item) => {
                   if (item.totalStock === 0) return <span style={{ color: "var(--danger)", fontWeight: 600, background: "var(--danger-bg)", padding: "2px 8px", borderRadius: "12px", fontSize: "12px" }}>Out of Stock</span>;
                   if (item.totalStock <= item.reorderLevel) return <span style={{ color: "var(--warning)", fontWeight: 600, background: "var(--warning-bg)", padding: "2px 8px", borderRadius: "12px", fontSize: "12px" }}>Low Stock</span>;
@@ -843,6 +891,7 @@ export const InventoryWorkspacePanel = () => {
                     {
                       key: "actions",
                       header: "Actions",
+                      // Format this table cell using the current row's data and available actions.
                       render: (item) => (
                         <div style={{ display: "flex", gap: "8px" }}>
                           <button className="table-link-button" type="button" onClick={() => openStandardModal("medicine", item)}>
@@ -887,6 +936,7 @@ export const InventoryWorkspacePanel = () => {
                     {
                       key: "actions",
                       header: "Actions",
+                      // Format this table cell using the current row's data and available actions.
                       render: (item) => (
                         <div style={{ display: "flex", gap: "8px" }}>
                           <button className="table-link-button" type="button" onClick={() => openStandardModal("supplier", item)}>
@@ -973,6 +1023,7 @@ export const InventoryWorkspacePanel = () => {
               {
                 key: "actions",
                 header: "Actions",
+                // Format this table cell using the current row's data and available actions.
                 render: (item) => (
                   <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                     <button className="table-link-button" type="button" onClick={() => handleViewReturn(item)}>
@@ -1043,6 +1094,7 @@ export const InventoryWorkspacePanel = () => {
                   {
                     key: "currentStock",
                     header: "Available Stock",
+                    // Format this table cell using the current row's data and available actions.
                     render: (item) => (
                       <span style={{ fontWeight: 700, color: item.isOutOfStock ? "var(--danger)" : "var(--warning)" }}>
                         {item.currentStock} {item.unit}s
@@ -1053,6 +1105,7 @@ export const InventoryWorkspacePanel = () => {
                   {
                     key: "deficit",
                     header: "Deficit",
+                    // Format this table cell using the current row's data and available actions.
                     render: (item) => (
                       <span style={{ color: "var(--danger)", fontWeight: 600 }}>
                         -{item.deficit} {item.unit}s
@@ -1062,6 +1115,7 @@ export const InventoryWorkspacePanel = () => {
                   {
                     key: "severity",
                     header: "Shortage Level",
+                    // Format this table cell using the current row's data and available actions.
                     render: (item) => (
                       item.isOutOfStock ? (
                         <span style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "3px 10px", borderRadius: "12px", fontWeight: 700, fontSize: "12px" }}>
@@ -1077,6 +1131,7 @@ export const InventoryWorkspacePanel = () => {
                   {
                     key: "action",
                     header: isPharmacist ? "Action" : "Procurement Status",
+                    // Format this table cell using the current row's data and available actions.
                     render: (item) =>
                       isPharmacist ? (
                         <button className="button-primary" type="button" onClick={() => openPurchaseModal(item)} style={{ padding: "4px 10px", fontSize: "12px" }}>
@@ -1118,6 +1173,7 @@ export const InventoryWorkspacePanel = () => {
                   {
                     key: "daysRemaining",
                     header: "Time to Expiry",
+                    // Format this table cell using the current row's data and available actions.
                     render: (item) => (
                       item.daysRemaining <= 0 ? (
                         <span style={{ color: "var(--danger)", fontWeight: 700, background: "var(--danger-bg)", padding: "2px 8px", borderRadius: "12px", fontSize: "12px" }}>
@@ -1137,6 +1193,7 @@ export const InventoryWorkspacePanel = () => {
                   {
                     key: "actions",
                     header: isPharmacist ? "Action" : "Status",
+                    // Format this table cell using the current row's data and available actions.
                     render: (item) =>
                       isPharmacist ? (
                         <button className="table-link-button" type="button" onClick={() => openStandardModal("batch", item)}>
@@ -1174,6 +1231,7 @@ export const InventoryWorkspacePanel = () => {
               {
                 key: "patient",
                 header: "Patient / Customer",
+                // Format this table cell using the current row's data and available actions.
                 render: (item) => customerLabel(item)
               },
               { key: "phone", header: "Phone", render: (item) => item.customerPhone || item.patientId?.phone || "-" },
@@ -1182,6 +1240,7 @@ export const InventoryWorkspacePanel = () => {
               {
                 key: "paymentStatus",
                 header: "Cashier Status",
+                // Format this table cell using the current row's data and available actions.
                 render: (item) =>
                   item.paymentStatus === "paid" ? (
                     <span style={{ color: "var(--success)", fontWeight: 700, background: "var(--success-bg)", padding: "2px 8px", borderRadius: "12px", fontSize: "12px" }}>
@@ -1196,6 +1255,7 @@ export const InventoryWorkspacePanel = () => {
               {
                 key: "actions",
                 header: "Actions",
+                // Format this table cell using the current row's data and available actions.
                 render: (item) => (
                   <div style={{ display: "flex", gap: "8px" }}>
                     <button className="table-link-button" type="button" onClick={() => handleViewBill(item)}>
@@ -1276,6 +1336,7 @@ export const InventoryWorkspacePanel = () => {
                   {
                     key: "sharePercentage",
                     header: "Revenue Share",
+                    // Format this table cell using the current row's data and available actions.
                     render: (item) => (
                       <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: "140px" }}>
                         <div style={{ flex: 1, height: "8px", background: "var(--line-light)", borderRadius: "4px", overflow: "hidden" }}>
@@ -1593,6 +1654,7 @@ export const InventoryWorkspacePanel = () => {
               label="Medicine"
               error={errors.medicineId?.message}
               {...register("medicineId", {
+                // Update the edited field and synchronize its dependent form values.
                 onChange: (event) => {
                   const firstBatch = batches.find((batch) => (batch.medicineId?._id || batch.medicineId) === event.target.value);
                   setValue("batchId", firstBatch?._id || "", { shouldValidate: true });

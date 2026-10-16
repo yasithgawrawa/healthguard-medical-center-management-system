@@ -23,6 +23,7 @@ const staffSelfServiceRoles = [
   ROLES.LAB_ASSISTANT
 ];
 
+// Choose navigation links for the signed-in user's role.
 const roleNavItems = (role) => {
   if (role === ROLES.ADMIN) {
     return [
@@ -68,11 +69,13 @@ const roleNavItems = (role) => {
   ];
 };
 
+// Render role-specific navigation and the current authenticated dashboard.
 export const DashboardLayout = () => {
   const { user, sessionVersion } = useAuth();
   const location = useLocation();
   const navItems = roleNavItems(user?.role);
 
+  // Read the initial URL fragment to select the current dashboard section.
   const getInitialHash = () => {
     if (location.hash) return location.hash;
     return navItems[0]?.href ?? "#overview";
@@ -80,6 +83,7 @@ export const DashboardLayout = () => {
 
   const [activeHash, setActiveHash] = useState(getInitialHash);
 
+  // Synchronize component state or external data when the listed dependencies change.
   useEffect(() => {
     if (location.hash) {
       setActiveHash(location.hash);
@@ -88,6 +92,7 @@ export const DashboardLayout = () => {
     }
   }, [location.hash, user?.role]);
 
+  // Check whether a navigation link matches the current dashboard location.
   const isItemActive = (href) => {
     if (activeHash === href) return true;
     if (href === "#attendance-leave" && (activeHash === "#attendance-leave" || activeHash === "#staff-self-service")) {
@@ -105,6 +110,7 @@ export const DashboardLayout = () => {
     return false;
   };
 
+  // Apply dashboard navigation and update the selected section.
   const handleNavClick = (href) => {
     setActiveHash(href);
   };

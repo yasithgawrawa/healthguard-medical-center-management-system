@@ -1,3 +1,4 @@
+// Define public and protected routes and select dashboards by role.
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./components/shared/ProtectedRoute.jsx";
 import { ErrorBoundary } from "./components/shared/ErrorBoundary.jsx";
@@ -17,6 +18,7 @@ import { RegisterPage } from "./pages/public/RegisterPage.jsx";
 import { UnauthorizedPage } from "./pages/public/UnauthorizedPage.jsx";
 import { ROLES } from "./utils/roles.js";
 
+// Map each dashboard URL to the roles that may enter it and the page it renders.
 const protectedRoutes = [
   ["/patient", [ROLES.PATIENT], <PatientDashboard />],
   ["/admin", [ROLES.ADMIN], <AdminDashboard />],
@@ -28,6 +30,7 @@ const protectedRoutes = [
   ["/lab", [ROLES.LAB_ASSISTANT], <LabDashboard />]
 ];
 
+// Wrap public and role-protected route trees with rendering error recovery.
 export default function App() {
   return (
     <ErrorBoundary>

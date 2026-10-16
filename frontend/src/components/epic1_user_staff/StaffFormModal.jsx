@@ -18,6 +18,7 @@ export const ROLE_PREFIX_MAP = {
   lab_assistant: "LAB"
 };
 
+// Suggest the next role-prefixed employee ID from the currently loaded staff list.
 export const generateNextEmployeeId = (role, staffList = []) => {
   if (!role) return "";
   const prefix = ROLE_PREFIX_MAP[role] || "EMP";
@@ -34,6 +35,7 @@ export const generateNextEmployeeId = (role, staffList = []) => {
   return `HG-${prefix}-${String(maxNum + 1).padStart(3, "0")}`;
 };
 
+// Validate base values including first name, last name, email, phone, employee id.
 const baseSchema = z.object({
   firstName: requiredName("First name"),
   lastName: requiredName("Last name"),
@@ -57,6 +59,7 @@ const baseSchema = z.object({
   password: z.string().optional()
 });
 
+// Validate create values including password.
 const createSchema = baseSchema.extend({
   password: z
     .string({ required_error: "Temporary password is required" })
@@ -67,12 +70,14 @@ const createSchema = baseSchema.extend({
     .regex(/[^A-Za-z0-9]/, "Must include at least one special character (e.g. @, #, $, !)")
 });
 
+// Validate edit values including email, employee id, password.
 const editSchema = baseSchema.omit({ email: true, employeeId: true }).extend({
   email: z.string().optional(),
   employeeId: z.string().optional(),
   password: z.string().optional()
 });
 
+// Convert a staff record and populated user details into editable form values.
 const toFormValues = (staff) => ({
   firstName: staff?.userId?.firstName || "",
   lastName: staff?.userId?.lastName || "",
@@ -88,11 +93,13 @@ const toFormValues = (staff) => ({
   password: ""
 });
 
+// Validate and submit staff creation or editing with role-based employee ID defaults.
 export const StaffFormModal = ({ open, mode = "create", staff, existingStaff = [], serverErrors, onClose, onSubmit, busy }) => {
   const isEdit = mode === "edit";
   const roleOptions = isEdit && staff?.role === "doctor"
     ? STAFF_ROLES
     : STAFF_ROLES.filter((role) => role.value !== "doctor");
+  // Connect form fields, validation errors, and submission handling through React Hook Form.
   const {
     register,
     handleSubmit,
@@ -109,10 +116,12 @@ export const StaffFormModal = ({ open, mode = "create", staff, existingStaff = [
 
   const selectedRole = watch("role");
 
+  // Reset the form when its selected record or dialog state changes.
   useEffect(() => {
     reset(toFormValues(staff));
   }, [staff, reset, open]);
 
+  // Synchronize component state or external data when the listed dependencies change.
   useEffect(() => {
     if (serverErrors && typeof serverErrors === "object") {
       Object.entries(serverErrors).forEach(([field, msg]) => {
@@ -122,6 +131,7 @@ export const StaffFormModal = ({ open, mode = "create", staff, existingStaff = [
     }
   }, [serverErrors, setError]);
 
+  // Synchronize dependent form values when the current selection changes.
   useEffect(() => {
     if (!isEdit && open && selectedRole) {
       const nextId = generateNextEmployeeId(selectedRole, existingStaff);
@@ -129,6 +139,7 @@ export const StaffFormModal = ({ open, mode = "create", staff, existingStaff = [
     }
   }, [selectedRole, isEdit, open, existingStaff, setValue]);
 
+  // Submit the validated staff form form and show the resulting success or error feedback.
   const submit = (values) => {
     const payload = { ...values };
     if (!payload.employeeId && !isEdit) {
@@ -167,6 +178,7 @@ export const StaffFormModal = ({ open, mode = "create", staff, existingStaff = [
             label="Role"
             error={errors.role?.message}
             {...register("role", {
+              // Update the edited field and synchronize its dependent form values.
               onChange: (e) => {
                 if (!isEdit && e.target.value) {
                   const nextId = generateNextEmployeeId(e.target.value, existingStaff);

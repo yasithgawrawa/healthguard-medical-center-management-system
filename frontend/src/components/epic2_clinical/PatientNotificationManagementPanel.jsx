@@ -12,7 +12,9 @@ import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
 import { FormTextarea } from "../shared/forms/FormTextarea.jsx";
 
+// Format a date using the Asia/Colombo calendar date.
 const clinicDate = date => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Colombo", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+// Validate fields values including title, recipient, patient id, expiry date.
 const fieldsSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(120),
   message: z.string().trim().min(1, "Message is required").max(1000),
@@ -20,11 +22,15 @@ const fieldsSchema = z.object({
   patientId: z.string(),
   expiryDate: z.string().refine(value => !value || (/^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value && value >= clinicDate(new Date())), "Choose today or a future expiry date")
 });
+// Validate this form's values.
 const schema = fieldsSchema.refine(value => value.recipient !== "one" || /^[a-f0-9]{24}$/i.test(value.patientId), { path: ["patientId"], message: "Select a patient" });
 const defaults = { title: "", message: "", recipient: "all", patientId: "", expiryDate: "" };
+// Display the clinic-local timestamp or indicate that the notice has no expiry.
 const displayDate = value => value ? new Date(value).toLocaleString("en-LK", { timeZone: "Asia/Colombo" }) : "No expiry";
+// Build a patient label using available identity and registration details.
 const patientLabel = patient => `${patient.firstName} ${patient.lastName} (${patient._id})`;
 
+// Create, edit, and delete manager-owned patient notices.
 export const PatientNotificationManagementPanel = () => {
   const [notices, setNotices] = useState([]);
   const [patients, setPatients] = useState([]);
@@ -35,9 +41,11 @@ export const PatientNotificationManagementPanel = () => {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [toast, setToast] = useState(null);
+  // Connect form fields, validation errors, and submission handling through React Hook Form.
   const { register, handleSubmit, reset, watch, setError, formState: { errors } } = useForm({ resolver: zodResolver(modal?.type === "edit" ? fieldsSchema.pick({ title: true, message: true, expiryDate: true }) : schema), defaultValues: defaults });
   const recipient = watch("recipient");
   const selectedPatientId = watch("patientId");
+  // Load list and update the displayed state.
   const load = async () => {
     setLoading(true);
     setLoadError("");
@@ -45,7 +53,9 @@ export const PatientNotificationManagementPanel = () => {
     catch (error) { setLoadError(error.response?.data?.message || "Unable to load notifications"); }
     finally { setLoading(false); }
   };
+  // Load workspace data on mount and whenever the effect dependencies change.
   useEffect(() => { load(); }, []);
+  // Schedule feedback dismissal or periodic updates and clear timers during cleanup.
   useEffect(() => {
     if (modal?.type !== "create" || recipient !== "one") return;
     let active = true;
@@ -61,12 +71,15 @@ export const PatientNotificationManagementPanel = () => {
     }, 250);
     return () => { active = false; clearTimeout(timer); };
   }, [search, modal?.type, recipient, selectedPatientId]);
+  // Close the active record dialog and clear its selected record.
   const close = () => { if (!busy) setModal(null); };
+  // Open the create or edit dialog with the appropriate form values.
   const open = (type, notice = null) => {
     reset(notice ? { ...defaults, ...notice, patientId: notice.patientId?._id || "", expiryDate: notice.expiryDate ? clinicDate(new Date(notice.expiryDate)) : "" } : defaults);
     setSearch("");
     setModal({ type, notice });
   };
+  // Save the validated notice form and refresh the notice list.
   const save = async values => {
     setBusy(true);
     try {
@@ -81,6 +94,7 @@ export const PatientNotificationManagementPanel = () => {
       setToast({ type: "error", message: error.response?.data?.message || "Unable to save notification" });
     } finally { setBusy(false); }
   };
+  // Delete the selected notice and refresh the notice list.
   const remove = async () => {
     setBusy(true);
     try {

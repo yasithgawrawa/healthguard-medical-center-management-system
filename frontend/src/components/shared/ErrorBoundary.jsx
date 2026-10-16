@@ -1,28 +1,35 @@
+// Provide shared rendering and error recovery for workspace content.
 import React from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 
 export class ErrorBoundary extends React.Component {
+  // Initialize the React error boundary with no captured rendering failure.
   constructor(props) {
     super(props);
     this.state = { hasError: false, error: null };
   }
 
+  // Store a rendering failure so the error boundary can show its fallback interface.
   static getDerivedStateFromError(error) {
     return { hasError: true, error };
   }
 
+  // Log the component error and React component-stack details.
   componentDidCatch(error, errorInfo) {
     console.error("HealthGuard Application Error caught by ErrorBoundary:", error, errorInfo);
   }
 
+  // Reload the browser page after a workspace rendering failure.
   handleReload = () => {
     window.location.reload();
   };
 
+  // Clear the error state so the workspace can attempt to render again.
   handleReset = () => {
     this.setState({ hasError: false, error: null });
   };
 
+  // Render the recovery interface after a failure or show the wrapped workspace.
   render() {
     if (this.state.hasError) {
       return (

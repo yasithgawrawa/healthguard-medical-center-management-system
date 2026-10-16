@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+// Render page navigation controls using the current page and page count.
 export const Pagination = ({ page, totalPages, onPageChange }) => (
   <div className="pagination">
     <button type="button" onClick={() => onPageChange(page - 1)} disabled={page <= 1}>

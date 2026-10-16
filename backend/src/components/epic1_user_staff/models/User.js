@@ -1,7 +1,9 @@
+// Define the MongoDB structure, constraints, and relationships for user records.
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 import { ROLE_VALUES, ROLES } from "../../../shared/constants/roles.js";
 
+// Define stored user data with first name, last name, email, phone, address and database validation.
 const userSchema = new mongoose.Schema(
   {
     firstName: {
@@ -18,6 +20,7 @@ const userSchema = new mongoose.Schema(
       minlength: 2,
       maxlength: 60
     },
+    // Require a unique email value through a MongoDB unique index.
     email: {
       type: String,
       required: true,
@@ -39,27 +42,32 @@ const userSchema = new mongoose.Schema(
     dateOfBirth: {
       type: Date
     },
+    // Restrict gender to the supported values defined for this record.
     gender: {
       type: String,
       enum: ["female", "male", "other", "prefer_not_to_say"]
     },
+    // Restrict role to the supported values defined for this record.
     role: {
       type: String,
       enum: ROLE_VALUES,
       default: ROLES.PATIENT,
       index: true
     },
+    // Restrict status to the supported values defined for this record.
     status: {
       type: String,
       enum: ["active", "inactive"],
       default: "active",
       index: true
     },
+    // Store only the password hash and exclude it from normal query selections.
     passwordHash: {
       type: String,
       required: true,
       select: false
     },
+    // Restrict registration source to the supported values defined for this record.
     registrationSource: {
       type: String,
       enum: ["self_registered", "staff_created", "walk_in"],
@@ -77,13 +85,16 @@ const userSchema = new mongoose.Schema(
       default: 1500
     }
   },
+  // Maintain createdAt and updatedAt automatically for auditing and date-based queries.
   { timestamps: true }
 );
 
+// Compare a submitted password with this user's stored bcrypt hash.
 userSchema.methods.comparePassword = function comparePassword(password) {
   return bcrypt.compare(password, this.passwordHash);
 };
 
+// Return public user fields while excluding the password hash.
 userSchema.methods.toSafeJSON = function toSafeJSON() {
   return {
     id: this._id,

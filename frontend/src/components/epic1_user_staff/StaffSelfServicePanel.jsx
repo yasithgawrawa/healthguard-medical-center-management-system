@@ -16,6 +16,7 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import { printPayslipPDF } from "../../utils/invoicePrintTemplate.js";
 import { formatDate, formatTime, LEAVE_TYPES } from "./e1Constants.js";
 
+// Validate leave request values including leave type, start date, end date, reason.
 const leaveRequestSchema = z
   .object({
     leaveType: z.string().min(1, "Leave type is required"),
@@ -28,11 +29,13 @@ const leaveRequestSchema = z
     message: "End date must be on or after start date"
   });
 
+// Calculate elapsed hours only when both attendance timestamps are available.
 const workedHours = (item) => {
   if (!item.checkInAt || !item.checkOutAt) return "-";
   return `${Math.max((new Date(item.checkOutAt) - new Date(item.checkInAt)) / 36e5, 0).toFixed(1)}h`;
 };
 
+// Show the signed-in staff member's shifts, attendance, salary, and leave actions.
 export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
   const { user } = useAuth();
   const location = useLocation();
@@ -53,6 +56,7 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Connect form fields, validation errors, and submission handling through React Hook Form.
   const {
     register,
     handleSubmit,
@@ -64,6 +68,7 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
     defaultValues: { leaveType: "", startDate: "", endDate: "", reason: "" }
   });
 
+  // Load list my attendance, list my leave, payroll and update the displayed state.
   const load = async () => {
     try {
       const [attendanceData, leaveData, payrollData] = await Promise.all([
@@ -79,6 +84,7 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
     }
   };
 
+  // Schedule feedback dismissal or periodic updates and clear timers during cleanup.
   useEffect(() => {
     if (isAttendanceActive) {
       load();
@@ -92,6 +98,7 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
     }
   }, [isAttendanceActive]);
 
+  // Close the self-service panel and clear its related navigation state.
   const handleClose = () => {
     if (onClose) {
       onClose();
@@ -104,11 +111,13 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
   };
 
   const today = new Date().toISOString().slice(0, 10);
+  // Cache today attendance until the listed source values change.
   const todayAttendance = useMemo(
     () => attendance.find((item) => item.workDate === today) || attendance.find((item) => item.status === "checked_in"),
     [attendance, today]
   );
 
+  // Submit a self-service check-in or check-out action and reload attendance.
   const runAttendance = async (action) => {
     setBusy(true);
     try {
@@ -127,6 +136,7 @@ export const StaffSelfServicePanel = ({ isVisible, onClose }) => {
     }
   };
 
+  // Submit the signed-in staff member's validated leave request.
   const requestLeave = async (values) => {
     setBusy(true);
     try {

@@ -1,6 +1,7 @@
 import { ArrowLeft, ShieldAlert } from "lucide-react";
 import { Link } from "react-router-dom";
 
+// Show an access-denied page with navigation back to an allowed location.
 export const UnauthorizedPage = () => (
   <section className="page-status">
     <div className="page-status-card">

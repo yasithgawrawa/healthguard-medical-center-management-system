@@ -1,3 +1,4 @@
+// Implement inventory business rules and coordinate database operations.
 import { Medicine } from "../models/Medicine.js";
 import { MedicineBatch } from "../models/MedicineBatch.js";
 import { Supplier } from "../models/Supplier.js";
@@ -12,6 +13,7 @@ import { User } from "../../epic1_user_staff/models/User.js";
 import { AppError } from "../../../shared/utils/AppError.js";
 import { ROLES } from "../../../shared/constants/roles.js";
 
+// Replace return reference IDs with selected medicine, batch, supplier, and staff details.
 const populateMedicineReturn = (query) =>
   query
     .populate("medicineId", "name category unit")
@@ -20,6 +22,7 @@ const populateMedicineReturn = (query) =>
     .populate("createdBy", "firstName lastName")
     .populate("completedBy", "firstName lastName");
 
+// Build a dated return reference and skip references that already exist.
 const generateReturnId = async (date = new Date()) => {
   const key = date.toISOString().slice(0, 10).replace(/-/g, "");
   const start = new Date(date);
@@ -37,11 +40,14 @@ const generateReturnId = async (date = new Date()) => {
 
 export const inventoryService = {
   // --- MEDICINES ---
+  // Sum batch quantities per medicine and derive stock levels against each reorder threshold.
   async getMedicinesWithStock(filter = {}) {
     const medicines = await Medicine.find(filter).sort({ name: 1 });
     const batches = await MedicineBatch.find();
 
+    // Group batch quantities by medicine ID so each medicine can be matched to its total stock.
     const stockMap = new Map();
+    // Count batches separately from their combined quantities.
     const batchCountMap = new Map();
 
     for (const batch of batches) {
@@ -50,10 +56,12 @@ export const inventoryService = {
       batchCountMap.set(medId, (batchCountMap.get(medId) || 0) + 1);
     }
 
+    // Attach computed stock values to plain medicine objects for the API response.
     return medicines.map((med) => {
       const totalStock = stockMap.get(med._id.toString()) || 0;
       const batchesCount = batchCountMap.get(med._id.toString()) || 0;
       let stockStatus = "in_stock";
+      // A zero quantity is out of stock; otherwise compare stock with the configured reorder level.
       if (totalStock === 0) {
         stockStatus = "out_of_stock";
       } else if (totalStock <= med.reorderLevel) {
@@ -69,6 +77,7 @@ export const inventoryService = {
     });
   },
 
+  // Reject an existing case-insensitive medicine name before creating the catalog record.
   async createMedicine(data) {
     const existing = await Medicine.findOne({ name: { $regex: new RegExp(`^${data.name.trim()}$`, "i") } });
     if (existing) {
@@ -77,6 +86,7 @@ export const inventoryService = {
     return Medicine.create(data);
   },
 
+  // Check name conflicts and update the medicine with Mongoose validation enabled.
   async updateMedicine(id, data) {
     if (data.name) {
       const existing = await Medicine.findOne({
@@ -92,10 +102,12 @@ export const inventoryService = {
     return medicine;
   },
 
+  // Delete the medicine and all of its batches and report the number of removed batches.
   async deleteMedicine(id) {
     const medicine = await Medicine.findById(id);
     if (!medicine) throw new AppError("Medicine not found", 404);
 
+    // Remove dependent batches before deleting their medicine catalog entry.
     const deletedBatches = await MedicineBatch.deleteMany({ medicineId: medicine._id });
     await Medicine.findByIdAndDelete(medicine._id);
 
@@ -106,12 +118,14 @@ export const inventoryService = {
   },
 
   // --- BATCHES ---
+  // Load batches with medicine details and classify expiry within the next 30 days.
   async getBatches() {
     const batches = await MedicineBatch.find()
       .populate("medicineId", "name category unit price status")
       .sort({ expiryDate: 1, createdAt: -1 });
 
     const now = new Date();
+    // Use a 30-day window to identify batches that are approaching expiry.
     const thirtyDaysAhead = new Date(Date.now() + 30 * 86400000);
 
     return batches.map((batch) => {
@@ -129,6 +143,7 @@ export const inventoryService = {
     });
   },
 
+  // Check batch uniqueness, linked medicine, and date order before creating received stock.
   async createBatch(data) {
     const existing = await MedicineBatch.findOne({ batchNumber: data.batchNumber.trim().toUpperCase() });
     if (existing) {
@@ -154,6 +169,7 @@ export const inventoryService = {
     });
   },
 
+  // Check batch-number conflicts and update the batch with Mongoose validation enabled.
   async updateBatch(id, data) {
     if (data.batchNumber) {
       const existing = await MedicineBatch.findOne({
@@ -171,20 +187,24 @@ export const inventoryService = {
   },
 
   // --- SUPPLIERS ---
+  // Return suppliers in alphabetical order.
   async getSuppliers() {
     return Supplier.find().sort({ name: 1 });
   },
 
+  // Store a new supplier using the validated request data.
   async createSupplier(data) {
     return Supplier.create(data);
   },
 
+  // Update a supplier with model validation or return a 404 error.
   async updateSupplier(id, data) {
     const supplier = await Supplier.findByIdAndUpdate(id, data, { new: true, runValidators: true });
     if (!supplier) throw new AppError("Supplier not found", 404);
     return supplier;
   },
 
+  // Mark a supplier inactive while preserving its purchase history.
   async deleteSupplier(id) {
     const supplier = await Supplier.findByIdAndUpdate(id, { status: "inactive" }, { new: true });
     if (!supplier) throw new AppError("Supplier not found", 404);
@@ -192,6 +212,7 @@ export const inventoryService = {
   },
 
   // --- PURCHASES ---
+  // Load purchase history with linked supplier, medicine, and batch details.
   async getPurchases() {
     return Purchase.find()
       .populate("supplierId", "name phone email")
@@ -200,6 +221,7 @@ export const inventoryService = {
       .sort({ purchasedAt: -1 });
   },
 
+  // Receive stock into an existing or new batch, record the purchase, and create a supplier bill.
   async recordPurchase(data) {
     const supplier = await Supplier.findById(data.supplierId);
     if (!supplier) throw new AppError("Supplier not found", 404);
@@ -208,16 +230,20 @@ export const inventoryService = {
     if (!medicine) throw new AppError("Medicine not found", 404);
 
     let batch;
+    // An existing batch receives additional stock after its medicine relationship is checked.
     if (data.batchId) {
       batch = await MedicineBatch.findById(data.batchId);
       if (!batch) throw new AppError("Medicine batch not found", 404);
       if (batch.medicineId.toString() !== medicine._id.toString()) {
         throw new AppError("Batch does not belong to selected medicine", 400);
       }
+      // Increase the stored batch quantity by the received purchase quantity.
       batch.quantity += data.quantity;
       if (data.purchasePrice) batch.purchasePrice = data.purchasePrice;
       await batch.save();
+    // Create a separate stock batch when the purchase supplies complete new-batch details.
     } else if (data.batchNumber && data.manufactureDate && data.expiryDate) {
+      // Normalize the batch number before checking uniqueness and storing the new batch.
       const cleanBatchNo = data.batchNumber.trim().toUpperCase();
       const existing = await MedicineBatch.findOne({ batchNumber: cleanBatchNo });
       if (existing) {
@@ -232,6 +258,7 @@ export const inventoryService = {
       if (mfg > endOfToday) {
         throw new AppError("Manufacture date cannot be in the future", 400);
       }
+      // Reject a new purchase batch whose expiry is at or before the start of today.
       if (exp <= startOfToday) {
         throw new AppError("Expiry date must be in the future for newly received stock", 400);
       }
@@ -250,6 +277,7 @@ export const inventoryService = {
       throw new AppError("Either select an existing batch or provide new batch details", 400);
     }
 
+    // Keep references to the supplier, medicine, and received batch in the purchase history.
     const purchase = await Purchase.create({
       supplierId: supplier._id,
       medicineId: medicine._id,
@@ -259,6 +287,7 @@ export const inventoryService = {
       purchasedAt: data.purchasedAt || new Date()
     });
 
+    // Link procurement to billing and calculate the payable amount from quantity and unit purchase price.
     await SupplierBill.create({
       supplierId: supplier._id,
       purchaseId: purchase._id,
@@ -273,6 +302,7 @@ export const inventoryService = {
   },
 
   // --- MEDICINE RETURNS ---
+  // Verify the medicine and batch, infer the supplier from purchase history, and check available stock.
   async validateMedicineReturnPayload(data) {
     const medicine = await Medicine.findById(data.medicineId);
     if (!medicine) throw new AppError("Medicine not found", 404);
@@ -283,6 +313,7 @@ export const inventoryService = {
       throw new AppError("Batch does not belong to selected medicine", 400, { batchId: "Select a matching batch" });
     }
 
+    // Use the latest purchase of this batch to identify its supplier.
     const purchase = await Purchase.findOne({ batchId: batch._id })
       .populate("supplierId", "name phone email status")
       .sort({ purchasedAt: -1, createdAt: -1 });
@@ -291,6 +322,7 @@ export const inventoryService = {
       throw new AppError("Supplier could not be found for this batch. Please check purchase history.", 409, { batchId: "No supplier found for selected batch" });
     }
 
+    // Reject a draft return quantity greater than the batch stock currently available.
     if (Number(data.quantity) > Number(batch.quantity || 0)) {
       throw new AppError(`Return quantity cannot exceed available batch stock (${batch.quantity})`, 400, { quantity: "Quantity exceeds available stock" });
     }
@@ -298,6 +330,7 @@ export const inventoryService = {
     return { medicine, batch, supplier };
   },
 
+  // Create a validated supplier return draft without deducting stock.
   async createMedicineReturnDraft(data, userId) {
     const { supplier } = await this.validateMedicineReturnPayload(data);
     const returnId = await generateReturnId();
@@ -311,21 +344,25 @@ export const inventoryService = {
     return populateMedicineReturn(MedicineReturn.findById(medicineReturn._id));
   },
 
+  // List supplier returns with related records, newest first.
   async getMedicineReturns() {
     return populateMedicineReturn(MedicineReturn.find().sort({ createdAt: -1 }));
   },
 
+  // Load a populated supplier return or return a 404 error.
   async getMedicineReturnById(id) {
     const medicineReturn = await populateMedicineReturn(MedicineReturn.findById(id));
     if (!medicineReturn) throw new AppError("Medicine return not found", 404);
     return medicineReturn;
   },
 
+  // Validate merged return details and allow edits only while the return is a draft.
   async updateMedicineReturnDraft(id, data) {
     const medicineReturn = await MedicineReturn.findById(id);
     if (!medicineReturn) throw new AppError("Medicine return not found", 404);
     if (medicineReturn.status !== "draft") throw new AppError("Completed returns cannot be edited", 409);
 
+    // Merge partial edits with stored values before validating the complete return payload.
     const nextData = {
       medicineId: data.medicineId ?? medicineReturn.medicineId,
       batchId: data.batchId ?? medicineReturn.batchId,
@@ -341,6 +378,7 @@ export const inventoryService = {
     return populateMedicineReturn(MedicineReturn.findById(medicineReturn._id));
   },
 
+  // Delete a return only while its status is draft.
   async deleteMedicineReturnDraft(id) {
     const medicineReturn = await MedicineReturn.findById(id);
     if (!medicineReturn) throw new AppError("Medicine return not found", 404);
@@ -349,11 +387,13 @@ export const inventoryService = {
     return medicineReturn;
   },
 
+  // Deduct available batch stock, complete a draft return, and restore stock if completion loses a race.
   async completeMedicineReturn(id, userId) {
     const medicineReturn = await MedicineReturn.findById(id);
     if (!medicineReturn) throw new AppError("Medicine return not found", 404);
     if (medicineReturn.status !== "draft") throw new AppError("Return has already been completed", 409);
 
+    // Check available quantity and deduct return stock in the same database update.
     const batch = await MedicineBatch.findOneAndUpdate(
       { _id: medicineReturn.batchId, quantity: { $gte: medicineReturn.quantity } },
       { $inc: { quantity: -medicineReturn.quantity } },
@@ -363,12 +403,14 @@ export const inventoryService = {
       throw new AppError("Not enough stock remains in this batch to complete the return", 409, { quantity: "Quantity exceeds available stock" });
     }
 
+    // Complete only a document that is still a draft and record the responsible staff member.
     const completed = await MedicineReturn.findOneAndUpdate(
       { _id: medicineReturn._id, status: "draft" },
       { status: "completed", completedAt: new Date(), completedBy: userId },
       { new: true, runValidators: true }
     );
 
+    // Restore the deducted stock if another request completed the draft first.
     if (!completed) {
       await MedicineBatch.findByIdAndUpdate(medicineReturn.batchId, { $inc: { quantity: medicineReturn.quantity } });
       throw new AppError("Return has already been completed", 409);
@@ -378,6 +420,7 @@ export const inventoryService = {
   },
 
   // --- SALES / POS ---
+  // Validate sale items, calculate prices on the server, deduct stock, and link prescription and billing records.
   async createSale({ prescriptionId, patientId, customerName, customerPhone, items, soldById, paymentStatus }) {
     if (!items || items.length === 0) {
       throw new AppError("Sale must contain at least one item", 400);
@@ -411,7 +454,9 @@ export const inventoryService = {
         throw new AppError(`Insufficient stock for ${medicine.name} (Batch: ${batch.batchNumber}). Available: ${batch.quantity}, Requested: ${item.quantity}`, 409);
       }
 
+      // Read the selling price from the medicine record instead of accepting a client-supplied total.
       const unitPrice = medicine.price;
+      // Calculate each sale line from the stored selling price and requested quantity.
       const lineTotal = unitPrice * item.quantity;
       grandTotal += lineTotal;
 
@@ -441,11 +486,13 @@ export const inventoryService = {
     });
     const saleNumber = `PH-${todayKey}-${String(countToday + 1).padStart(4, "0")}`;
 
+    // Preserve a supplied prescription link or replace it with a generated dispensing record when available.
     let effectivePrescriptionId = prescriptionId;
 
     // If patient is selected and no prescriptionId was provided, auto-digitize the prescription record
     if (!effectivePrescriptionId && patientId) {
       try {
+        // Find the patient's latest appointment to link the dispensing or invoice record.
         const latestAppt = await Appointment.findOne({ patientId }).sort({ appointmentDate: -1 });
         if (latestAppt) {
           const rxItems = processedItems.map(({ itemRecord, batch, medicineName }) => {
@@ -484,7 +531,9 @@ export const inventoryService = {
       const isPaid = paymentStatus === "paid";
 
       if (patientId) {
+        // Find the patient's latest appointment to link the dispensing or invoice record.
         const latestAppt = await Appointment.findOne({ patientId }).sort({ appointmentDate: -1 });
+        // Reuse the latest draft or issued patient invoice when one is available.
         let patientInvoice = await Invoice.findOne({
           patientId,
           status: { $in: ["issued", "draft"] }
@@ -493,10 +542,12 @@ export const inventoryService = {
         if (patientInvoice) {
           patientInvoice.items.push(...invoiceItems);
           patientInvoice.invoiceType = "visit";
+          // Recalculate the combined invoice subtotal from its stored charge lines.
           patientInvoice.subtotal = patientInvoice.items.reduce((sum, item) => sum + Number(item.lineTotal || 0), 0);
           if (isPaid) {
             patientInvoice.paidAmount = Math.min(patientInvoice.subtotal, Number(patientInvoice.paidAmount || 0) + grandTotal);
           }
+          // Derive the remaining balance from the invoice subtotal and recorded payments.
           patientInvoice.outstandingAmount = Math.max(0, patientInvoice.subtotal - Number(patientInvoice.paidAmount || 0));
           patientInvoice.status = patientInvoice.outstandingAmount === 0 ? "paid" : "issued";
           await patientInvoice.save();
@@ -535,6 +586,7 @@ export const inventoryService = {
       console.error("Error creating billing invoice for pharmacy sale:", invoiceErr);
     }
 
+    // Save the sale with its calculated amounts and shared prescription, patient, dispenser, and invoice IDs.
     const sale = await PharmacySale.create({
       saleNumber,
       prescriptionId: effectivePrescriptionId || undefined,
@@ -562,6 +614,7 @@ export const inventoryService = {
     ]);
   },
 
+  // List pharmacy sales with patient, dispenser, medicine, and batch details.
   async getSales() {
     return PharmacySale.find()
       .populate("patientId", "firstName lastName email phone registrationSource portalAccessEnabled")
@@ -571,6 +624,7 @@ export const inventoryService = {
       .sort({ createdAt: -1 });
   },
 
+  // Load one pharmacy sale with the details needed for its bill.
   async getSaleById(id) {
     const sale = await PharmacySale.findById(id)
       .populate("patientId", "firstName lastName email phone address registrationSource portalAccessEnabled")
@@ -582,6 +636,7 @@ export const inventoryService = {
     return sale;
   },
 
+  // Build a downloadable text bill showing dispensed items, totals, and cashier payment status.
   async getBillFile(id) {
     const sale = await this.getSaleById(id);
     const patientName = sale.customerName || [sale.patientId?.firstName, sale.patientId?.lastName].filter(Boolean).join(" ") || "Walk-in Patient";
@@ -605,6 +660,7 @@ export const inventoryService = {
     ];
 
     for (const item of sale.items) {
+      // Pad or trim bill columns so the downloaded plain-text receipt stays aligned.
       const name = (item.medicineId?.name || "Medicine").padEnd(24).slice(0, 24);
       const batch = (item.batchId?.batchNumber || "-").padEnd(10).slice(0, 10);
       const qty = String(item.quantity).padStart(4);
@@ -632,6 +688,7 @@ export const inventoryService = {
   },
 
   // --- ALERTS ---
+  // Report medicines at or below reorder level and batches expiring within 60 days, including expired batches.
   async getAlerts() {
     const medicines = await Medicine.find({ status: "active" }).sort({ name: 1 });
     const batches = await MedicineBatch.find()
@@ -639,6 +696,7 @@ export const inventoryService = {
       .sort({ expiryDate: 1 });
 
     const now = new Date();
+    // Group batch quantities by medicine ID so each medicine can be matched to its total stock.
     const stockMap = new Map();
 
     for (const batch of batches) {
@@ -649,6 +707,7 @@ export const inventoryService = {
     const lowStock = medicines
       .map((med) => {
         const currentStock = stockMap.get(med._id.toString()) || 0;
+        // Calculate how many units are needed to reach the medicine's reorder threshold.
         const deficit = Math.max(0, med.reorderLevel - currentStock);
         return {
           _id: med._id,
@@ -669,6 +728,7 @@ export const inventoryService = {
       .filter((batch) => new Date(batch.expiryDate) <= expiresBefore)
       .map((batch) => {
         const exp = new Date(batch.expiryDate);
+        // Convert the remaining expiry time into days for expired, critical, and warning labels.
         const diffDays = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
         return {
           _id: batch._id,
@@ -690,10 +750,12 @@ export const inventoryService = {
   },
 
   // --- SALES REPORT ---
+  // Aggregate sale revenue and quantities by period, medicine, and category.
   async getSalesReport(period = "all") {
     let dateFilter = {};
     const now = new Date();
 
+    // Choose the report's lower date boundary; all leaves the query unrestricted.
     if (period === "today") {
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       dateFilter = { createdAt: { $gte: startOfDay } };
@@ -741,6 +803,7 @@ export const inventoryService = {
       }
     }
 
+    // Rank the top ten medicines by revenue and calculate each medicine's revenue share.
     const topMedicines = [...medicineMap.values()]
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10)
@@ -751,6 +814,7 @@ export const inventoryService = {
 
     const categoryBreakdown = [...categoryMap.values()].sort((a, b) => b.revenue - a.revenue);
 
+    // Avoid dividing by zero when calculating the average sale value.
     const averageOrderValue = sales.length > 0 ? Number((totalRevenue / sales.length).toFixed(2)) : 0;
 
     return {
@@ -765,12 +829,14 @@ export const inventoryService = {
   },
 
   // --- PATIENTS & PRESCRIPTIONS HELPERS FOR PHARMACY ---
+  // List active patient records available for pharmacy sales.
   async getEligiblePatients() {
     return User.find({ role: ROLES.PATIENT, status: "active" })
       .select("firstName lastName email phone registrationSource portalAccessEnabled")
       .sort({ firstName: 1 });
   },
 
+  // Load active prescriptions with patient and doctor details for dispensing.
   async getActivePrescriptions() {
     return Prescription.find({ status: "active" })
       .populate("patientId", "firstName lastName email phone registrationSource portalAccessEnabled")

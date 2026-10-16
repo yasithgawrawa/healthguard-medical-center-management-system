@@ -1,12 +1,17 @@
+# Define the local development services managed by Docker Compose.
 services:
   mongo:
+    # Run the MongoDB 7 database image.
     image: mongo:7
     container_name: healthguard-mongo
     restart: unless-stopped
+    # Expose the database on the host for the backend connection.
     ports:
       - "27017:27017"
     volumes:
+      # Preserve database files in a named volume when the container restarts.
       - healthguard_mongo_data:/data/db
 
 volumes:
+  # Declare the persistent database volume.
   healthguard_mongo_data:

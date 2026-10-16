@@ -1,3 +1,4 @@
+// Keep reusable domain values consistent across validation, storage, and interface choices.
 export const ROLES = Object.freeze({
   PATIENT: "patient",
   ADMIN: "admin",

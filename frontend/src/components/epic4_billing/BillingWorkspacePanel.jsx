@@ -21,13 +21,18 @@ import { FormInput } from "../shared/forms/FormInput.jsx";
 import { FormSelect } from "../shared/forms/FormSelect.jsx";
 import { ExpenseManagementPanel } from "./ExpenseManagementPanel.jsx";
 
+// Format a numeric amount as Sri Lankan rupees for display.
 const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
+// Format a stored date for a date-only display, with a fallback for missing values.
 const dateOnly = (value) => (value ? new Date(value).toLocaleDateString() : "-");
+// Use the shared customer label helper for invoice displays.
 const getInvoiceClient = (item) => customerLabel(item);
+// Remove formatting and compare phone numbers using their last nine digits.
 const normalizePhone = (value) => {
   const digits = String(value || "").replace(/\D/g, "");
   return digits.length > 9 ? digits.slice(-9) : digits;
 };
+// Group invoice item amounts into consultation, laboratory, and medicine charge summaries.
 const chargeSummary = (items = []) => items.reduce((summary, item) => {
   const description = (item.description || "").toLowerCase();
   const amount = Number(item.lineTotal || 0);
@@ -46,6 +51,7 @@ const chargeSummary = (items = []) => items.reduce((summary, item) => {
 // 1. Populated: { userId: { firstName, lastName } }
 // 2. Flat merged: { firstName, lastName } (userId fields hoisted)
 // 3. Fallback: employeeId string
+// Build the staff display name from populated user details with fallbacks.
 const staffName = (staff) => {
   if (!staff) return "Unknown";
   const u = staff.userId || {};
@@ -55,6 +61,7 @@ const staffName = (staff) => {
   if (fromFlat) return fromFlat;
   return staff.employeeId || "—";
 };
+// Trigger a browser download for a Blob and release its temporary object URL.
 const saveBlob = (blob, filename) => {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -64,19 +71,23 @@ const saveBlob = (blob, filename) => {
   URL.revokeObjectURL(url);
 };
 
+// Validate invoice values including appointment id, description, quantity, unit price.
 const invoiceSchema = z.object({
   appointmentId: z.string().min(1, "Select appointment"),
   description: z.string().trim().min(2, "Description is required").max(120, "Description is too long"),
   quantity: requiredQuantity(),
   unitPrice: requiredMoney("Unit price").min(0.01, "Unit price must be greater than 0")
 });
+// Validate payment values including amount, method.
 const paymentSchema = z.object({
   amount: z.coerce.number({ invalid_type_error: "Amount is required" }).min(0.01, "Amount must be greater than 0").max(10000000, "Amount is too high"),
   method: z.string().min(1, "Payment method is required")
 });
+// Validate supplier bill values including method.
 const supplierBillSchema = z.object({
   method: z.string().min(1, "Payment method is required")
 });
+// Validate payroll values including staff id, month, daily pay, working days, allowances.
 const payrollSchema = z.object({
   staffId: z.string().min(1, "Select staff member"),
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Select payroll month")
@@ -87,6 +98,7 @@ const payrollSchema = z.object({
   deductions: requiredMoney("Deductions")
 });
 
+// Manage invoices, cashier payments, supplier bills, payroll, and financial summaries.
 export const BillingWorkspacePanel = () => {
   const { user } = useAuth();
   const [invoices, setInvoices] = useState([]);
@@ -96,6 +108,7 @@ export const BillingWorkspacePanel = () => {
   const [payroll, setPayroll] = useState([]);
   const [staff, setStaff] = useState([]);
   const [summary, setSummary] = useState({ invoiced: 0, collected: 0, outstanding: 0, payrollExpense: 0 });
+  // Track the selected billing view and its local filters.
   const [activeTab, setActiveTab] = useState("invoices");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -117,6 +130,7 @@ export const BillingWorkspacePanel = () => {
   const canCreatePayroll = [ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN].includes(user?.role);
   const canViewExpenses = [ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN].includes(user?.role);
 
+  // Select the validation schema for the active form and whether it is creating or editing a record.
   const schema = useMemo(() => {
     if (modal.type === "payment") {
       const exactBal = modal.record?.outstandingAmount ? Number(modal.record.outstandingAmount) : 0;
@@ -134,6 +148,7 @@ export const BillingWorkspacePanel = () => {
     return invoiceSchema;
   }, [modal.type, modal.record]);
 
+  // Connect form fields, validation errors, and submission handling through React Hook Form.
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({ resolver: zodResolver(schema), mode: "onChange" });
   const selectedStaffId = watch("staffId");
   const selectedPayrollMonth = watch("month");
@@ -145,6 +160,7 @@ export const BillingWorkspacePanel = () => {
     payrollPreview && Number(selectedDeductions || 0) > Number(payrollPreview.baseSalary || 0) + Number(selectedAllowances || 0)
   );
 
+  // Load invoices, summary, payments, supplier bills and update the displayed state.
   const load = async () => {
     try {
       const requests = [billingApi.invoices(), billingApi.summary()];
@@ -171,11 +187,14 @@ export const BillingWorkspacePanel = () => {
     }
   };
 
+  // Load workspace data on mount and whenever the effect dependencies change.
   useEffect(() => {
     load();
   }, []);
 
+  // Register browser event listeners and remove them when this effect is cleaned up.
   useEffect(() => {
+    // Apply dashboard quick-action events to this workspace's tabs, filters, or forms.
     const handleDashboardCommand = (event) => {
       const command = event.detail || {};
       if (command.workspace !== "billing") return;
@@ -199,6 +218,7 @@ export const BillingWorkspacePanel = () => {
     return () => window.removeEventListener(DASHBOARD_COMMAND_EVENT, handleDashboardCommand);
   }, [canCreatePayroll, isCashier, reset]);
 
+  // Synchronize dependent form values when the current selection changes.
   useEffect(() => {
     if (modal.type !== "payroll" || !selectedStaffId) return;
     const selectedStaff = staff.find((item) => item._id === selectedStaffId);
@@ -210,6 +230,7 @@ export const BillingWorkspacePanel = () => {
     setValue("deductions", selectedStaff.deductions || 0, { shouldValidate: true });
   }, [modal.type, selectedStaffId, setValue, staff]);
 
+  // Schedule feedback dismissal or periodic updates and clear timers during cleanup.
   useEffect(() => {
     if (modal.type !== "payroll" || !selectedStaffId || !selectedPayrollMonth || !selectedDailyPay || !selectedWorkingDays) {
       setPayrollPreview(null);
@@ -241,6 +262,7 @@ export const BillingWorkspacePanel = () => {
     return () => clearTimeout(timer);
   }, [modal.type, selectedStaffId, selectedPayrollMonth, selectedDailyPay, selectedWorkingDays, selectedAllowances, selectedDeductions]);
 
+  // Cache rows until the listed source values change.
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return invoices.filter((item) => {
@@ -252,6 +274,7 @@ export const BillingWorkspacePanel = () => {
     });
   }, [invoices, search, statusFilter]);
 
+  // Cache checkout groups until the listed source values change.
   const checkoutGroups = useMemo(() => {
     const groups = new Map();
     const payableInvoices = invoices.filter((invoice) => invoice.status !== "cancelled" && Number(invoice.outstandingAmount || 0) > 0);
@@ -298,21 +321,25 @@ export const BillingWorkspacePanel = () => {
     return Array.from(groups.values()).sort((a, b) => a.label.localeCompare(b.label));
   }, [invoices]);
 
+  // Cache selected checkout group until the listed source values change.
   const selectedCheckoutGroup = useMemo(
     () => checkoutGroups.find((group) => group.key === checkoutKey),
     [checkoutGroups, checkoutKey]
   );
 
+  // Cache selected checkout summary until the listed source values change.
   const selectedCheckoutSummary = useMemo(
     () => chargeSummary(selectedCheckoutGroup?.items || []),
     [selectedCheckoutGroup]
   );
 
+  // Cache payroll rows until the listed source values change.
   const payrollRows = useMemo(() => payroll.filter((item) => (
     (payrollStatusFilter === "all" || item.status === payrollStatusFilter) &&
     (!payrollMonthFilter || item.month === payrollMonthFilter)
   )), [payroll, payrollStatusFilter, payrollMonthFilter]);
 
+  // Submit the validated billing workspace form and show the resulting success or error feedback.
   const submit = async (values) => {
     setBusy(true);
     try {
@@ -347,6 +374,7 @@ export const BillingWorkspacePanel = () => {
     }
   };
 
+  // Submit a payment status change and reload billing data.
   const changePaymentStatus = async (payment, status) => {
     setBusy(true);
     try {
@@ -360,6 +388,7 @@ export const BillingWorkspacePanel = () => {
     }
   };
 
+  // Submit the requested payroll workflow step and reload salary data.
   const changePayrollStatus = async (item, status) => {
     setBusy(true);
     try {
@@ -373,6 +402,7 @@ export const BillingWorkspacePanel = () => {
     }
   };
 
+  // Download the selected salary record using the shared payslip download flow.
   const downloadPayslip = async (item) => {
     setBusy(true);
     try {
@@ -384,6 +414,7 @@ export const BillingWorkspacePanel = () => {
     }
   };
 
+  // Load completed attendance days to prefill the salary form's working-day count.
   const useAttendanceDays = async () => {
     if (!selectedStaffId || !selectedPayrollMonth) {
       setToast({ type: "error", message: "Select staff and month first" });
@@ -401,6 +432,7 @@ export const BillingWorkspacePanel = () => {
     }
   };
 
+  // Download the selected paid invoice's receipt and save it in the browser.
   const downloadReceipt = async (invoice) => {
     setBusy(true);
     try {
@@ -412,6 +444,7 @@ export const BillingWorkspacePanel = () => {
     }
   };
 
+  // Consolidate the patient's invoices and prepare the combined balance for cashier payment.
   const collectUnifiedCheckout = async () => {
     setCheckoutError("");
     if (!selectedCheckoutGroup) {
@@ -464,10 +497,12 @@ export const BillingWorkspacePanel = () => {
     }
   };
 
+  // Open the selected invoice using the shared printable invoice template.
   const printInvoice = (invoice) => {
     printInvoicePDF(invoice);
   };
 
+  // Open the selected salary record using the shared printable payslip template.
   const printPayslip = (item) => {
     printPayslipPDF(item);
   };
@@ -590,6 +625,7 @@ export const BillingWorkspacePanel = () => {
               {
                 key: "details",
                 header: "Invoice Charges",
+                // Format this table cell using the current row's data and available actions.
                 render: (item) => {
                   const hasDoctor = item.items?.some((i) => i.description?.toLowerCase().includes("consultation") || i.description?.toLowerCase().includes("channelling"));
                   const hasLab = item.items?.some((i) => i.description?.toLowerCase().includes("lab") || i.description?.toLowerCase().includes("investigation"));
@@ -632,6 +668,7 @@ export const BillingWorkspacePanel = () => {
               {
                 key: "actions",
                 header: "Actions",
+                // Format this table cell using the current row's data and available actions.
                 render: (item) => {
                   return (
                     <div className="inline-actions" style={{ flexWrap: "wrap", gap: "6px" }}>
@@ -691,6 +728,7 @@ export const BillingWorkspacePanel = () => {
             {
               key: "purchase",
               header: "Purchase",
+              // Format this table cell using the current row's data and available actions.
               render: (item) => {
                 const purchase = item.purchaseId || {};
                 const medicine = purchase.medicineId?.name || "Medicine";
@@ -704,6 +742,7 @@ export const BillingWorkspacePanel = () => {
             {
               key: "actions",
               header: "Actions",
+              // Format this table cell using the current row's data and available actions.
               render: (item) => (
                 <div className="inline-actions">
                   {isCashier && item.status === "pending" ? (
@@ -806,6 +845,7 @@ export const BillingWorkspacePanel = () => {
                 label="Completed Appointment"
                 error={errors.appointmentId?.message}
                 {...register("appointmentId", {
+                  // Update the edited field and synchronize its dependent form values.
                   onChange: (e) => {
                     if (e.target.value) {
                       setValue("description", "Doctor Consultation Fee", { shouldValidate: true });

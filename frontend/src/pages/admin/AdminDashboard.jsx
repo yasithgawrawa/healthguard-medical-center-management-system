@@ -1,3 +1,4 @@
+// Display the admin dashboard and its role-specific actions.
 import { CalendarPlus, ReceiptText, Shield, UserPlus, Users } from "lucide-react";
 import { StaffManagementPanel } from "../../components/epic1_user_staff/StaffManagementPanel.jsx";
 import { StaffNoticesPanel } from "../../components/epic1_user_staff/StaffNoticesPanel.jsx";
@@ -5,6 +6,7 @@ import { WorkforceManagementPanel } from "../../components/epic1_user_staff/Work
 import { DashboardQuickActions } from "../../components/shared/DashboardQuickActions.jsx";
 import { ExpenseManagementPanel } from "../../components/epic4_billing/ExpenseManagementPanel.jsx";
 
+// Load admin summary data and render the role's dashboard cards and workspaces.
 export const AdminDashboard = () => {
   return (
     <div id="overview" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>

@@ -1,3 +1,4 @@
+// Load environment configuration and supply defaults for server and authentication settings.
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -11,6 +12,7 @@ export const env = {
   CLIENT_ORIGIN: process.env.CLIENT_ORIGIN || "http://localhost:5173"
 };
 
+// Reject the development JWT signing secret when running in production.
 if (env.NODE_ENV === "production" && env.JWT_SECRET === "development_only_change_me") {
   throw new Error("JWT_SECRET must be configured in production.");
 }

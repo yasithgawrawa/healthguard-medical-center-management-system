@@ -1,3 +1,4 @@
+// Clear operational records, preserve accounts and staff, and synchronize the resulting state to the test database.
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 import { connectDatabase } from "./shared/config/database.js";

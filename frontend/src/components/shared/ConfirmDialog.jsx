@@ -1,6 +1,7 @@
 import { AlertTriangle } from "lucide-react";
 import { Modal } from "./Modal.jsx";
 
+// Render the shared confirmation modal and its cancel and confirm actions.
 export const ConfirmDialog = ({ open, title, message, confirmLabel = "Confirm", busy, onCancel, onConfirm }) => (
   <Modal open={open} title={title} onClose={onCancel}>
     <div className="confirm-dialog-body">

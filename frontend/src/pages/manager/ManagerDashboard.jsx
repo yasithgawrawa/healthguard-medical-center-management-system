@@ -1,3 +1,4 @@
+// Display the manager dashboard and its role-specific actions.
 import { AlertTriangle, ClipboardCheck, ClipboardList, DollarSign, FlaskConical, Megaphone, ReceiptText, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { PatientNotificationManagementPanel } from "../../components/epic2_clinical/PatientNotificationManagementPanel.jsx";
@@ -13,8 +14,10 @@ import { billingApi } from "../../services/billingApi.js";
 import { e1Api } from "../../services/e1Api.js";
 import { inventoryApi } from "../../services/inventoryApi.js";
 
+// Format a numeric amount as Sri Lankan rupees for display.
 const money = (val) => `Rs. ${Number(val || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+// Load manager summary data and render the role's dashboard cards and workspaces.
 export const ManagerDashboard = () => {
   const [metrics, setMetrics] = useState({
     onDutyStaff: 0,
@@ -23,6 +26,7 @@ export const ManagerDashboard = () => {
     totalAlerts: 0
   });
 
+  // Synchronize component state or external data when the listed dependencies change.
   useEffect(() => {
     Promise.all([
       e1Api.listAttendance().catch(() => []),

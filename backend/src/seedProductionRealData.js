@@ -1,3 +1,4 @@
+// Clear operational data while retaining accounts, then rebuild linked clinic seed records.
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 import { connectDatabase } from "./shared/config/database.js";
@@ -70,6 +71,7 @@ const passwordHash = await bcrypt.hash(defaultPassword, 12);
 const now = new Date();
 const currentMonth = now.toISOString().slice(0, 7);
 
+// Build a date relative to today and assign the requested local time.
 const offsetDate = (dayOffset, hour = 9, minute = 0) => {
   const d = new Date(now);
   d.setDate(d.getDate() + dayOffset);
@@ -462,6 +464,7 @@ const shiftPatterns = {
   "HG-LAB-002": { startHour: 9, endHour: 17, notes: "Sample collection and reporting" }
 };
 const shiftByEmpDate = new Map();
+// Combine the employee ID and ISO calendar date into a shift lookup key.
 const shiftKey = (empId, date) => `${empId}:${date.toISOString().slice(0, 10)}`;
 
 for (const [empId, pattern] of Object.entries(shiftPatterns)) {

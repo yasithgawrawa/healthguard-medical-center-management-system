@@ -1,12 +1,19 @@
+// Define the MongoDB structure, constraints, and relationships for lab request records.
 import mongoose from "mongoose";
 
+// Define stored lab request data with appointment id, patient id, doctor id, test name, priority and database validation.
 const labRequestSchema = new mongoose.Schema(
   {
+    // Reference the shared Appointment record by ID and require the relationship.
     appointmentId: { type: mongoose.Schema.Types.ObjectId, ref: "Appointment", required: true, index: true },
+    // Reference the shared User record by ID and require the relationship.
     patientId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    // Reference the shared User record by ID and require the relationship.
     doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     testName: { type: String, required: true, trim: true },
+    // Restrict priority to the supported values defined for this record.
     priority: { type: String, enum: ["routine", "urgent"], default: "routine" },
+    // Restrict status to the supported values defined for this record.
     status: { type: String, enum: ["requested", "verified", "in_progress", "completed", "cancelled"], default: "requested" },
     resultSummary: { type: String, trim: true },
     resultUrl: { type: String, trim: true },
@@ -22,8 +29,10 @@ const labRequestSchema = new mongoose.Schema(
     specimenType: { type: String, trim: true, default: "Venous Blood" },
     sampleCollectedAt: { type: Date },
     reportedAt: { type: Date },
+    // Reference the shared User record by ID.
     verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
   },
+  // Maintain createdAt and updatedAt automatically for auditing and date-based queries.
   { timestamps: true }
 );
 

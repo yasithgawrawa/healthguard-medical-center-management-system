@@ -1,3 +1,4 @@
+// Create or update linked seed records used to populate the clinic application.
 // ============================================================================
 // Health Guard Medical Center – Sri Lankan Demo Data Seed
 // ============================================================================
@@ -56,6 +57,7 @@ const now = new Date();
 const currentMonth = now.toISOString().slice(0, 7); // e.g. "2026-09"
 
 /** Return a Date offset by dayOffset from today, at given hour:minute */
+// Build a date relative to today and assign the requested local time.
 const atTime = (dayOffset, hour = 9, minute = 0) => {
   const d = new Date(now);
   d.setDate(d.getDate() + dayOffset);
@@ -310,6 +312,7 @@ const shiftPatterns = {
 
 // Create shifts for past 3 days, today, and next 2 days
 const shiftsByKey = new Map();
+// Combine the employee ID and ISO calendar date into a shift lookup key.
 const shiftKey = (empId, date) => `${empId}:${date.toISOString().slice(0, 10)}`;
 
 for (const [empId, pattern] of Object.entries(shiftPatterns)) {

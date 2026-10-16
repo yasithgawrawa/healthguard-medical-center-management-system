@@ -17,6 +17,7 @@ const STATUS_CONFIGS = {
   verified: { label: "Verified", color: "#0d9488", bg: "#f0fdfa", border: "#99f6e4", dot: "#0f766e" }
 };
 
+// Translate a record status into the shared badge label and appearance.
 export const StatusBadge = ({ status }) => {
   const normalized = String(status || "").toLowerCase().trim();
   const config = STATUS_CONFIGS[normalized] || {

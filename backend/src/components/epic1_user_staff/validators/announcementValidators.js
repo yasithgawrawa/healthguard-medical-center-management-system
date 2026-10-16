@@ -1,9 +1,11 @@
+// Validate and normalize announcement request fields before business logic runs.
 import { z } from "zod";
 import { ROLE_VALUES, ROLES } from "../../../shared/constants/roles.js";
 import { idParamSchema } from "../../../shared/validators/commonSchemas.js";
 
 const targetRoleValues = ["all", ...ROLE_VALUES.filter((role) => role !== ROLES.PATIENT)];
 
+// Validate optional date values.
 const optionalDateSchema = z.preprocess(
   (value) => (value === "" || value === null ? undefined : value),
   z.coerce.date().optional()
@@ -23,8 +25,10 @@ const announcementFields = {
   targetRole: z.enum(targetRoleValues, { required_error: "Target role is required" })
 };
 
+// Allow no expiry date or require expiry to be on or after publication.
 const validDateRange = (data) => !data.expiryDate || !data.publishedDate || data.expiryDate >= data.publishedDate;
 
+// Represent the current Colombo calendar date as UTC midnight for date-only comparisons.
 const clinicTodayStart = () => {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Colombo",
@@ -36,6 +40,7 @@ const clinicTodayStart = () => {
   return new Date(Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day)));
 };
 
+// Validate create announcement values.
 export const createAnnouncementSchema = z.object({
   body: z.object(announcementFields)
     .refine((data) => data.publishedDate >= clinicTodayStart(), {
@@ -52,6 +57,7 @@ export const createAnnouncementSchema = z.object({
     })
 });
 
+// Validate update announcement values including title, published date, expiry date, target role.
 export const updateAnnouncementSchema = z.object({
   params: idParamSchema.shape.params,
   body: z.object({

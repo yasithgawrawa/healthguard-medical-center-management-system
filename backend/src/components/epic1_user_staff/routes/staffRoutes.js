@@ -1,3 +1,4 @@
+// Register staff endpoints with authentication, role checks, validation, and controllers.
 import { Router } from "express";
 import { ROLES } from "../../../shared/constants/roles.js";
 import { asyncHandler } from "../../../shared/middleware/asyncHandler.js";
@@ -8,13 +9,20 @@ import { createQuickPatient, createStaff, listStaff, updateStaff } from "../cont
 import { createStaffSchema, quickPatientSchema, updateStaffSchema } from "../validators/epic1Validators.js";
 
 const router = Router();
+// Authenticate requests before they reach the following routes.
 router.use(authenticate);
 
+// POST /patients: run create quick patient after role and request validation.
 router.post("/patients", authorizeRoles(ROLES.ADMIN, ROLES.NURSE), validateRequest(quickPatientSchema), asyncHandler(createQuickPatient));
 
+// Apply the shared middleware to the routes registered below.
 router.use(authorizeRoles(ROLES.ADMIN));
+// POST /: run create staff after role and request validation.
 router.post("/", validateRequest(createStaffSchema), asyncHandler(createStaff));
+// GET /: run list staff.
 router.get("/", asyncHandler(listStaff));
+// PATCH /:id: run update staff after role and request validation.
 router.patch("/:id", validateRequest(updateStaffSchema), asyncHandler(updateStaff));
+// DELETE /:id: handle this endpoint after role and request validation.
 router.delete("/:id", validateRequest(idParamSchema), asyncHandler((req, res) => updateStaff({ ...req, body: { status: "inactive" } }, res)));
 export default router;

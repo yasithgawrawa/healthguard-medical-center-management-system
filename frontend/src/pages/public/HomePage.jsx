@@ -89,6 +89,7 @@ const portalFeatures = [
   }
 ];
 
+// Render the public clinic introduction, services, and registration links.
 export const HomePage = () => (
   <div className="home-page">
     <div className="hero-wrapper">

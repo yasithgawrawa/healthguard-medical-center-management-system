@@ -1,3 +1,4 @@
+// Describe reusable workspace actions, form fields, and their API paths.
 export const commonId = { name: "id", label: "Record ID", required: true, pathParam: true };
 
 const medicineCategoryOptions = [
