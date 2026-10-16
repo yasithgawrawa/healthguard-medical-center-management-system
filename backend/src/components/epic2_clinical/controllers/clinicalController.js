@@ -12,6 +12,11 @@ import { AppError } from "../../../shared/utils/AppError.js";
 import { User } from "../../epic1_user_staff/models/User.js";
 import { Invoice } from "../../epic4_billing/models/Invoice.js";
 
+// View Appointment Slots | Business Logic | Offer hourly appointments from 9:00 AM through 10:00 PM in Sri Lanka.
+// Book Appointment | Backend Validation | Use the same clinic hours for listing and booking appointments.
+// Reschedule Appointment | Backend Validation | Apply the same clinic hours when selecting a replacement appointment.
+const APPOINTMENT_SLOT_HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
+
 // Update Appointment Status | Business Logic | Check whether an appointment falls on a calendar day after today.
 // Save Consultation | Business Logic | Check whether an appointment falls on a calendar day after today.
 const isFutureAppointmentDate = (value) => {
@@ -53,14 +58,13 @@ export const createAppointment = async (req, res) => {
   }
 
   // Validate that the requested appointmentDate falls on a valid clinic slot.
-  // Slots are stored as IST times (+05:30): clinic hours 9-16 IST = 3:30-10:30 UTC.
+  // Slots use Sri Lanka time (+05:30): clinic hours 09:00-22:00 correspond to 03:30-16:30 UTC.
   // We check the IST hour by offsetting by 330 minutes (5h30m).
   const requestedDate = new Date(payload.appointmentDate);
   const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // UTC+5:30 in milliseconds
   const istHour = Math.floor(((requestedDate.getTime() + IST_OFFSET_MS) % 86400000) / 3600000);
   const istMinutes = Math.floor(((requestedDate.getTime() + IST_OFFSET_MS) % 3600000) / 60000);
-  const validSlotHours = [9, 10, 11, 12, 13, 14, 15, 16];
-  if (!validSlotHours.includes(istHour) || istMinutes !== 0) {
+  if (!APPOINTMENT_SLOT_HOURS.includes(istHour) || istMinutes !== 0) {
     throw new AppError("Invalid appointment slot. Please select a valid time slot from the available options.", 400, { appointmentDate: "Invalid slot selected" });
   }
 
@@ -109,12 +113,11 @@ export const listAppointmentSlots = async (req, res) => {
   const doctor = await User.findOne({ _id: doctorId, role: ROLES.DOCTOR, status: "active" });
   if (!doctor) throw new AppError("Active doctor not found", 404, { doctorId: "Select an active doctor" });
 
-  // Build slot timestamps using IST offset (+05:30) so clinic hours 9-16 are stored correctly.
+  // Build slot timestamps using the Sri Lanka offset (+05:30) for clinic hours 09:00-22:00.
   // e.g. "09:00 IST" = "2026-09-21T03:30:00.000Z" in UTC — correctly displays as 9 AM locally.
   const IST_OFFSET = "+05:30";
-  const slotHours = [9, 10, 11, 12, 13, 14, 15, 16];
 
-  const slotISOs = slotHours.map((hour) =>
+  const slotISOs = APPOINTMENT_SLOT_HOURS.map((hour) =>
     `${date}T${String(hour).padStart(2, "00")}:00:00.000${IST_OFFSET}`
   );
 
@@ -132,8 +135,8 @@ export const listAppointmentSlots = async (req, res) => {
 
   const slots = slotISOs.map((iso, index) => {
     const startsAt = new Date(iso);
-    const hour = slotHours[index];
-    const label = `${hour < 12 ? "Morning" : "Afternoon"} ${String(hour).padStart(2, "0")}:00`;
+    const hour = APPOINTMENT_SLOT_HOURS[index];
+    const label = `${hour < 12 ? "Morning" : hour < 17 ? "Afternoon" : "Evening"} ${String(hour).padStart(2, "0")}:00`;
     return {
       label,
       startsAt: startsAt.toISOString(), // canonical UTC ISO for storage
@@ -220,8 +223,7 @@ export const rescheduleAppointment = async (req, res) => {
   const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
   const istHour = Math.floor(((requestedDate.getTime() + IST_OFFSET_MS) % 86400000) / 3600000);
   const istMinutes = Math.floor(((requestedDate.getTime() + IST_OFFSET_MS) % 3600000) / 60000);
-  const validSlotHours = [9, 10, 11, 12, 13, 14, 15, 16];
-  if (!validSlotHours.includes(istHour) || istMinutes !== 0) {
+  if (!APPOINTMENT_SLOT_HOURS.includes(istHour) || istMinutes !== 0) {
     throw new AppError("Invalid appointment slot. Please select a valid time slot from the available options.", 400, { appointmentDate: "Invalid slot selected" });
   }
 
