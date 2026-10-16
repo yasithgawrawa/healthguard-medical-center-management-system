@@ -281,21 +281,6 @@ export const InventoryWorkspacePanel = () => {
     loadData();
   }, [reportPeriod]);
 
-  useEffect(() => {
-    const handleDashboardCommand = (event) => {
-      const command = event.detail || {};
-      if (command.workspace !== "inventory") return;
-      if (command.tab && command.tab !== "batches") setActiveTab(command.tab);
-      if (command.search !== undefined) setSearch(command.search);
-      if (command.stockStatus !== undefined) setStockStatusFilter(command.stockStatus);
-      if (command.category !== undefined) setCategoryFilter(command.category);
-      if (command.reportPeriod) setReportPeriod(command.reportPeriod);
-    };
-
-    window.addEventListener(DASHBOARD_COMMAND_EVENT, handleDashboardCommand);
-    return () => window.removeEventListener(DASHBOARD_COMMAND_EVENT, handleDashboardCommand);
-  }, []);
-
   // Open Standard Modal (Medicine, Batch, Supplier)
   const openStandardModal = (type, record = null) => {
     const defaults = record
@@ -370,6 +355,38 @@ export const InventoryWorkspacePanel = () => {
     setPosQty(1);
     setModal({ type: "pos", record: prefillRx });
   };
+
+  useEffect(() => {
+    const handleDashboardCommand = (event) => {
+      const command = event.detail || {};
+      if (command.workspace !== "inventory") return;
+      if (command.tab && command.tab !== "batches") setActiveTab(command.tab);
+      if (command.search !== undefined) setSearch(command.search);
+      if (command.stockStatus !== undefined) setStockStatusFilter(command.stockStatus);
+      if (command.category !== undefined) setCategoryFilter(command.category);
+      if (command.reportPeriod) setReportPeriod(command.reportPeriod);
+      if (!isPharmacist) return;
+      switch (command.action) {
+        case "createMedicine":
+          openStandardModal("medicine");
+          break;
+        case "createSupplier":
+          openStandardModal("supplier");
+          break;
+        case "recordPurchase":
+          openPurchaseModal();
+          break;
+        case "recordSale":
+          openPosModal();
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener(DASHBOARD_COMMAND_EVENT, handleDashboardCommand);
+    return () => window.removeEventListener(DASHBOARD_COMMAND_EVENT, handleDashboardCommand);
+  }, [isPharmacist, reset, suppliers, medicines, batches, patients]);
 
   // Form Submits
   const submitStandard = async (values) => {

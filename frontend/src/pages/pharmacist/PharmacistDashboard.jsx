@@ -100,10 +100,10 @@ export const PharmacistDashboard = () => {
 
       <DashboardQuickActions
         actions={[
-          { label: "Add Medicine", detail: "Create catalog item", icon: Pill, href: "#pharmacy-inventory" },
-          { label: "Record Purchase", detail: "Log supplier delivery", icon: ArrowDownCircle, href: "#pharmacy-inventory" },
-          { label: "Record Sale", detail: "Dispense to patient", icon: PackageCheck, href: "#pharmacy-inventory" },
-          { label: "Add Supplier", detail: "Manage vendor details", icon: Truck, href: "#pharmacy-inventory" }
+          { label: "Add Medicine", detail: "Create catalog item", icon: Pill, href: "#pharmacy-inventory", command: { workspace: "inventory", tab: "catalog", action: "createMedicine", search: "", stockStatus: "", category: "" } },
+          { label: "Record Purchase", detail: "Log supplier delivery", icon: ArrowDownCircle, href: "#pharmacy-inventory", command: { workspace: "inventory", tab: "purchases", action: "recordPurchase", search: "", stockStatus: "", category: "" } },
+          { label: "Record Sale", detail: "Dispense to patient", icon: PackageCheck, href: "#pharmacy-inventory", command: { workspace: "inventory", tab: "sales", action: "recordSale", search: "", stockStatus: "", category: "" } },
+          { label: "Add Supplier", detail: "Manage vendor details", icon: Truck, href: "#pharmacy-inventory", command: { workspace: "inventory", tab: "suppliers", action: "createSupplier", search: "", stockStatus: "", category: "" } }
         ]}
       />
 
