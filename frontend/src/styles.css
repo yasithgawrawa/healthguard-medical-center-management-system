@@ -3387,3 +3387,12 @@ main {
     text-align: center;
   }
 }
+
+/* Patient notices use the dashboard's existing cards, forms, and table layout. */
+.notice-message { white-space: pre-wrap; overflow-wrap: anywhere; }
+.notice-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.patient-record-item.notice-unread { border-left: 4px solid var(--brand-600); background: var(--brand-50); padding-left: 12px; }
+.notice-unread-label { font-weight: 700; color: var(--brand-700); }
+#patient-records-notifications .patient-record-list { max-height: 480px; overflow-y: auto; }
+#patient-notice-management .e1-panel-header { flex-wrap: wrap; gap: 12px; }
+#patient-notice-management td { overflow-wrap: anywhere; }

@@ -5,6 +5,7 @@ import morgan from "morgan";
 import authRoutes from "./components/epic1_user_staff/routes/authRoutes.js";
 import staffRoutes from "./components/epic1_user_staff/routes/staffRoutes.js";
 import workforceRoutes from "./components/epic1_user_staff/routes/workforceRoutes.js";
+import patientNoticeRoutes from "./components/epic2_clinical/routes/patientNoticeRoutes.js";
 import clinicalRoutes from "./components/epic2_clinical/routes/clinicalRoutes.js";
 import inventoryRoutes from "./components/epic3_inventory/routes/inventoryRoutes.js";
 import billingRoutes from "./components/epic4_billing/routes/billingRoutes.js";
@@ -79,6 +80,7 @@ app.use("/api/e1/announcements", loadAnnouncementRoutes);
 app.use("/api/e1/staff", staffRoutes);
 app.use("/api/e1/workforce", workforceRoutes);
 app.use("/api/e2/clinical", clinicalRoutes);
+app.use("/api/e2/patient-notices", patientNoticeRoutes);
 app.use("/api/e3/inventory", inventoryRoutes);
 app.use("/api/e4/billing", billingRoutes);
 

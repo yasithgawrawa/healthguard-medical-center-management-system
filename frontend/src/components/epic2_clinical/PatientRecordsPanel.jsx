@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bell, CalendarCheck, CalendarClock, CreditCard, Download, FileText, History, Pill, Printer, RefreshCw } from "lucide-react";
+import { patientNoticeApi } from "../../services/patientNoticeApi.js";
 import { patientApi } from "../../services/patientApi.js";
 import { printInvoicePDF, printLabReportPDF } from "../../utils/invoicePrintTemplate.js";
 import { customerLabel, patientLabel } from "../../utils/personLabels.js";
@@ -29,7 +30,7 @@ const emptyText = {
   labs: "No laboratory requests found.",
   prescriptions: "No prescriptions found.",
   invoices: "No invoices found.",
-  notifications: "No notifications yet."
+  notifications: "No notifications"
 };
 
 const saveBlob = (blob, filename) => {
@@ -67,7 +68,7 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
         patientApi.getLabRequests(),
         patientApi.getPrescriptions(),
         patientApi.getInvoices(),
-        patientApi.getNotifications()
+        Promise.all([patientApi.getNotifications(), patientNoticeApi.mine()]).then(([labs, notices]) => [...labs.map(item => ({ ...item, source: "lab" })), ...notices].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)))
       ]);
       setData({ appointments, labs, prescriptions, invoices, notifications });
     } catch (err) {
@@ -80,6 +81,28 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
   useEffect(() => {
     load();
   }, [load, refreshKey]);
+
+  useEffect(() => {
+    let active = true;
+    const refreshNotifications = async () => {
+      try {
+        const [labs, notices] = await Promise.all([patientApi.getNotifications(), patientNoticeApi.mine()]);
+        if (active) setData(previous => ({ ...previous, notifications: [...labs.map(item => ({ ...item, source: "lab" })), ...notices].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) }));
+      } catch { if (active) setError("Unable to refresh notifications. Please refresh your records."); }
+    };
+    const timer = setInterval(refreshNotifications, 30000);
+    window.addEventListener("focus", refreshNotifications);
+    return () => { active = false; clearInterval(timer); window.removeEventListener("focus", refreshNotifications); };
+  }, []);
+
+  useEffect(() => {
+    const expiries = data.notifications.map(item => item.expiryDate ? new Date(item.expiryDate).getTime() : 0).filter(time => time > Date.now());
+    if (!expiries.length) return;
+    const timer = setTimeout(() => {
+      setData(previous => ({ ...previous, notifications: previous.notifications.filter(item => !item.expiryDate || new Date(item.expiryDate) > new Date()) }));
+    }, Math.min(Math.max(1, Math.min(...expiries) - Date.now()), 2147483647));
+    return () => clearTimeout(timer);
+  }, [data.notifications]);
 
   const cancelAppointment = async (id) => {
     setBusyId(id);
@@ -187,10 +210,11 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
     printInvoicePDF(invoice);
   };
 
-  const markNotificationRead = async (id) => {
+  const markNotificationRead = async (item) => {
+    const id = item._id;
     setBusyId(id);
     try {
-      await patientApi.markNotificationRead(id);
+      await (item.source === "manager" ? patientNoticeApi.markRead(id) : patientApi.markNotificationRead(id));
       await load();
     } catch (err) {
       setError(err.response?.data?.message || "Unable to update notification");
@@ -238,15 +262,15 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
       key: "notifications",
       title: "Notifications",
       icon: Bell,
-      records: data.notifications,
+      records: data.notifications.filter(item => !item.expiryDate || new Date(item.expiryDate) > new Date()),
       render: (item) => (
         <>
           <strong>{item.title}</strong>
-          <span>{item.message}</span>
+          <span className="notice-message">{item.message}</span>
           <small>{formatDate(item.createdAt)}</small>
           {!item.readAt ? (
-            <button className="table-link-button" type="button" onClick={() => markNotificationRead(item._id)} disabled={busyId === item._id}>
-              Mark read
+            <button className="table-link-button" type="button" onClick={() => markNotificationRead(item)} disabled={busyId === item._id}>
+              Mark as read
             </button>
           ) : null}
         </>
@@ -373,8 +397,9 @@ export const PatientRecordsPanel = ({ refreshKey = 0, onChanged }) => {
 
               <div className="patient-record-list">
                 {section.records.length ? (
-                  section.records.slice(0, 4).map((item) => (
-                    <div className="patient-record-item" key={item._id}>
+                  (section.key === "notifications" ? section.records : section.records.slice(0, 4)).map((item) => (
+                    <div className={`patient-record-item${section.key === "notifications" && !item.readAt ? " notice-unread" : ""}`} key={`${item.source || section.key}-${item._id}`}>
+                      {section.key === "notifications" && !item.readAt ? <small className="notice-unread-label">Unread</small> : null}
                       {section.render(item)}
                     </div>
                   ))

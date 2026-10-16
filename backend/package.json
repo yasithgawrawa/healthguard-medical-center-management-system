@@ -12,7 +12,8 @@
     "seed:real": "node src/seedProductionRealData.js",
     "clean:db": "node src/cleanDemoData.js",
     "clean:demo": "node src/cleanDemoData.js",
-    "verify:flows": "node src/verifyAllRealFlows.js"
+    "verify:flows": "node src/verifyAllRealFlows.js",
+    "test:notifications": "node --test tests/patientNotices.test.js"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^6.1.1",
@@ -29,6 +30,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "mongodb-memory-server": "^11.3.0",
     "nodemon": "^3.1.4"
   }
 }

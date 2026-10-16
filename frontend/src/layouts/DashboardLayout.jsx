@@ -41,6 +41,7 @@ const roleNavItems = (role) => {
       { href: "#overview", label: "Overview", icon: Activity },
       { href: "#work", label: "Quick Actions", icon: ClipboardList },
       { href: "#staff-announcements", label: "Announcements", icon: Megaphone },
+      { href: "#patient-notice-management", label: "Patient Notifications", icon: Megaphone },
       { href: "#manager-workforce", label: "Schedule & Shifts", icon: Calendar },
       { href: "#manager-workforce", label: "Attendance & Leave", icon: UserRoundCheck },
       { href: "#pharmacy-inventory", label: "Inventory Reports", icon: PackageSearch },
@@ -62,7 +63,8 @@ const roleNavItems = (role) => {
   return [
     { href: "#overview", label: "Overview", icon: Activity },
     { href: "#book-appointment", label: "Appointments", icon: Calendar },
-    { href: "#patient-records", label: "My Records", icon: ClipboardList }
+    { href: "#patient-records", label: "My Records", icon: ClipboardList },
+    { href: "#patient-records-notifications", label: "Notifications", icon: Megaphone }
   ];
 };
 

@@ -1,5 +1,6 @@
 import { AlertTriangle, ClipboardCheck, ClipboardList, DollarSign, FlaskConical, Megaphone, ReceiptText, Users } from "lucide-react";
 import { useEffect, useState } from "react";
+import { PatientNotificationManagementPanel } from "../../components/epic2_clinical/PatientNotificationManagementPanel.jsx";
 import { StaffAnnouncementManagementPanel } from "../../components/epic1_user_staff/StaffAnnouncementManagementPanel.jsx";
 import { StaffNoticesPanel } from "../../components/epic1_user_staff/StaffNoticesPanel.jsx";
 import { BillingWorkspacePanel } from "../../components/epic4_billing/BillingWorkspacePanel.jsx";
@@ -116,6 +117,7 @@ export const ManagerDashboard = () => {
       />
 
       <StaffAnnouncementManagementPanel />
+      <PatientNotificationManagementPanel />
       <WorkforceManagementPanel />
       <ManagerLabPricingPanel />
       <InventoryWorkspacePanel />
