@@ -1,6 +1,6 @@
 // Patient Notifications | Backend Validation | Validate and normalize patient notice request fields before business logic runs.
 import { z } from "zod";
-import { objectIdSchema, idParamSchema } from "../../../shared/validators/commonSchemas.js";
+import { idParamSchema } from "../../../shared/validators/commonSchemas.js";
 
 // Patient Notifications | Backend Validation | Format today's calendar date in the Asia/Colombo timezone.
 export const clinicToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Colombo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
@@ -13,10 +13,10 @@ const fields = {
   message: z.string().trim().min(1, "Message is required").max(1000),
   expiryDate: expiryDate.optional()
 };
-// Create Patient Notification | Backend Validation | Validate create patient notice values.
+// Create Patient Notification | Backend Validation | Permit only an all-patient audience and reject individual patient IDs.
 export const createPatientNoticeSchema = z.object({ body: z.object({
-  ...fields, recipient: z.enum(["one", "all"]), patientId: objectIdSchema.nullable().optional()
-}).strict().refine(data => data.recipient === "one" ? Boolean(data.patientId) : !data.patientId, { path: ["patientId"], message: "Select a patient only for One Patient" }) });
+  ...fields, recipient: z.literal("all"), patientId: z.null().optional()
+}).strict() });
 // Update Patient Notification | Backend Validation | Validate update patient notice values while allowing omitted fields for updates.
 export const updatePatientNoticeSchema = z.object({ params: idParamSchema.shape.params,
   body: z.object(fields).partial().strict().refine(data => Object.keys(data).length > 0, "Provide a field to update") });

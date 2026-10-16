@@ -16,12 +16,12 @@ export const eligibleNoticeFilter = (patientId, now = new Date()) => ({
 });
 // View Managed Notifications | Business Logic | List only the notices created by the requesting manager.
 export const listOwnedNotices = managerId => PatientNotice.find({ createdBy: managerId }).populate("patientId", "firstName lastName").sort({ createdAt: -1, _id: -1 });
-// Create Patient Notification | Business Logic | Validate an individual recipient and save a manager-owned patient notice.
+// Create Patient Notification | Business Logic | Create all-patient notices and reject attempts to target an individual patient.
 export const createNotice = async (body, managerId) => {
-  if (body.recipient === "one" && !await User.exists({ _id: body.patientId, role: ROLES.PATIENT, status: "active" })) {
-    throw new AppError("Active patient not found", 400, { patientId: "Select an active patient" });
+  if (body.recipient !== "all" || body.patientId != null) {
+    throw new AppError("Notifications must be addressed to all patients", 400, { recipient: "Select All Patients" });
   }
-  return PatientNotice.create({ ...body, expiryDate: expiryInstant(body.expiryDate), createdBy: managerId });
+  return PatientNotice.create({ title: body.title, message: body.message, recipient: "all", patientId: null, expiryDate: expiryInstant(body.expiryDate), createdBy: managerId });
 };
 // Update Patient Notification | Business Logic | Update a notice only when it belongs to the requesting manager.
 export const updateNotice = async (id, managerId, body) => {

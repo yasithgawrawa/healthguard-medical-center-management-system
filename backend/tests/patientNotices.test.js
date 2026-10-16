@@ -52,6 +52,8 @@ test("manager CRUD, ownership, automatic fields, expiry removal and immutable re
   const result = await create();
   assert.equal(result.status, 201);
   const notice = result.data;
+  assert.equal(notice.recipient, "all");
+  assert.equal(notice.patientId, null);
   assert.match(notice.notificationId, /^PN-[A-F0-9]{24}$/);
   assert.ok(notice.createdAt);
   assert.equal(notice.createdBy, String(actors.manager.user._id));
@@ -86,8 +88,27 @@ test("management and patient endpoints enforce every role", async () => {
   }
 });
 
-test("selected-patient privacy, forged identity, and unavailable reads", async () => {
-  const privateNotice = (await create("manager", { recipient: "one", patientId: String(actors.patient.user._id) })).data;
+test("new notifications are broadcasts and reject individual recipients", async () => {
+  const count = await PatientNotice.countDocuments();
+  assert.equal((await create("manager", { recipient: "one", patientId: String(actors.patient.user._id) })).status, 400);
+  assert.equal((await create("manager", { recipient: "all", patientId: String(actors.patient.user._id) })).status, 400);
+  assert.equal(await PatientNotice.countDocuments(), count);
+  const notice = (await create()).data;
+  for (const actor of ["patient", "patient2"]) {
+    assert.ok((await request(actor, "GET", `${base}/mine`)).data.some(item => item._id === notice._id));
+  }
+});
+
+test("legacy selected-patient notices retain privacy, ownership, and read behavior", async () => {
+  // View Patient Notifications | Tests | Simulate an existing private document without enabling creation of new private notices.
+  const id = new mongoose.Types.ObjectId();
+  await PatientNotice.collection.insertOne({
+    _id: id, notificationId: `PN-${String(id).toUpperCase()}`, title: "Legacy private notice", message: "Existing private message",
+    recipient: "one", patientId: actors.patient.user._id, createdBy: actors.manager.user._id,
+    expiryDate: null, createdAt: new Date(), updatedAt: new Date()
+  });
+  const privateNotice = { _id: String(id) };
+  assert.equal((await request("manager", "PATCH", `${base}/${privateNotice._id}`, { title: "Updated legacy notice" })).status, 200);
   assert.ok((await request("patient", "GET", `${base}/mine`)).data.some(item => item._id === privateNotice._id));
   assert.ok(!(await request("patient2", "GET", `${base}/mine?patientId=${actors.patient.user._id}`)).data.some(item => item._id === privateNotice._id));
   assert.equal((await request("patient2", "PATCH", `${base}/${privateNotice._id}/read`, { patientId: String(actors.patient.user._id) })).status, 404);
@@ -155,6 +176,7 @@ test("lab notification listing and reading remain compatible", async () => {
 
 test("schema enforces recipient integrity and unique read constraint", async () => {
   await assert.rejects(new PatientNotice({ title: "Title", message: "Message", recipient: "one", createdBy: actors.manager.user._id }).validate());
+  await assert.rejects(new PatientNotice({ title: "Title", message: "Message", recipient: "one", patientId: actors.patient.user._id, createdBy: actors.manager.user._id }).validate());
   await assert.rejects(new PatientNotice({ title: "Title", message: "Message", recipient: "all", patientId: actors.patient.user._id, createdBy: actors.manager.user._id }).validate());
   const notice = (await create()).data;
   await PatientNoticeRead.create({ noticeId: notice._id, patientId: actors.patient.user._id });
